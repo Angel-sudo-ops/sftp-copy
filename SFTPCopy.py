@@ -7,6 +7,7 @@ import threading
 import json
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 # import pystray
 # from PIL import Image
 
@@ -112,8 +113,18 @@ def start_transfer(status_widget):
         messagebox.showerror("Input Error", "Please provide a valid IP range.")
         return
 
-    for host in ip_list:
-        threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
+    # for host in ip_list:
+    #     threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
+    
+    with ThreadPoolExecutor (max_workers=10) as executor:   
+        futures = [executor.submit(sftp_transfer, host, port, username, password, local_path, remote_dir, status_widget) for host in  ip_list]
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                status_widget.insert(tk.END, f"Error: {e}\n")
+                status_widget.update()
+
 
 def choose_file():
     file_path.set(filedialog.askopenfilename())
