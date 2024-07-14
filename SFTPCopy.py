@@ -7,7 +7,7 @@ import threading
 import json
 import re
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 # Load custom paths from a file
 def load_custom_paths():
@@ -113,14 +113,17 @@ def start_transfer(status_widget):
         messagebox.showerror("Input Error", "Please provide a valid IP range.")
         return
 
+    def worker(host):
+        try:
+            sftp_transfer(host, port, username, password, local_path, remote_dir, status_widget)
+        except Exception as e:
+            status_widget.insert(tk.END, f"Error: {e}\n")
+            status_widget.yview(tk.END)
+
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(sftp_transfer, host, port, username, password, local_path, remote_dir, status_widget) for host in ip_list]
-        for future in as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                status_widget.insert(tk.END, f"Error: {e}\n")
-                status_widget.yview(tk.END)
+        futures = [executor.submit(worker, host) for host in ip_list]
+        for future in futures:
+            future.result()
 
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
