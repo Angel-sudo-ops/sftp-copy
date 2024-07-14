@@ -8,8 +8,6 @@ import json
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-# import pystray
-# from PIL import Image
 
 # Load custom paths from a file
 def load_custom_paths():
@@ -55,11 +53,13 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     sftp.put(local_file, remote_file)
                     status_widget.insert(tk.END, f"Successfully transferred {local_file} to {host}:{remote_file}\n")
 
-        sftp.close()
-        ssh.close()
     except Exception as e:
         status_widget.insert(tk.END, f"Failed to transfer {local_path} to {host}:{remote_path}. Error: {e}\n")
     finally:
+        if 'sftp' in locals():
+            sftp.close()
+        if 'ssh' in locals():
+            ssh.close()
         status_widget.yview(tk.END)
 
 def parse_ip_ranges(base_ip, range_input):
@@ -113,24 +113,14 @@ def start_transfer(status_widget):
         messagebox.showerror("Input Error", "Please provide a valid IP range.")
         return
 
-    # for host in ip_list:
-    #     threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
-    
-    with ThreadPoolExecutor (max_workers=10) as executor:   
-        futures = [executor.submit(sftp_transfer, host, port, username, password, local_path, remote_dir, status_widget) for host in  ip_list]
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(sftp_transfer, host, port, username, password, local_path, remote_dir, status_widget) for host in ip_list]
         for future in as_completed(futures):
             try:
                 future.result()
             except Exception as e:
                 status_widget.insert(tk.END, f"Error: {e}\n")
-                status_widget.update()
-
-
-def choose_file():
-    file_path.set(filedialog.askopenfilename())
-
-def choose_folder():
-    file_path.set(filedialog.askdirectory())
+                status_widget.yview(tk.END)
 
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
@@ -162,16 +152,6 @@ def save_custom_path():
         remote_dir_entry['values'] = default_paths + tuple(custom_paths)
         messagebox.showinfo("Saved", f"Path '{custom_path}' saved successfully.")
 
-# def create_systray_icon(icon_path):
-#     icon_image = Image.open(icon_path)
-#     menu = pystray.Menu(pystray.MenuItem("Quit", quit_app))
-#     icon = pystray.Icon("SFTPTransfer", icon_image, "SFTP Transfer", menu)
-#     icon.run()
-
-# def quit_app(icon, item):
-#     icon.stop()
-#     root.destroy()
-
 # Function to validate IP address format
 def validate_ip_format(event):
     ip = ip_entry.get()
@@ -189,27 +169,10 @@ def validate_ip_format(event):
 # Default paths for remote directory
 default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
 
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath("\data")
-
-    return os.path.join(base_path, relative_path)
-
-# Use resource_path function to locate files
-icon_path = resource_path("icon.ico")
-
 root = tk.Tk()
 root.title("SFTP File Transfer")
 
 root.resizable(False, False)
-
-# Set the icon for the application
-# icon_path = r"D:\Documents\PythonPrograms\transfer.ico"  # Replace with the path to your .ico file
-#root.iconbitmap(icon_path)
 
 # Add this to your GUI layout
 tk.Label(root, text="Choose file or folder to transfer:").grid(row=0, column=0, padx=10, pady=10)
@@ -217,19 +180,11 @@ file_path = tk.StringVar()
 tk.Entry(root, textvariable=file_path, width=50).grid(row=0, column=1, padx=10, pady=10)
 tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=0, column=2, padx=5, pady=10)
 
-# tk.Label(root, text="Choose file or folder to transfer:").grid(row=0, column=0, padx=10, pady=10)
-# file_path = tk.StringVar()
-# tk.Entry(root, textvariable=file_path, width=50).grid(row=0, column=1, padx=10, pady=10)
-# tk.Button(root, text="Browse File", command=choose_file).grid(row=0, column=2, padx=5, pady=10)
-# tk.Button(root, text="Browse Folder", command=choose_folder).grid(row=0, column=3, padx=5, pady=10)
-# # tk.Button(root, text="Browse", command=choose_file).grid(row=0, column=2, padx=10, pady=10)
-
 tk.Label(root, text="Enter base IP (first three parts):").grid(row=1, column=0, padx=10, pady=10)
 ip_entry = tk.Entry(root, width=50, fg="grey")
 create_placeholder(ip_entry, "e.g., 7.204.194")
 ip_entry.grid(row=1, column=1, padx=10, pady=10)
 ip_entry.bind("<KeyRelease>", validate_ip_format)
-
 
 tk.Label(root, text="Enter IP range:").grid(row=2, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50, fg="grey")
@@ -242,8 +197,6 @@ remote_dir_entry.grid(row=3, column=1, padx=10, pady=10)
 
 # Add a button to save a custom path
 tk.Button(root, text="Save Path", command=save_custom_path).grid(row=3, column=2, padx=5, pady=10)
-
-# create_placeholder(remote_dir_entry, "e.g., /remote/config/")
 
 tk.Label(root, text="Enter username:").grid(row=4, column=0, padx=10, pady=10)
 username_entry = tk.Entry(root, width=50)
@@ -261,12 +214,4 @@ status_font = font.Font(family="Consolas", size=10)
 status_widget.configure(font=status_font)
 status_widget.grid(row=7, column=0, columnspan=3, padx=10, pady=10)
 
-# # Create a separate thread for the system tray icon
-# icon_thread = threading.Thread(target=create_systray_icon, args=(icon_path,))
-# icon_thread.daemon = True
-# icon_thread.start()
-
 root.mainloop()
-
-## not showing connection timeout fix that
-
