@@ -215,7 +215,7 @@ tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=0, column
 
 tk.Label(root, text="Enter base IP (first three parts):").grid(row=1, column=0, padx=10, pady=10)
 ip_entry = tk.Entry(root, width=50, fg="grey")
-create_placeholder(ip_entry, "e.g., 7.204.194")
+create_placeholder(ip_entry, "7.204.194")
 ip_entry.grid(row=1, column=1, padx=10, pady=10)
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
@@ -223,10 +223,11 @@ ip_entry.bind("<KeyRelease>", validate_ip_format)
 tk.Label(root, text="Enter IP range:").grid(row=2, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50, fg="grey")
 range_entry.grid(row=2, column=1, padx=10, pady=10)
-create_placeholder(range_entry, "e.g., 10-25, 27, 29, 31-40")
+create_placeholder(range_entry, "10-25, 27, 29, 31-40")
 
 tk.Label(root, text="Enter remote directory:").grid(row=3, column=0, padx=10, pady=10)
 remote_dir_entry = ttk.Combobox(root, values=default_paths + tuple(custom_paths), width=47)
+remote_dir_entry.insert(0, default_paths[0])
 remote_dir_entry.grid(row=3, column=1, padx=10, pady=10)
 
 # Add a button to save a custom path
