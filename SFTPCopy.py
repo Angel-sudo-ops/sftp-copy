@@ -115,18 +115,16 @@ def start_transfer(status_widget):
     for host in ip_list:
         threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
 
-def choose_file():
-    file_path.set(filedialog.askopenfilename())
-
-def choose_folder():
-    file_path.set(filedialog.askdirectory())
-
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
-    file_or_folder = filedialog.askdirectory()  # Try to select a file
-    if not file_or_folder:  # If no file is selected, try to select a folder
-        file_or_folder = filedialog.askopenfilenames()
-    file_path.set(file_or_folder)
+    if selection.get() == 'file':
+        file_or_folder = filedialog.askopenfilenames()  # Select files
+        if file_or_folder:
+            file_path.set(", ".join(file_or_folder))
+    elif selection.get() == 'folder':
+        file_or_folder = filedialog.askdirectory()  # Select a folder
+        if file_or_folder:
+            file_path.set(file_or_folder)
 
 def create_placeholder(entry, placeholder_text):
     entry.insert(0, placeholder_text)
@@ -178,78 +176,66 @@ def validate_ip_format(event):
 # Default paths for remote directory
 default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
 
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath("\data")
-
-    return os.path.join(base_path, relative_path)
-
-# Use resource_path function to locate files
-icon_path = resource_path("icon.ico")
-
 root = tk.Tk()
 root.title("SFTP File Transfer")
 
 root.resizable(False, False)
 
+# Variable to store the file or folder path
+file_path = tk.StringVar()
+# Variable to store the user's choice (file or folder)
+selection = tk.StringVar(value='file')
+
 # Set the icon for the application
 # icon_path = r"D:\Documents\PythonPrograms\transfer.ico"  # Replace with the path to your .ico file
 #root.iconbitmap(icon_path)
 
-# Add this to your GUI layout
-tk.Label(root, text="Choose file or folder to transfer:").grid(row=0, column=0, padx=10, pady=10)
-file_path = tk.StringVar()
-tk.Entry(root, textvariable=file_path, width=50).grid(row=0, column=1, padx=10, pady=10)
-tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=0, column=2, padx=5, pady=10)
 
-# tk.Label(root, text="Choose file or folder to transfer:").grid(row=0, column=0, padx=10, pady=10)
-# file_path = tk.StringVar()
-# tk.Entry(root, textvariable=file_path, width=50).grid(row=0, column=1, padx=10, pady=10)
-# tk.Button(root, text="Browse File", command=choose_file).grid(row=0, column=2, padx=5, pady=10)
-# tk.Button(root, text="Browse Folder", command=choose_folder).grid(row=0, column=3, padx=5, pady=10)
-# # tk.Button(root, text="Browse", command=choose_file).grid(row=0, column=2, padx=10, pady=10)
+# Radio buttons for selecting file or folder
+tk.Radiobutton(root, text="File", variable=selection, value='file').grid(row=0, column=1, padx=5, pady=10, sticky='w')
+tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=1, padx=50, pady=10, sticky='w')
 
-tk.Label(root, text="Enter base IP (first three parts):").grid(row=1, column=0, padx=10, pady=10)
+tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
+tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
+tk.Entry(root, textvariable=file_path, width=50).grid(row=1, column=1, padx=10, pady=10)
+
+tk.Label(root, text="Enter base IP (first three parts):").grid(row=2, column=0, padx=10, pady=10)
 ip_entry = tk.Entry(root, width=50, fg="grey")
 create_placeholder(ip_entry, "7.204.194")
-ip_entry.grid(row=1, column=1, padx=10, pady=10)
+ip_entry.grid(row=2, column=1, padx=10, pady=10)
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
 
-tk.Label(root, text="Enter IP range:").grid(row=2, column=0, padx=10, pady=10)
+tk.Label(root, text="Enter IP range:").grid(row=3, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50, fg="grey")
-range_entry.grid(row=2, column=1, padx=10, pady=10)
+range_entry.grid(row=3, column=1, padx=10, pady=10)
 create_placeholder(range_entry, "10-25, 27, 29, 31-40")
 
-tk.Label(root, text="Enter remote directory:").grid(row=3, column=0, padx=10, pady=10)
+tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
 remote_dir_entry = ttk.Combobox(root, values=default_paths + tuple(custom_paths), width=47)
 remote_dir_entry.insert(0, default_paths[0])
-remote_dir_entry.grid(row=3, column=1, padx=10, pady=10)
+remote_dir_entry.grid(row=4, column=1, padx=10, pady=10)
 
 # Add a button to save a custom path
-tk.Button(root, text="Save Path", command=save_custom_path).grid(row=3, column=2, padx=5, pady=10)
+tk.Button(root, text="Save Path", command=save_custom_path).grid(row=4, column=2, padx=5, pady=10)
 
 # create_placeholder(remote_dir_entry, "e.g., /remote/config/")
 
-tk.Label(root, text="Enter username:").grid(row=4, column=0, padx=10, pady=10)
+tk.Label(root, text="Enter username:").grid(row=5, column=0, padx=10, pady=10)
 username_entry = tk.Entry(root, width=50)
 username_entry.insert(0, "Administrator")
-username_entry.grid(row=4, column=1, padx=10, pady=10)
+username_entry.grid(row=5, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Enter password:").grid(row=5, column=0, padx=10, pady=10)
+tk.Label(root, text="Enter password:").grid(row=6, column=0, padx=10, pady=10)
 password_entry = tk.Entry(root, width=50, show="*")
-password_entry.grid(row=5, column=1, padx=10, pady=10)
+password_entry.grid(row=6, column=1, padx=10, pady=10)
 
-tk.Button(root, text="Start Transfer", command=lambda: start_transfer(status_widget)).grid(row=6, column=0, columnspan=3, pady=20)
+tk.Button(root, text="Start Transfer", command=lambda: start_transfer(status_widget)).grid(row=7, column=0, columnspan=3, pady=20)
 
 status_widget = tk.Text(root, height=10, width=80)
 status_font = font.Font(family="Consolas", size=10)
 status_widget.configure(font=status_font)
-status_widget.grid(row=7, column=0, columnspan=3, padx=10, pady=10)
+status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
 
 # # Create a separate thread for the system tray icon
 # icon_thread = threading.Thread(target=create_systray_icon, args=(icon_path,))
