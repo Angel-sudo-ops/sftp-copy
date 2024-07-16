@@ -89,10 +89,10 @@ def start_transfer(status_widget):
     if not local_path:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
         return
-    if not base_ip:
+    if not base_ip or base_ip == "e.g., 7.204.194":
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input:
+    if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not remote_dir:
@@ -192,7 +192,7 @@ selection = tk.StringVar(value='file')
 
 
 # Radio buttons for selecting file or folder
-tk.Radiobutton(root, text="File", variable=selection, value='file').grid(row=0, column=1, padx=5, pady=10, sticky='w')
+tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0, column=1, padx=5, pady=10, sticky='w')
 tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=1, padx=50, pady=10, sticky='w')
 
 tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
@@ -201,7 +201,7 @@ tk.Entry(root, textvariable=file_path, width=50).grid(row=1, column=1, padx=10, 
 
 tk.Label(root, text="Enter base IP (first three parts):").grid(row=2, column=0, padx=10, pady=10)
 ip_entry = tk.Entry(root, width=50, fg="grey")
-create_placeholder(ip_entry, "7.204.194")
+create_placeholder(ip_entry, "e.g., 7.204.194")
 ip_entry.grid(row=2, column=1, padx=10, pady=10)
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
@@ -209,7 +209,7 @@ ip_entry.bind("<KeyRelease>", validate_ip_format)
 tk.Label(root, text="Enter IP range:").grid(row=3, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50, fg="grey")
 range_entry.grid(row=3, column=1, padx=10, pady=10)
-create_placeholder(range_entry, "10-25, 27, 29, 31-40")
+create_placeholder(range_entry, "e.g., 10-25, 27, 29, 31-40")
 
 tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
 remote_dir_entry = ttk.Combobox(root, values=default_paths + tuple(custom_paths), width=47)
@@ -245,4 +245,5 @@ status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
 root.mainloop()
 
 ## not showing connection timeout fix that
+## add profiles to save data just like routes
 
