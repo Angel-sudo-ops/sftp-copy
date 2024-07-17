@@ -173,8 +173,71 @@ def validate_ip_format(event):
     else:
         ip_entry.config(bg="yellow")
 
+def save_profile():
+    profile = {
+        "base_ip": ip_entry.get(),
+        "ip_range": range_entry.get(),
+        # "remote_dir": remote_dir_entry.get(),
+        "username": username_entry.get(),
+        "password": password_entry.get()
+    }
+    try:
+        with open("profiles.json", "r") as file:
+            profiles = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        profiles = []
+
+    profiles.append(profile)
+    
+    with open("profiles.json", "w") as file:
+        json.dump(profiles, file, indent=4)
+    
+    messagebox.showinfo("Success", "Profile saved successfully")
+    update_profiles_combobox()
+
+def load_profiles():
+    try:
+        with open("profiles.json", "r") as file:
+            profiles = json.load(file)
+            return profiles
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def load_profile():
+    selected_profile_name = profiles_combobox.get()
+    profiles = load_profiles()
+    for profile in profiles:
+        if profile["base_ip"] + " - " + profile["username"] == selected_profile_name:
+            ip_entry.delete(0, tk.END)
+            ip_entry.insert(0, profile["base_ip"])
+    
+            range_entry.delete(0, tk.END)
+            range_entry.insert(0, profile["ip_range"])
+    
+            # remote_dir_entry.set(profile["remote_dir"])
+    
+            username_entry.delete(0, tk.END)
+            username_entry.insert(0, profile["username"])
+
+            password_entry.delete(0, tk.END)
+            password_entry.insert(0, profile["password"])
+            break
+
+def update_profiles_combobox():
+    profiles_combobox['values'] = []
+    profiles = load_profiles()
+    profiles_combobox['values'] = [profile["base_ip"] + " - " + profile["username"] for profile in profiles]
+
 # Default paths for remote directory
 default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
+
+default_profile = {
+    "name": "Default Profile",
+    "base_ip": "192.168.0",
+    "ip_range": "10-20",
+    "remote_dir": "/remote/config/",
+    "username": "Administrator"
+}
 
 root = tk.Tk()
 root.title("SFTP File Transfer")
@@ -192,8 +255,15 @@ selection = tk.StringVar(value='file')
 
 
 # Radio buttons for selecting file or folder
-tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0, column=1, padx=5, pady=10, sticky='w')
-tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=1, padx=50, pady=10, sticky='w')
+tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0, column=0, padx=10, pady=10, sticky='w')
+tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
+
+# Create a listbox to display saved profiles
+profiles_combobox = ttk.Combobox(root, values=default_profile["name"], width=20)
+profiles_combobox.insert(0, default_profile["name"])
+profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
+
+tk.Button(root, text="Save Profile", command=save_profile).grid(row=0, column=2, padx=10, pady=10)
 
 tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
 tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
@@ -204,7 +274,6 @@ ip_entry = tk.Entry(root, width=50, fg="grey")
 create_placeholder(ip_entry, "e.g., 7.204.194")
 ip_entry.grid(row=2, column=1, padx=10, pady=10)
 ip_entry.bind("<KeyRelease>", validate_ip_format)
-
 
 tk.Label(root, text="Enter IP range:").grid(row=3, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50, fg="grey")
