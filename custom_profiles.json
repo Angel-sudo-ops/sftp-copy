@@ -1,0 +1,9 @@
+[
+    {
+        "name": "Default",
+        "base_ip": "e.g., 7.204.194",
+        "ip_range": "e.g., 10-25, 27, 29, 31-40",
+        "username": "Administrator",
+        "password": ""
+    }
+]
