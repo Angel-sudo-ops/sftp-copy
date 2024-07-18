@@ -11,7 +11,6 @@ import sys
 # from PIL import Image
 
 # Default paths for remote directory
-default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget):
     ssh = paramiko.SSHClient()
@@ -144,6 +143,8 @@ def validate_ip_format(event):
         ip_entry.config(bg="yellow")
 
 ###################################################### Custom paths ##########################################################
+default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
+
 # Load custom paths from a file
 def load_custom_paths():
     try:
@@ -192,6 +193,14 @@ def load_custom_profiles():
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 
+def save_custom_profiles(custom_profiles):
+    with open("custom_profiles.json", "w") as file:
+        json.dump(custom_profiles, file, indent=4)
+
+custom_profiles = load_custom_profiles()
+
+profile_names = [profile["name"] for profile in custom_profiles]
+
 def save_custom_profile():
     custom_profile_name = profiles_combobox.get()
     if not custom_profile_name:
@@ -206,8 +215,6 @@ def save_custom_profile():
         "password": password_entry.get()
     }
 
-    custom_profiles = load_custom_profiles()
-
     # Check for duplicate profile names and update if found
     for existing_profile in custom_profiles:
         if existing_profile["name"] == custom_profile_name:
@@ -216,19 +223,12 @@ def save_custom_profile():
     else:
         custom_profiles.append(custom_profile)
     
-    with open("custom_profiles.json", "w") as file:
-        json.dump(custom_profiles, file, indent=4)
-    
+    save_custom_profiles(custom_profiles)
+    profiles_combobox['values'] = default_profile["name"] + tuple(custom_profiles["name"])
     messagebox.showinfo("Success", "Profile saved successfully")
 
-profiles = load_custom_profiles()
-
-profiles.append(default_profile)
-
-profile_names = [profile["name"] for profile in profiles]
     
 def set_profile(profile):
-
     ip_entry.delete(0, tk.END)
     ip_entry.insert(0, profile["base_ip"])
 
@@ -241,13 +241,6 @@ def set_profile(profile):
     password_entry.delete(0, tk.END)
     password_entry.insert(0, profile["password"])
 
-# def update_profiles_combobox():
-#     profiles = load_custom_profiles()
-#     profile_names = [profile["name"] for profile in profiles]
-#     profiles_combobox.config(values=profile_names)
-#     if profile_names:
-#         profiles_combobox.set(profile_names[0])
-
 def load_profile_by_name(event=None):
     selected_profile_name = profiles_combobox.get()
     profiles = load_custom_profiles()
@@ -255,9 +248,6 @@ def load_profile_by_name(event=None):
         if profile["name"] == selected_profile_name:
             set_profile(profile)
             break
-
-def load_default_profile():
-    set_profile(default_profile)
 
 ######################################################## Create UI ##################################################
 
@@ -276,7 +266,7 @@ tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0,
 tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
 
 # Create a listbox to display saved profiles
-profiles_combobox = ttk.Combobox(root, values=profile_names, width=40)
+profiles_combobox = ttk.Combobox(root, values= (profile["name"] for profile in custom_profiles), width=40)
 # profiles_combobox.insert(0, default_profile["name"])
 profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
@@ -324,14 +314,6 @@ status_widget = tk.Text(root, height=10, width=80)
 status_font = font.Font(family="Consolas", size=10)
 status_widget.configure(font=status_font)
 status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
-
-# # Create a separate thread for the system tray icon
-# icon_thread = threading.Thread(target=create_systray_icon, args=(icon_path,))
-# icon_thread.daemon = True
-# icon_thread.start()
-
-# update_profiles_combobox()
-# load_default_profile()
 
 root.mainloop()
 

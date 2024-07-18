@@ -5,5 +5,26 @@
         "ip_range": "e.g., 10-25, 27, 29, 31-40",
         "username": "Administrator",
         "password": ""
+    },
+    {
+        "name": "CC1842",
+        "base_ip": "172.20.71",
+        "ip_range": "81-86",
+        "username": "Administrator",
+        "password": "1"
+    },
+    {
+        "name": "CC1845",
+        "base_ip": "172.20.18",
+        "ip_range": "54",
+        "username": "Administrator",
+        "password": "StandardE80"
+    },
+    {
+        "name": "Default2",
+        "base_ip": "185.21.2",
+        "ip_range": "85-84",
+        "username": "Administrator",
+        "password": "Password"
     }
 ]
