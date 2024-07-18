@@ -179,6 +179,19 @@ default_profile = {
     "password": "1"
 }
 
+def set_profile(profile):
+    ip_entry.delete(0, tk.END)
+    ip_entry.insert(0, profile["base_ip"])
+
+    range_entry.delete(0, tk.END)
+    range_entry.insert(0, profile["ip_range"])
+
+    username_entry.delete(0, tk.END)
+    username_entry.insert(0, profile["username"])
+
+    password_entry.delete(0, tk.END)
+    password_entry.insert(0, profile["password"])
+
 def load_custom_profiles():
     try:
         with open("custom_profiles.json", "r") as file:
@@ -193,9 +206,9 @@ def load_custom_profiles():
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 
-def save_custom_profiles(custom_profiles):
+def save_custom_profiles(profile):
     with open("custom_profiles.json", "w") as file:
-        json.dump(custom_profiles, file, indent=4)
+        json.dump(profile, file, indent=4)
 
 custom_profiles = load_custom_profiles()
 
@@ -203,8 +216,25 @@ profile_names = [profile["name"] for profile in custom_profiles]
 
 def save_custom_profile():
     custom_profile_name = profiles_combobox.get()
+    base_ip = ip_entry.get()
+    range_input = range_entry.get()
+    username = username_entry.get()
+    password = password_entry.get()
+
     if not custom_profile_name:
         messagebox.showerror("Error", "Profile name cannot be empty")
+        return
+    if not base_ip or base_ip == "e.g., 7.204.194":
+        messagebox.showerror("Input Error", "Please enter the base IP.")
+        return
+    if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
+        messagebox.showerror("Input Error", "Please enter the IP range.")
+        return
+    if not username:
+        messagebox.showerror("Input Error", "Please enter the username.")
+        return
+    if not password:
+        messagebox.showerror("Input Error", "Please enter the password.")
         return
     
     custom_profile = {
@@ -224,22 +254,8 @@ def save_custom_profile():
         custom_profiles.append(custom_profile)
     
     save_custom_profiles(custom_profiles)
-    profiles_combobox['values'] = default_profile["name"] + tuple(custom_profiles["name"])
+    # profiles_combobox['values'] = default_profile["name"] + tuple(custom_profiles["name"])
     messagebox.showinfo("Success", "Profile saved successfully")
-
-    
-def set_profile(profile):
-    ip_entry.delete(0, tk.END)
-    ip_entry.insert(0, profile["base_ip"])
-
-    range_entry.delete(0, tk.END)
-    range_entry.insert(0, profile["ip_range"])
-
-    username_entry.delete(0, tk.END)
-    username_entry.insert(0, profile["username"])
-
-    password_entry.delete(0, tk.END)
-    password_entry.insert(0, profile["password"])
 
 def load_profile_by_name(event=None):
     selected_profile_name = profiles_combobox.get()
@@ -266,7 +282,7 @@ tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0,
 tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
 
 # Create a listbox to display saved profiles
-profiles_combobox = ttk.Combobox(root, values= (profile["name"] for profile in custom_profiles), width=40)
+profiles_combobox = ttk.Combobox(root, values="Default", width=40)
 # profiles_combobox.insert(0, default_profile["name"])
 profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=1,padx=10, pady=10)

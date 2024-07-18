@@ -7,24 +7,17 @@
         "password": ""
     },
     {
-        "name": "CC1842",
-        "base_ip": "172.20.71",
-        "ip_range": "81-86",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1845",
-        "base_ip": "172.20.18",
-        "ip_range": "54",
-        "username": "Administrator",
-        "password": "StandardE80"
-    },
-    {
         "name": "Default2",
-        "base_ip": "185.21.2",
-        "ip_range": "85-84",
+        "base_ip": "e.g., 7.204.194",
+        "ip_range": "e.g., 10-25, 27, 29, 31-40",
         "username": "Administrator",
-        "password": "Password"
+        "password": ""
+    },
+    {
+        "name": "Default3",
+        "base_ip": "e.g., 7.204.194",
+        "ip_range": "e.g., 10-25, 27, 29, 31-40",
+        "username": "Administrator",
+        "password": ""
     }
 ]
