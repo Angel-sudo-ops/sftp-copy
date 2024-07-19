@@ -173,8 +173,8 @@ def save_custom_path():
 
 default_profile = {
     "name":     "Default",
-    "base_ip":  "192.168.0",
-    "ip_range": "10-20",
+    "base_ip":  "e.g., 7.204.194",#"192.168.0", 
+    "ip_range": "e.g., 10-25, 27, 29, 31-40",#"10-20",
     "username": "Administrator",
     "password": "1"
 }
@@ -211,8 +211,7 @@ def save_custom_profiles(profile):
         json.dump(profile, file, indent=4)
 
 custom_profiles = load_custom_profiles()
-
-profile_names = default_profile["name"],[profile["name"] for profile in custom_profiles]
+profile_names = [profile["name"] for profile in custom_profiles]
 
 def save_custom_profile():
     custom_profile_name = profiles_combobox.get()
@@ -254,17 +253,21 @@ def save_custom_profile():
         custom_profiles.append(custom_profile)
     
     save_custom_profiles(custom_profiles)
-    profiles_combobox['values'] = profile_names
+    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
     messagebox.showinfo("Success", "Profile saved successfully")
 
 def load_profile_by_name(event=None):
     selected_profile_name = profiles_combobox.get()
-    save_custom_profiles([default_profile]) #option to save default profile on file at first cycle
+    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
+    # save_custom_profiles([default_profile]) #option to save default profile on file at first cycle
     profiles = load_custom_profiles()
+    if selected_profile_name == "Default":
+        set_profile(default_profile)
     for profile in profiles:
         if profile["name"] == selected_profile_name:
             set_profile(profile)
             break
+
 
 ######################################################## Create UI ##################################################
 
@@ -272,7 +275,6 @@ root = tk.Tk()
 root.title("SFTP File Transfer")
 
 root.resizable(False, False)
-
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
@@ -284,12 +286,12 @@ tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0,
 tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
 
 # Create a listbox to display saved profiles
-profiles_combobox = ttk.Combobox(root, values=profile_names, width=40)
+profiles_combobox = ttk.Combobox(root, values=tuple(profile_names) + ("Default",), width=40)
 # profiles_combobox.insert(0, default_profile["name"])
 profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
 profiles_combobox.bind("<<ComboboxSelected>>", load_profile_by_name)
-profiles_combobox.bind("<ButtonPress>", validate_ip_format)
+# profiles_combobox.bind("<ButtonPress>", validate_ip_format)
 
 tk.Button(root, text="Save Profile", command=save_custom_profile).grid(row=0, column=2, padx=10, pady=10)
 
@@ -333,6 +335,8 @@ status_widget = tk.Text(root, height=10, width=80)
 status_font = font.Font(family="Consolas", size=10)
 status_widget.configure(font=status_font)
 status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
+
+
 
 root.mainloop()
 

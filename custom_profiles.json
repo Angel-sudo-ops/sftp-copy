@@ -1,9 +1,30 @@
 [
     {
-        "name": "Default",
-        "base_ip": "192.168.0",
-        "ip_range": "10-20",
+        "name": "CC1829",
+        "base_ip": "15.51.1",
+        "ip_range": "85-85",
         "username": "Administrator",
         "password": "1"
+    },
+    {
+        "name": "CC1824",
+        "base_ip": "15.1.1",
+        "ip_range": "15-52",
+        "username": "Administrator",
+        "password": "StandardE80"
+    },
+    {
+        "name": "CC1201",
+        "base_ip": "185.25.2",
+        "ip_range": "48-85",
+        "username": "Administrator",
+        "password": "Password"
+    },
+    {
+        "name": "CC1854",
+        "base_ip": "75.21.21",
+        "ip_range": "8-9,78-100,120-160",
+        "username": "Administrator",
+        "password": "admin"
     }
 ]
