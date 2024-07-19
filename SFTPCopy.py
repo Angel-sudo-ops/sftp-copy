@@ -176,8 +176,8 @@ def save_custom_path():
 
 default_profile = {
     "name":     "Default",
-    "base_ip":  "e.g., 7.204.194",#"192.168.0", 
-    "ip_range": "e.g., 10-25, 27, 29, 31-40",#"10-20",
+    "base_ip":  "192.168.0", 
+    "ip_range": "10-20,30-35",
     "username": "Administrator",
     "password": "1"
 }

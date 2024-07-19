@@ -1,15 +1,8 @@
 [
     {
-        "name": "1595",
-        "base_ip": "15.1",
-        "ip_range": "15-50",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC0080",
-        "base_ip": "1.2.1",
-        "ip_range": "1-15",
+        "name": "CC1585",
+        "base_ip": "1.2.2",
+        "ip_range": "10-20",
         "username": "Administrator",
         "password": "1"
     }
