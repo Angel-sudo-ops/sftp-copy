@@ -137,10 +137,13 @@ def validate_ip_format(event):
         valid = all(0 <= int(segment) <= 255 for segment in segments)
         if valid:
             ip_entry.config(bg="white")
+            return True
         else:
             ip_entry.config(bg="yellow")
+            return False     
     else:
         ip_entry.config(bg="yellow")
+        return False
 
 ###################################################### Custom paths ##########################################################
 default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
@@ -210,8 +213,7 @@ def save_custom_profiles(profile):
     with open("custom_profiles.json", "w") as file:
         json.dump(profile, file, indent=4)
 
-custom_profiles = load_custom_profiles()
-profile_names = [profile["name"] for profile in custom_profiles]
+
 
 def save_custom_profile():
     custom_profile_name = profiles_combobox.get()
@@ -223,7 +225,7 @@ def save_custom_profile():
     if not custom_profile_name:
         messagebox.showerror("Error", "Profile name cannot be empty")
         return
-    if not base_ip or base_ip == "e.g., 7.204.194":
+    if not base_ip or base_ip == "e.g., 7.204.194" or not validate_ip_format("<KeyRelease>"):
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
     if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
@@ -244,6 +246,9 @@ def save_custom_profile():
         "password": password_entry.get()
     }
 
+    custom_profiles = load_custom_profiles()
+    profile_names = [profile["name"] for profile in custom_profiles]
+
     # Check for duplicate profile names and update if found
     for existing_profile in custom_profiles:
         if existing_profile["name"] == custom_profile_name:
@@ -258,9 +263,9 @@ def save_custom_profile():
 
 def load_profile_by_name(event=None):
     selected_profile_name = profiles_combobox.get()
-    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
     # save_custom_profiles([default_profile]) #option to save default profile on file at first cycle
     profiles = load_custom_profiles()
+
     if selected_profile_name == "Default":
         set_profile(default_profile)
     for profile in profiles:
@@ -268,6 +273,10 @@ def load_profile_by_name(event=None):
             set_profile(profile)
             break
 
+def load_profile_names(event=None):
+    custom_profiles = load_custom_profiles()
+    profile_names = [profile["name"] for profile in custom_profiles]
+    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
 
 ######################################################## Create UI ##################################################
 
@@ -286,14 +295,16 @@ tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0,
 tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
 
 # Create a listbox to display saved profiles
-profiles_combobox = ttk.Combobox(root, values=tuple(profile_names) + ("Default",), width=40)
+profiles_combobox = ttk.Combobox(root, width=40)
 # profiles_combobox.insert(0, default_profile["name"])
 profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
 profiles_combobox.bind("<<ComboboxSelected>>", load_profile_by_name)
-# profiles_combobox.bind("<ButtonPress>", validate_ip_format)
+profiles_combobox.bind("<ButtonPress>", load_profile_names)
 
-tk.Button(root, text="Save Profile", command=save_custom_profile).grid(row=0, column=2, padx=10, pady=10)
+save = tk.Button(root, text="Save Profile", command=save_custom_profile)
+save.grid(row=0, column=2, padx=10, pady=10)
+# save.bind("<Button-1>", validate_ip_format)
 
 tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
 tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
