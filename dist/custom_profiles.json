@@ -1,0 +1,37 @@
+[
+    {
+        "name": "CC1842_CB25",
+        "base_ip": "172.20.71",
+        "ip_range": "81-85",
+        "username": "Administrator",
+        "password": "1"
+    },
+    {
+        "name": "CC1842_CB16",
+        "base_ip": "172.20.71",
+        "ip_range": "71-75",
+        "username": "Administrator",
+        "password": "1"
+    },
+    {
+        "name": "CC1842_ELE",
+        "base_ip": "172.20.71",
+        "ip_range": "51-54",
+        "username": "Administrator",
+        "password": "1"
+    },
+    {
+        "name": "CC1842_CB25_LGV81",
+        "base_ip": "172.20.71",
+        "ip_range": "81",
+        "username": "Administrator",
+        "password": "1"
+    },
+    {
+        "name": "CC1842_CB25_LGV82",
+        "base_ip": "172.20.71",
+        "ip_range": "82",
+        "username": "Administrator",
+        "password": "1"
+    }
+]

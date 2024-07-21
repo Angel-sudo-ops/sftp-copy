@@ -10,21 +10,7 @@ import sys
 # import pystray
 # from PIL import Image
 
-# Load custom paths from a file
-def load_custom_paths():
-    try:
-        with open("custom_paths.json", "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return []
-
-# Save custom paths to a file
-def save_custom_paths(paths):
-    with open("custom_paths.json", "w") as file:
-        json.dump(paths, file)
-
-# Initialize custom paths
-custom_paths = load_custom_paths()
+# Default paths for remote directory
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget):
     ssh = paramiko.SSHClient()
@@ -126,6 +112,7 @@ def choose_file_or_folder():
         if file_or_folder:
             file_path.set(file_or_folder)
 
+################################################## Placeholder #######################################################################
 def create_placeholder(entry, placeholder_text):
     entry.insert(0, placeholder_text)
     entry.bind("<FocusIn>", lambda event: on_focus_in(entry, placeholder_text))
@@ -141,25 +128,7 @@ def on_focus_out(entry, placeholder_text):
         entry.insert(0, placeholder_text)
         entry.config(fg='grey')
 
-def save_custom_path():
-    custom_path = remote_dir_entry.get()
-    if custom_path and custom_path not in remote_dir_entry['values']:
-        custom_paths.append(custom_path)
-        save_custom_paths(custom_paths)
-        remote_dir_entry['values'] = default_paths + tuple(custom_paths)
-        messagebox.showinfo("Saved", f"Path '{custom_path}' saved successfully.")
-
-# def create_systray_icon(icon_path):
-#     icon_image = Image.open(icon_path)
-#     menu = pystray.Menu(pystray.MenuItem("Quit", quit_app))
-#     icon = pystray.Icon("SFTPTransfer", icon_image, "SFTP Transfer", menu)
-#     icon.run()
-
-# def quit_app(icon, item):
-#     icon.stop()
-#     root.destroy()
-
-# Function to validate IP address format
+# ############################################### Function to validate IP address format ################################################
 def validate_ip_format(event):
     ip = ip_entry.get()
     pattern = re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}$")
@@ -168,13 +137,148 @@ def validate_ip_format(event):
         valid = all(0 <= int(segment) <= 255 for segment in segments)
         if valid:
             ip_entry.config(bg="white")
+            return True
         else:
             ip_entry.config(bg="yellow")
+            return False     
     else:
         ip_entry.config(bg="yellow")
+        return False
 
-# Default paths for remote directory
+###################################################### Custom paths ##########################################################
 default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
+
+# Load custom paths from a file
+def load_custom_paths():
+    try:
+        with open("custom_paths.json", "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
+
+# Save custom paths to a file
+def save_custom_paths(paths):
+    with open("custom_paths.json", "w") as file:
+        json.dump(paths, file)
+
+# Initialize custom paths
+custom_paths = load_custom_paths()
+
+def save_custom_path():
+    custom_path = remote_dir_entry.get()
+    if custom_path and custom_path not in remote_dir_entry['values']:
+        custom_paths.append(custom_path)
+        save_custom_paths(custom_paths)
+        remote_dir_entry['values'] = default_paths + tuple(custom_paths)
+        messagebox.showinfo("Saved", f"Path '{custom_path}' saved successfully.")
+
+####################################################### Profiles ###############################################################
+
+default_profile = {
+    "name":     "Default",
+    "base_ip":  "192.168.0", 
+    "ip_range": "10-20,30-35",
+    "username": "Administrator",
+    "password": "1"
+}
+
+def set_profile(profile):
+    ip_entry.delete(0, tk.END)
+    ip_entry.insert(0, profile["base_ip"])
+
+    range_entry.delete(0, tk.END)
+    range_entry.insert(0, profile["ip_range"])
+
+    username_entry.delete(0, tk.END)
+    username_entry.insert(0, profile["username"])
+
+    password_entry.delete(0, tk.END)
+    password_entry.insert(0, profile["password"])
+
+def load_custom_profiles():
+    try:
+        with open("custom_profiles.json", "r") as file:
+            data = json.load(file)
+             # Check if the loaded data is a dict with "profiles" key or a list
+            if isinstance(data, dict) and "profiles" in data:
+                return data["profiles"]
+            elif isinstance(data, list):
+                return data
+            else:
+                raise ValueError("Unexpected JSON structure")
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def save_custom_profiles(profile):
+    with open("custom_profiles.json", "w") as file:
+        json.dump(profile, file, indent=4)
+
+
+
+def save_custom_profile():
+    custom_profile_name = profiles_combobox.get()
+    base_ip = ip_entry.get()
+    range_input = range_entry.get()
+    username = username_entry.get()
+    password = password_entry.get()
+
+    if not custom_profile_name:
+        messagebox.showerror("Error", "Profile name cannot be empty")
+        return
+    if not base_ip or base_ip == "e.g., 7.204.194" or not validate_ip_format("<KeyRelease>"):
+        messagebox.showerror("Input Error", "Please enter the base IP.")
+        return
+    if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
+        messagebox.showerror("Input Error", "Please enter the IP range.")
+        return
+    if not username:
+        messagebox.showerror("Input Error", "Please enter the username.")
+        return
+    if not password:
+        messagebox.showerror("Input Error", "Please enter the password.")
+        return
+    
+    custom_profile = {
+        "name":     custom_profile_name,
+        "base_ip":  ip_entry.get(),
+        "ip_range": range_entry.get(),
+        "username": username_entry.get(),
+        "password": password_entry.get()
+    }
+
+    custom_profiles = load_custom_profiles()
+    profile_names = [profile["name"] for profile in custom_profiles]
+
+    # Check for duplicate profile names and update if found
+    for existing_profile in custom_profiles:
+        if existing_profile["name"] == custom_profile_name:
+            existing_profile.update(custom_profile)
+            break
+    else:
+        custom_profiles.append(custom_profile)
+    
+    save_custom_profiles(custom_profiles)
+    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
+    messagebox.showinfo("Success", "Profile saved successfully")
+
+def load_profile_by_name(event=None):
+    selected_profile_name = profiles_combobox.get()
+    # save_custom_profiles([default_profile]) #option to save default profile on file at first cycle
+    profiles = load_custom_profiles()
+
+    if selected_profile_name == "Default":
+        set_profile(default_profile)
+    for profile in profiles:
+        if profile["name"] == selected_profile_name:
+            set_profile(profile)
+            break
+
+def load_profile_names(event=None):
+    custom_profiles = load_custom_profiles()
+    profile_names = [profile["name"] for profile in custom_profiles]
+    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
+
+######################################################## Create UI ##################################################
 
 root = tk.Tk()
 root.title("SFTP File Transfer")
@@ -186,14 +290,21 @@ file_path = tk.StringVar()
 # Variable to store the user's choice (file or folder)
 selection = tk.StringVar(value='file')
 
-# Set the icon for the application
-# icon_path = r"D:\Documents\PythonPrograms\transfer.ico"  # Replace with the path to your .ico file
-#root.iconbitmap(icon_path)
-
-
 # Radio buttons for selecting file or folder
-tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0, column=1, padx=5, pady=10, sticky='w')
-tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=1, padx=50, pady=10, sticky='w')
+tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0, column=0, padx=10, pady=10, sticky='w')
+tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
+
+# Create a listbox to display saved profiles
+profiles_combobox = ttk.Combobox(root, width=40)
+# profiles_combobox.insert(0, default_profile["name"])
+profiles_combobox.set("Select a profile")
+profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
+profiles_combobox.bind("<<ComboboxSelected>>", load_profile_by_name)
+profiles_combobox.bind("<ButtonPress>", load_profile_names)
+
+save = tk.Button(root, text="Save Profile", command=save_custom_profile)
+save.grid(row=0, column=2, padx=10, pady=10)
+# save.bind("<Button-1>", validate_ip_format)
 
 tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
 tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
@@ -204,7 +315,6 @@ ip_entry = tk.Entry(root, width=50, fg="grey")
 create_placeholder(ip_entry, "e.g., 7.204.194")
 ip_entry.grid(row=2, column=1, padx=10, pady=10)
 ip_entry.bind("<KeyRelease>", validate_ip_format)
-
 
 tk.Label(root, text="Enter IP range:").grid(row=3, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50, fg="grey")
@@ -237,13 +347,14 @@ status_font = font.Font(family="Consolas", size=10)
 status_widget.configure(font=status_font)
 status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
 
-# # Create a separate thread for the system tray icon
-# icon_thread = threading.Thread(target=create_systray_icon, args=(icon_path,))
-# icon_thread.daemon = True
-# icon_thread.start()
+
 
 root.mainloop()
 
 ## not showing connection timeout fix that
 ## add profiles to save data just like routes
 
+## fix data still gray even after placeholder is not the same
+##  cannot sned several files at the same time
+
+## create tool for layout zipper

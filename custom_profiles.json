@@ -1,0 +1,9 @@
+[
+    {
+        "name": "CC1585",
+        "base_ip": "1.2.2",
+        "ip_range": "10-20",
+        "username": "Administrator",
+        "password": "1"
+    }
+]
