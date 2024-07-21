@@ -354,3 +354,7 @@ root.mainloop()
 ## not showing connection timeout fix that
 ## add profiles to save data just like routes
 
+## fix data still gray even after placeholder is not the same
+##  cannot sned several files at the same time
+
+## create tool for layout zipper
