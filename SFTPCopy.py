@@ -117,7 +117,8 @@ def create_placeholder(entry, placeholder_text):
     entry.insert(0, placeholder_text)
     entry.bind("<FocusIn>", lambda event: on_focus_in(entry, placeholder_text))
     entry.bind("<FocusOut>", lambda event: on_focus_out(entry, placeholder_text))
-
+    entry.config(fg="grey")
+   
 def on_focus_in(entry, placeholder_text):
     if entry.get() == placeholder_text:
         entry.delete(0, tk.END)
@@ -127,6 +128,7 @@ def on_focus_out(entry, placeholder_text):
     if not entry.get():
         entry.insert(0, placeholder_text)
         entry.config(fg='grey')
+
 
 # ############################################### Function to validate IP address format ################################################
 def validate_ip_format(event):
@@ -214,7 +216,6 @@ def save_custom_profiles(profile):
         json.dump(profile, file, indent=4)
 
 
-
 def save_custom_profile():
     custom_profile_name = profiles_combobox.get()
     base_ip = ip_entry.get()
@@ -268,10 +269,11 @@ def load_profile_by_name(event=None):
 
     if selected_profile_name == "Default":
         set_profile(default_profile)
-    for profile in profiles:
-        if profile["name"] == selected_profile_name:
-            set_profile(profile)
-            break
+    else:
+        for profile in profiles:
+            if profile["name"] == selected_profile_name:
+                set_profile(profile)
+                break
 
 def load_profile_names(event=None):
     custom_profiles = load_custom_profiles()
@@ -311,15 +313,17 @@ tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, 
 tk.Entry(root, textvariable=file_path, width=50).grid(row=1, column=1, padx=10, pady=10)
 
 tk.Label(root, text="Enter base IP (first three parts):").grid(row=2, column=0, padx=10, pady=10)
-ip_entry = tk.Entry(root, width=50, fg="grey")
-create_placeholder(ip_entry, "e.g., 7.204.194")
+ip_entry = tk.Entry(root, width=50)
 ip_entry.grid(row=2, column=1, padx=10, pady=10)
+create_placeholder(ip_entry, "e.g., 7.204.194")
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
+
 tk.Label(root, text="Enter IP range:").grid(row=3, column=0, padx=10, pady=10)
-range_entry = tk.Entry(root, width=50, fg="grey")
+range_entry = tk.Entry(root, width=50)
 range_entry.grid(row=3, column=1, padx=10, pady=10)
 create_placeholder(range_entry, "e.g., 10-25, 27, 29, 31-40")
+
 
 tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
 remote_dir_entry = ttk.Combobox(root, values=default_paths + tuple(custom_paths), width=47)
@@ -355,6 +359,6 @@ root.mainloop()
 ## add profiles to save data just like routes
 
 ## fix data still gray even after placeholder is not the same
-##  cannot sned several files at the same time
+##  cannot send several files at the same time
 
 ## create tool for layout zipper
