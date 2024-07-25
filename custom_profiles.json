@@ -12,5 +12,12 @@
         "ip_range": "10-20, 30-35",
         "username": "Administrator",
         "password": "StandardE80"
+    },
+    {
+        "name": "CC_Test2",
+        "base_ip": "54.1.1",
+        "ip_range": "10-50",
+        "username": "Administrator",
+        "password": "1"
     }
 ]

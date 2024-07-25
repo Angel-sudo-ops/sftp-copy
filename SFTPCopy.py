@@ -243,8 +243,8 @@ def save_custom_profile():
     username = username_entry.get()
     password = password_entry.get()
 
-    if not custom_profile_name:
-        messagebox.showerror("Error", "Profile name cannot be empty")
+    if not custom_profile_name or custom_profile_name == "Select a profile":
+        messagebox.showerror("Error", "Please enter a profile name")
         return
     if not base_ip or base_ip == "e.g., 7.204.194" or not validate_ip_format("<KeyRelease>"):
         messagebox.showerror("Input Error", "Please enter the base IP.")
@@ -370,8 +370,8 @@ tk.Button(root, text="Start Transfer", command=lambda: start_transfer(status_wid
 # status_widget = tk.Text(root, height=10, width=80)
 status_widget = scrolledtext.ScrolledText(root, 
                                           undo=True,
-                                          height=15, 
-                                          width=80
+                                          height=15,
+                                          width=70
                                           )
 status_font = font.Font(family="Consolas", size=11)
 status_widget.configure(font=status_font)
