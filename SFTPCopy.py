@@ -11,7 +11,7 @@ import sys
 # import pystray
 # from PIL import Image
 
-# Default paths for remote directory
+###########################"""""############ SFTP Transfer ###############################################
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget):
     ssh = paramiko.SSHClient()
@@ -150,7 +150,7 @@ def combined_combobox_selected(event):
     on_combobox_change(event)
     load_profile_by_name(event)
 
-# ############################################### Function to validate IP address format ################################################
+# ############################################### Validate IP address format ################################################
 def validate_ip_format(event):
     ip = ip_entry.get()
     pattern = re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}$")
@@ -300,6 +300,13 @@ def load_profile_names(event=None):
     profile_names = [profile["name"] for profile in custom_profiles]
     profiles_combobox['values'] = tuple(profile_names) + ("Default",)
 
+####################################################################################################################
+def on_enter(e):
+    e.widget['background'] = 'LightSkyBlue1'
+
+def on_leave(e):
+    e.widget['background'] = 'ghost white'
+
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
@@ -365,7 +372,17 @@ tk.Label(root, text="Enter password:").grid(row=6, column=0, padx=10, pady=10)
 password_entry = tk.Entry(root, width=50, show="*")
 password_entry.grid(row=6, column=1, padx=10, pady=10)
 
-tk.Button(root, text="Start Transfer", command=lambda: start_transfer(status_widget)).grid(row=7, column=0, columnspan=3, pady=20)
+transfer = tk.Button(root, text="Start Transfer", 
+                     borderwidth=0,
+                     highlightthickness=0,
+                     background='white',
+                     command=lambda: start_transfer(status_widget)
+                     )
+transfer.grid(row=7, column=0, columnspan=3, pady=20)
+transfer.configure(font=('Lucida Sans', 12))
+transfer.bind("<Enter>", on_enter)
+transfer.bind("<Leave>", on_leave)
+transfer.bind("<Button-1>", on_enter)
 
 # status_widget = tk.Text(root, height=10, width=80)
 status_widget = scrolledtext.ScrolledText(root, 
