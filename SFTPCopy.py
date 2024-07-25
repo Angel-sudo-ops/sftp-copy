@@ -381,7 +381,7 @@ status_widget = scrolledtext.ScrolledText(root,
 status_font = font.Font(family="Consolas", size=11)
 status_widget.configure(font=status_font)
 status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
-
+status_widget.bind("<Key>", lambda e: "break")
 
 root.mainloop()
 
