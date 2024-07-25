@@ -33,5 +33,19 @@
         "ip_range": "82",
         "username": "Administrator",
         "password": "1"
+    },
+    {
+        "name": "cctest",
+        "base_ip": "4.2.21",
+        "ip_range": "1-50",
+        "username": "Administrator",
+        "password": "1"
+    },
+    {
+        "name": "CC1930_PepsicoSC",
+        "base_ip": "7.219.2",
+        "ip_range": "53",
+        "username": "Administrator",
+        "password": "1"
     }
 ]
