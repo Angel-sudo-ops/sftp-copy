@@ -21,7 +21,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
         status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
         # status_widget.config(state='disabled')
         status_widget.yview(tk.END)
-        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10)
+        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
