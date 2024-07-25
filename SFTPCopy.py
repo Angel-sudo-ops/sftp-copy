@@ -113,12 +113,18 @@ def choose_file_or_folder():
             file_path.set(file_or_folder)
 
 ################################################## Placeholder #######################################################################
+# Dictionary to store entry widgets and their placeholder texts
+placeholders = {}
+entries = []
+
 def create_placeholder(entry, placeholder_text):
     entry.insert(0, placeholder_text)
     entry.bind("<FocusIn>", lambda event: on_focus_in(entry, placeholder_text))
     entry.bind("<FocusOut>", lambda event: on_focus_out(entry, placeholder_text))
     entry.config(fg="grey")
-   
+    placeholders[entry] = placeholder_text
+    entries.append(entry)
+
 def on_focus_in(entry, placeholder_text):
     if entry.get() == placeholder_text:
         entry.delete(0, tk.END)
@@ -129,6 +135,20 @@ def on_focus_out(entry, placeholder_text):
         entry.insert(0, placeholder_text)
         entry.config(fg='grey')
 
+def disable_placeholder(entry):
+    entry.unbind("<FocusIn>")
+    entry.unbind("<FocusOut>")
+    if entry.get() == placeholders[entry]:
+        entry.delete(0, tk.END)
+    entry.config(fg='black')
+
+def on_combobox_change(event):
+    for entry in entries:
+        disable_placeholder(entry)
+
+def combined_combobox_selected(event):
+    on_combobox_change(event)
+    load_profile_by_name(event)
 
 # ############################################### Function to validate IP address format ################################################
 def validate_ip_format(event):
@@ -301,14 +321,15 @@ profiles_combobox = ttk.Combobox(root, width=40)
 # profiles_combobox.insert(0, default_profile["name"])
 profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
-profiles_combobox.bind("<<ComboboxSelected>>", load_profile_by_name)
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
+profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 
 save = tk.Button(root, text="Save Profile", command=save_custom_profile)
 save.grid(row=0, column=2, padx=10, pady=10)
 # save.bind("<Button-1>", validate_ip_format)
 
 tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
+
 tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
 tk.Entry(root, textvariable=file_path, width=50).grid(row=1, column=1, padx=10, pady=10)
 
