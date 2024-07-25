@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import font, ttk
+import tkinter.scrolledtext as scrolledtext
 import threading
 import json
 import re
@@ -18,12 +19,14 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
 
     try:
         status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
+        # status_widget.config(state='disabled')
         status_widget.yview(tk.END)
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10)
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
             sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
+            # status_widget.config(state='normal')
             status_widget.insert(tk.END, f"Successfully transferred {local_path} to {host}:{remote_path}\n")
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -38,12 +41,14 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     sftp.put(local_file, remote_file)
+                    # status_widget.config(state='normal')
                     status_widget.insert(tk.END, f"Successfully transferred {local_file} to {host}:{remote_file}\n")
-
+        # status_widget.config(state='disabled')
         sftp.close()
         ssh.close()
     except Exception as e:
         status_widget.insert(tk.END, f"Failed to transfer {local_path} to {host}:{remote_path}. Error: {e}\n")
+        # status_widget.config(state='disabled')
     finally:
         status_widget.yview(tk.END)
 
@@ -313,7 +318,7 @@ file_path = tk.StringVar()
 selection = tk.StringVar(value='file')
 
 # Radio buttons for selecting file or folder
-tk.Radiobutton(root, text="Files", variable=selection, value='file').grid(row=0, column=0, padx=10, pady=10, sticky='w')
+tk.Radiobutton(root, text="File", variable=selection, value='file').grid(row=0, column=0, padx=10, pady=10, sticky='w')
 tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
 
 # Create a listbox to display saved profiles
@@ -367,11 +372,15 @@ password_entry.grid(row=6, column=1, padx=10, pady=10)
 
 tk.Button(root, text="Start Transfer", command=lambda: start_transfer(status_widget)).grid(row=7, column=0, columnspan=3, pady=20)
 
-status_widget = tk.Text(root, height=10, width=80)
-status_font = font.Font(family="Consolas", size=10)
+# status_widget = tk.Text(root, height=10, width=80)
+status_widget = scrolledtext.ScrolledText(root, 
+                                          undo=True,
+                                          height=15, 
+                                          width=80
+                                          )
+status_font = font.Font(family="Consolas", size=11)
 status_widget.configure(font=status_font)
 status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
-
 
 
 root.mainloop()
