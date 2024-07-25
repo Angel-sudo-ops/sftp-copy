@@ -19,15 +19,13 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
 
     try:
         status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
-        # status_widget.config(state='disabled')
         status_widget.yview(tk.END)
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
             sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
-            # status_widget.config(state='normal')
-            status_widget.insert(tk.END, f"Successfully transferred {local_path} to {host}:{remote_path}\n")
+            status_widget.insert(tk.END, f"Successfully transferred {local_path} to\n\\\{host}{remote_path}\n")
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -41,14 +39,11 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     sftp.put(local_file, remote_file)
-                    # status_widget.config(state='normal')
-                    status_widget.insert(tk.END, f"Successfully transferred {local_file} to {host}:{remote_file}\n")
-        # status_widget.config(state='disabled')
+                    status_widget.insert(tk.END, f"Successfully transferred {local_file} to\n\\\{host}{remote_file}\n")
         sftp.close()
         ssh.close()
     except Exception as e:
-        status_widget.insert(tk.END, f"Failed to transfer {local_path} to {host}:{remote_path}. Error: {e}\n")
-        # status_widget.config(state='disabled')
+        status_widget.insert(tk.END, f"Failed to transfer {local_path} to\n\\\{host}{remote_path}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
 
