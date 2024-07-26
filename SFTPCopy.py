@@ -79,10 +79,10 @@ def start_transfer(status_widget):
     if not local_path:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
         return
-    if not base_ip or base_ip == "e.g., 7.204.194":
+    if not base_ip or base_ip == placeholders[ip_entry]:
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
+    if not range_input or range_input == placeholders[range_entry]:
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not remote_dir:
@@ -203,10 +203,10 @@ def save_custom_path():
 
 default_profile = {
     "name":     "Default",
-    "base_ip":  "192.168.0", 
-    "ip_range": "10-20,30-35",
+    "base_ip":  "192.168.80.10", 
+    "ip_range": "1-15,20-35",
     "username": "Administrator",
-    "password": "1"
+    "password": "***********"
 }
 
 def set_profile(profile):
@@ -251,10 +251,10 @@ def save_custom_profile():
     if not custom_profile_name or custom_profile_name == "Select a profile":
         messagebox.showerror("Error", "Please enter a profile name")
         return
-    if not base_ip or base_ip == "e.g., 7.204.194" or not validate_ip_format("<KeyRelease>"):
+    if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
+    if not range_input or range_input == placeholders[range_entry]:
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not username:
@@ -352,10 +352,10 @@ create_placeholder(ip_entry, "e.g., 7.204.194.10")
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
 
-tk.Label(root, text="Enter IP range:").grid(row=3, column=0, padx=10, pady=10)
+tk.Label(root, text="Enter LGV range:").grid(row=3, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50)
 range_entry.grid(row=3, column=1, padx=10, pady=10)
-create_placeholder(range_entry, "e.g., 10-25, 27, 29, 31-40")
+create_placeholder(range_entry, "e.g., 1-9,11-25,27,29,31-40")
 
 
 tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
