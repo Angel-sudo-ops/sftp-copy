@@ -26,5 +26,19 @@
         "ip_range": "1-9,11-15,21-27",
         "username": "Administrator",
         "password": "1"
+    },
+    {
+        "name": "CC1930_PepsicoSC_Atlanta",
+        "base_ip": "7.219.2.10",
+        "ip_range": "1-47",
+        "username": "Administrator",
+        "password": "1"
+    },
+    {
+        "name": "CC1930_PepsicoSC_Atlanta_Boot",
+        "base_ip": "7.219.2.10",
+        "ip_range": "34",
+        "username": "Administrator",
+        "password": "1"
     }
 ]
