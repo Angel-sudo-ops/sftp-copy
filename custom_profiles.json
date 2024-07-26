@@ -19,5 +19,12 @@
         "ip_range": "10-50",
         "username": "Administrator",
         "password": "1"
+    },
+    {
+        "name": "CC_Test_RootIP",
+        "base_ip": "172.20.51.10",
+        "ip_range": "1-9,11-15,21-27",
+        "username": "Administrator",
+        "password": "1"
     }
 ]

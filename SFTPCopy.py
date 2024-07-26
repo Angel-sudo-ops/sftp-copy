@@ -11,7 +11,7 @@ import sys
 # import pystray
 # from PIL import Image
 
-###########################"""""############ SFTP Transfer ###############################################
+############################################### SFTP Transfer ###############################################
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget):
     ssh = paramiko.SSHClient()
@@ -25,7 +25,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
 
         if os.path.isfile(local_path):
             sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
-            status_widget.insert(tk.END, f"Successfully transferred {local_path} to\n\\\{host}{remote_path}\n")
+            status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\\{host}{remote_path}\n")
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -39,16 +39,19 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     sftp.put(local_file, remote_file)
-                    status_widget.insert(tk.END, f"Successfully transferred {local_file} to\n\\\{host}{remote_file}\n")
+                    status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\\{host}{remote_file}\n")
         sftp.close()
         ssh.close()
     except Exception as e:
-        status_widget.insert(tk.END, f"Failed to transfer {local_path} to\n\\\{host}{remote_path}. Error: {e}\n")
+        status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\\{host}{remote_path}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
 
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
+    base_ip_parts = base_ip.rsplit('.', 1)
+    base_ip_root = base_ip_parts[0]
+    base_ip_last_digit = int(base_ip_parts[1])
 
     if not range_input:
         return None
@@ -57,11 +60,12 @@ def parse_ip_ranges(base_ip, range_input):
         for r in ranges:
             if '-' in r:
                 start, end = map(int, r.split('-'))
-                ip_list.extend([f"{base_ip}.{i}" for i in range(start, end + 1)])
+                ip_list.extend([f"{base_ip_root}.{i + base_ip_last_digit}" for i in range(start, end + 1)])
             else:
-                ip_list.append(f"{base_ip}.{r.strip()}")
-
+                ip_list.append(f"{base_ip_root}.{int(r.strip()) + base_ip_last_digit}")
+    # print(ip_list)
     return ip_list
+
 
 def start_transfer(status_widget):
     local_path = file_path.get()
@@ -75,10 +79,10 @@ def start_transfer(status_widget):
     if not local_path:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
         return
-    if not base_ip or base_ip == "e.g., 7.204.194":
+    if not base_ip or base_ip == placeholders[ip_entry]:
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
+    if not range_input or range_input == placeholders[range_entry]:
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not remote_dir:
@@ -153,7 +157,7 @@ def combined_combobox_selected(event):
 # ############################################### Validate IP address format ################################################
 def validate_ip_format(event):
     ip = ip_entry.get()
-    pattern = re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}$")
+    pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')  # Match format 'xxx.xxx.xxx.xxx'
     if pattern.match(ip):
         segments = ip.split('.')
         valid = all(0 <= int(segment) <= 255 for segment in segments)
@@ -168,7 +172,8 @@ def validate_ip_format(event):
         return False
 
 ###################################################### Custom paths ##########################################################
-default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
+default_paths = ("\Config", "\TwinCAT\Boot", "\Layout")
+# default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
 
 # Load custom paths from a file
 def load_custom_paths():
@@ -198,10 +203,10 @@ def save_custom_path():
 
 default_profile = {
     "name":     "Default",
-    "base_ip":  "192.168.0", 
-    "ip_range": "10-20,30-35",
+    "base_ip":  "192.168.80.10", 
+    "ip_range": "1-15,20-35",
     "username": "Administrator",
-    "password": "1"
+    "password": "***********"
 }
 
 def set_profile(profile):
@@ -246,10 +251,10 @@ def save_custom_profile():
     if not custom_profile_name or custom_profile_name == "Select a profile":
         messagebox.showerror("Error", "Please enter a profile name")
         return
-    if not base_ip or base_ip == "e.g., 7.204.194" or not validate_ip_format("<KeyRelease>"):
+    if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input or range_input == "e.g., 10-25, 27, 29, 31-40":
+    if not range_input or range_input == placeholders[range_entry]:
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not username:
@@ -340,17 +345,17 @@ tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column
 tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
 tk.Entry(root, textvariable=file_path, width=50).grid(row=1, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Enter base IP (first three parts):").grid(row=2, column=0, padx=10, pady=10)
+tk.Label(root, text="Enter Root IP:").grid(row=2, column=0, padx=10, pady=10)
 ip_entry = tk.Entry(root, width=50)
 ip_entry.grid(row=2, column=1, padx=10, pady=10)
-create_placeholder(ip_entry, "e.g., 7.204.194")
+create_placeholder(ip_entry, "e.g., 7.204.194.10")
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
 
-tk.Label(root, text="Enter IP range:").grid(row=3, column=0, padx=10, pady=10)
+tk.Label(root, text="Enter LGV range:").grid(row=3, column=0, padx=10, pady=10)
 range_entry = tk.Entry(root, width=50)
 range_entry.grid(row=3, column=1, padx=10, pady=10)
-create_placeholder(range_entry, "e.g., 10-25, 27, 29, 31-40")
+create_placeholder(range_entry, "e.g., 1-9,11-25,27,29,31-40")
 
 
 tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
