@@ -1,50 +1,8 @@
 [
     {
-        "name": "CC1842_CB25",
-        "base_ip": "172.20.71",
-        "ip_range": "81-85",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1842_CB16",
-        "base_ip": "172.20.71",
-        "ip_range": "71-75",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1842_ELE",
-        "base_ip": "172.20.71",
-        "ip_range": "51-54",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1842_CB25_LGV81",
-        "base_ip": "172.20.71",
-        "ip_range": "81",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1842_CB25_LGV82",
-        "base_ip": "172.20.71",
-        "ip_range": "82",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "cctest",
-        "base_ip": "4.2.21",
-        "ip_range": "1-50",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1930_PepsicoSC",
-        "base_ip": "7.219.2",
-        "ip_range": "53",
+        "name": "CC1930_PepsicoSC_Atlanta",
+        "base_ip": "7.219.2.10",
+        "ip_range": "1-47",
         "username": "Administrator",
         "password": "1"
     }
