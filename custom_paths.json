@@ -1,1 +1,1 @@
-["/Hard Disk/Backup/export_to_agv/ini"]
+{"FTP": ["/Hard Disk/Backup/ini", "/Hard Disk/Backup/laserview/ini"], "SFTP": ["\\Config\\ini", "\\Config\\Laserview"]}

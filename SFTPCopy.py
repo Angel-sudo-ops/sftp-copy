@@ -199,7 +199,7 @@ def start_transfer(status_widget):
             threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
         elif transfer_type_sel.get() == 'FTP':
             # threading.Thread(target=ftp_transfer, args=(host, 'anonymous', 'anonymous@example.com', local_path, remote_dir, status_widget)).start()
-            threading.Thread(target=ftp_transfer_anonymous, args=(host, 'anonymous', 'anonymous@example.com', local_path, remote_dir, status_widget)).start()
+            threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
 
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
@@ -294,48 +294,62 @@ def set_default_login():
 
 ###################################################### Custom paths ##########################################################
 # Global variable to store default paths
-default_paths = ()
+default_paths = []
+custom_paths = []
 
 def set_paths():
-    global default_paths
+    global default_paths, custom_paths
     default_paths_sftp = ("\Config", "\TwinCAT\Boot", "\Layout")
     default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/Backup/export_to_agv", "/Hard Disk/TwinCAT/Boot")
-    if transfer_type_sel.get() == 'SFTP':
+    transfer_type = transfer_type_sel.get()
+
+    # Load custom paths based on the transfer type
+    custom_paths = load_custom_paths(transfer_type)
+
+    if transfer_type == 'SFTP':
         default_paths = default_paths_sftp
         anonymous_check.set(0)
         anonymous.config(state='disabled')
         set_default_login()
-        # username_entry.delete(0, tk.END)
-        # username_entry.insert(0, "Administrator")
-        # username_entry.config(state='normal')
-    elif transfer_type_sel.get() == 'FTP':
+
+    elif transfer_type == 'FTP':
         default_paths = default_paths_ftp
         anonymous.config(state='normal')
-          
 
     # Update the Combobox values
     remote_dir_entry['values'] = default_paths + tuple(custom_paths)
+    
     # Optionally, reset the displayed value to the first default path
     if default_paths:
         remote_dir_entry.set(default_paths[0])
 
     print(f"Default paths set to: {default_paths}")
 
+
 # Load custom paths from a file
-def load_custom_paths():
+def load_custom_paths(transfer_type):
     try:
         with open("custom_paths.json", "r") as file:
-            return json.load(file)
+            all_paths = json.load(file)
+            return all_paths.get(transfer_type, [])
     except FileNotFoundError:
         return []
 
 # Save custom paths to a file
-def save_custom_paths(paths):
+def save_custom_paths(paths, transfer_type):
+    try:
+        with open("custom_paths.json", "r") as file:
+            all_paths = json.load(file)
+    except FileNotFoundError:
+        all_paths = {}
+
+    all_paths[transfer_type] = paths
+
     with open("custom_paths.json", "w") as file:
-        json.dump(paths, file)
+        json.dump(all_paths, file)
 
 # Initialize custom paths
-custom_paths = load_custom_paths()
+# custom_paths = load_custom_paths()
 
 def save_custom_path():
     custom_path = remote_dir_entry.get()
@@ -344,6 +358,21 @@ def save_custom_path():
         save_custom_paths(custom_paths)
         remote_dir_entry['values'] = default_paths + tuple(custom_paths)
         messagebox.showinfo("Saved", f"Path '{custom_path}' saved successfully.")
+
+def add_path(new_path):
+    transfer_type = transfer_type_sel.get()
+    paths = load_custom_paths(transfer_type)
+    if new_path not in paths:
+        paths.append(new_path)
+        save_custom_paths(paths, transfer_type)
+        messagebox.showinfo("Saved", f"Path '{new_path}' saved successfully.")
+
+def on_add_path():
+    new_path = remote_dir_entry.get()
+    if new_path:
+        add_path(new_path)
+        set_paths()  # Update the paths to reflect the new addition
+        # remote_dir_entry.delete(0, tk.END)  # Clear the entry widget
 
 ####################################################### Profiles ###############################################################
 
@@ -512,13 +541,18 @@ create_placeholder(range_entry, "e.g., 1-9,11-25,27,29,31-40")
 
 
 tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
-remote_dir_entry = ttk.Combobox(root, values=default_paths + tuple(custom_paths), width=47)
-if default_paths:
-    remote_dir_entry.insert(0, default_paths[0])
+remote_dir_entry = ttk.Combobox(root, 
+                                # values=default_paths + tuple(custom_paths), 
+                                width=47)
+# if default_paths:
+#     remote_dir_entry.insert(0, default_paths[0])
 remote_dir_entry.grid(row=4, column=1, padx=10, pady=10)
 
 # Add a button to save a custom path
-tk.Button(root, text="Save Path", command=save_custom_path).grid(row=4, column=2, padx=5, pady=10)
+save_path = tk.Button(root, text="Save Path", 
+        #   command=save_custom_path)
+        command=on_add_path)
+save_path.grid(row=4, column=2, padx=5, pady=10)
 
 # create_placeholder(remote_dir_entry, "e.g., /remote/config/")
 
