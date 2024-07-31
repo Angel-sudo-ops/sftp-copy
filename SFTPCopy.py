@@ -128,6 +128,7 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
         status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
+        
 ####################################################### Get IPs #############################################################
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
@@ -507,7 +508,7 @@ def on_leave(e):
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
-root.title("File Transfer")
+root.title("Super File Transfer")
 
 root.resizable(False, False)
 
