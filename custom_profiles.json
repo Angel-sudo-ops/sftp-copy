@@ -3,14 +3,18 @@
         "name": "CC1527_GP_Portland_TC2",
         "base_ip": "172.20.2.50",
         "ip_range": "1-15,30-42",
-        "username": "Administrator",
-        "password": "1"
+        "username": "anonymous",
+        "password": "anonymous@example.com",
+        "remote_dir": "/Hard Disk/Backup/",
+        "transfer_type": "FTP"
     },
     {
         "name": "CC1527_GP_Portland_TC3",
         "base_ip": "172.20.2.50",
         "ip_range": "16-18",
         "username": "Administrator",
-        "password": "1"
+        "password": "1",
+        "remote_dir": "\\Config",
+        "transfer_type": "SFTP"
     }
 ]

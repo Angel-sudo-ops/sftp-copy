@@ -249,6 +249,7 @@ def on_combobox_change(event):
 def combined_combobox_selected(event):
     on_combobox_change(event)
     load_profile_by_name(event)
+    set_paths()
 
 # ############################################### Validate IP address format ################################################
 def validate_ip_format(event):
@@ -351,6 +352,7 @@ def save_custom_paths(paths, transfer_type):
 # Initialize custom paths
 # custom_paths = load_custom_paths()
 
+# not used
 def save_custom_path():
     custom_path = remote_dir_entry.get()
     if custom_path and custom_path not in remote_dir_entry['values']:
@@ -391,11 +393,16 @@ def set_profile(profile):
     range_entry.delete(0, tk.END)
     range_entry.insert(0, profile["ip_range"])
 
+    remote_dir_entry.delete(0, tk.END)
+    remote_dir_entry.insert(0, profile["remote_dir"])
+
     username_entry.delete(0, tk.END)
     username_entry.insert(0, profile["username"])
 
     password_entry.delete(0, tk.END)
     password_entry.insert(0, profile["password"])
+
+    transfer_type_sel.set(profile["transfer_type"])
 
 def load_custom_profiles():
     try:
@@ -420,8 +427,10 @@ def save_custom_profile():
     custom_profile_name = profiles_combobox.get()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
+    dir_entry = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
+    transfer_mode = transfer_type.get()
 
     if not custom_profile_name or custom_profile_name == "Select a profile":
         messagebox.showerror("Error", "Please enter a profile name")
@@ -432,19 +441,27 @@ def save_custom_profile():
     if not range_input or range_input == placeholders[range_entry]:
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
+    if not dir_entry:
+        messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
     if not username:
         messagebox.showerror("Input Error", "Please enter the username.")
         return
     if not password:
         messagebox.showerror("Input Error", "Please enter the password.")
         return
+    # if not transfer_mode:
+    #     messagebox.showerror("Input Error", "Please enter the transfer type.")
+    #     return
     
     custom_profile = {
-        "name":     custom_profile_name,
-        "base_ip":  ip_entry.get(),
-        "ip_range": range_entry.get(),
-        "username": username_entry.get(),
-        "password": password_entry.get()
+        "name":             custom_profile_name,
+        "base_ip":          ip_entry.get(),
+        "ip_range":         range_entry.get(),
+        "remote_dir":       remote_dir_entry.get(),
+        "username":         username_entry.get(),
+        "password":         password_entry.get(),
+        "transfer_type":    transfer_type_sel.get()    
     }
 
     custom_profiles = load_custom_profiles()
