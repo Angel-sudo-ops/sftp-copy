@@ -8,6 +8,8 @@ import threading
 import json
 import re
 import sys
+from ftplib import FTP
+from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
 
@@ -46,7 +48,46 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
         status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\\{host}{remote_path}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
+    
+################################################ FTP transfer ###############################################################
+def ftp_transfer(host, username, password, local_path, remote_path, status_widget):
+    try:
+        status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
+        status_widget.yview(tk.END)
+        
+        # Connect to the FTP server
+        ftp = FTP(host)
+        ftp.login(user=username, passwd=password)
+        # ftp.login(user='anonymous', passwd='anonymous@example.com')  # You can use any email as password
 
+        if os.path.isfile(local_path):
+            with open(local_path, 'rb') as file:
+                ftp.storbinary(f"STOR {os.path.join(remote_path, os.path.basename(local_path))}", file)
+            status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
+        else:
+            for root_dir, dirs, files in os.walk(local_path):
+                for dir_name in dirs:
+                    local_dir = os.path.join(root_dir, dir_name)
+                    remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path)).replace("\\", "/")
+                    try:
+                        ftp.mkd(remote_dir)
+                    except Exception as e:
+                        status_widget.insert(tk.END, f"\nDirectory {remote_dir} might already exist. Error: {e}\n")
+                for file_name in files:
+                    local_file = os.path.join(root_dir, file_name)
+                    remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path)).replace("\\", "/")
+                    with open(local_file, 'rb') as file:
+                        ftp.storbinary(f"STOR {remote_file}", file)
+                    status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+        
+        # Close the FTP connection
+        ftp.quit()
+    except Exception as e:
+        status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+    finally:
+        status_widget.yview(tk.END)
+
+####################################################### Get IPs #############################################################
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
     base_ip_parts = base_ip.rsplit('.', 1)
@@ -74,7 +115,13 @@ def start_transfer(status_widget):
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
-    port = 20022
+
+    if transfer_type_sel.get() == 'SFTP':
+        port = 20022
+        # 20022 
+    elif transfer_type_sel.get() == 'FTP':
+        port = FTP_PORT
+    print (f"Selected port is {port}")
 
     if not local_path:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
@@ -103,7 +150,10 @@ def start_transfer(status_widget):
         return
 
     for host in ip_list:
-        threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
+        if transfer_type_sel.get() == 'SFTP': 
+            threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
+        elif transfer_type_sel.get() == 'FTP':
+            threading.Thread(target=ftp_transfer, args=(host, 'anonymous', 'anonymous@example.com', local_path, remote_dir, status_widget)).start()
 
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
@@ -172,8 +222,25 @@ def validate_ip_format(event):
         return False
 
 ###################################################### Custom paths ##########################################################
-default_paths = ("\Config", "\TwinCAT\Boot", "\Layout")
-# default_paths = ("/Config", "/TwinCAT/Boot", "/Layout")
+# Global variable to store default paths
+default_paths = ()
+
+def set_paths():
+    global default_paths
+    default_paths_sftp = ("\Config", "\TwinCAT\Boot", "\Layout")
+    default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/Backup/export_to_agv", "/Hard Disk/TwinCAT/Boot")
+    if transfer_type_sel.get() == 'SFTP':
+        default_paths = default_paths_sftp
+    elif transfer_type_sel.get() == 'FTP':
+        default_paths = default_paths_ftp
+
+    # Update the Combobox values
+    remote_dir_entry['values'] = default_paths + tuple(custom_paths)
+    # Optionally, reset the displayed value to the first default path
+    if default_paths:
+        remote_dir_entry.set(default_paths[0])
+
+    print(f"Default paths set to: {default_paths}")
 
 # Load custom paths from a file
 def load_custom_paths():
@@ -315,9 +382,16 @@ def on_leave(e):
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
-root.title("SFTP File Transfer")
+root.title("File Transfer")
 
 root.resizable(False, False)
+
+transfer_type = tk.StringVar()
+transfer_type_sel = tk.StringVar(value='SFTP')
+
+# Radio buttons for selecting file or folder
+tk.Radiobutton(root, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths).grid(row=0, column=0, padx=10, pady=0, sticky='w')
+tk.Radiobutton(root, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_paths).grid(row=0, column=0, padx=60, pady=0, sticky='w')
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
@@ -325,8 +399,8 @@ file_path = tk.StringVar()
 selection = tk.StringVar(value='file')
 
 # Radio buttons for selecting file or folder
-tk.Radiobutton(root, text="File", variable=selection, value='file').grid(row=0, column=0, padx=10, pady=10, sticky='w')
-tk.Radiobutton(root, text="Folder", variable=selection, value='folder').grid(row=0, column=0, padx=60, pady=10, sticky='w')
+tk.Radiobutton(root, text="File", variable=selection, value='file').grid(row=1, column=0, padx=10, pady=10, sticky='w')
+tk.Radiobutton(root, text="Folder:", variable=selection, value='folder').grid(row=1, column=0, padx=60, pady=10, sticky='w')
 
 # Create a listbox to display saved profiles
 profiles_combobox = ttk.Combobox(root, width=40)
@@ -342,7 +416,7 @@ save.grid(row=0, column=2, padx=10, pady=10)
 
 tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
 
-tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
+# tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
 tk.Entry(root, textvariable=file_path, width=50).grid(row=1, column=1, padx=10, pady=10)
 
 tk.Label(root, text="Enter Root IP:").grid(row=2, column=0, padx=10, pady=10)
@@ -360,7 +434,8 @@ create_placeholder(range_entry, "e.g., 1-9,11-25,27,29,31-40")
 
 tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
 remote_dir_entry = ttk.Combobox(root, values=default_paths + tuple(custom_paths), width=47)
-remote_dir_entry.insert(0, default_paths[0])
+if default_paths:
+    remote_dir_entry.insert(0, default_paths[0])
 remote_dir_entry.grid(row=4, column=1, padx=10, pady=10)
 
 # Add a button to save a custom path
@@ -376,6 +451,7 @@ username_entry.grid(row=5, column=1, padx=10, pady=10)
 tk.Label(root, text="Enter password:").grid(row=6, column=0, padx=10, pady=10)
 password_entry = tk.Entry(root, width=50, show="*")
 password_entry.grid(row=6, column=1, padx=10, pady=10)
+
 
 transfer = tk.Button(root, text="Start Transfer", 
                      borderwidth=0,
@@ -399,6 +475,8 @@ status_font = font.Font(family="Consolas", size=11)
 status_widget.configure(font=status_font)
 status_widget.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
 status_widget.bind("<Key>", lambda e: "break")
+
+set_paths()
 
 root.mainloop()
 

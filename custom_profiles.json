@@ -40,5 +40,12 @@
         "ip_range": "34",
         "username": "Administrator",
         "password": "1"
+    },
+    {
+        "name": "CC1527_GP_Rivergate",
+        "base_ip": "172.20.2.50",
+        "ip_range": "34",
+        "username": "Administrator",
+        "password": "1"
     }
 ]
