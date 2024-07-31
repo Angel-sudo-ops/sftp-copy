@@ -8,7 +8,7 @@ import threading
 import json
 import re
 import sys
-from ftplib import FTP
+from ftplib import FTP, error_perm
 from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
@@ -87,6 +87,47 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
     finally:
         status_widget.yview(tk.END)
 
+def ftp_transfer_anonymous(host, username, password, local_path, remote_path, status_widget):
+    try:
+        status_widget.insert(tk.END, f"Anonymous transfer to {host} in progress...\n")
+        status_widget.yview(tk.END)
+        
+        # Connect to the FTP server with anonymous login
+        ftp = FTP(host)
+        ftp.login(user=username, passwd=password)  # You can use any email as password
+        
+        def upload_file(local_file, remote_file):
+            try:
+                with open(local_file, 'rb') as file:
+                    ftp.storbinary(f"STOR {remote_file}", file)
+                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+            except error_perm as e:
+                status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to\n\\{host}{remote_file}. Error: {e}\n")
+                if '552' in str(e):
+                    status_widget.insert(tk.END, "\nError 552: Exceeded storage allocation.\n")
+        
+        if os.path.isfile(local_path):
+            upload_file(local_path, os.path.join(remote_path, os.path.basename(local_path)).replace("\\", "/"))
+        else:
+            for root_dir, dirs, files in os.walk(local_path):
+                for dir_name in dirs:
+                    local_dir = os.path.join(root_dir, dir_name)
+                    remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path)).replace("\\", "/")
+                    try:
+                        ftp.mkd(remote_dir)
+                    except error_perm:
+                        pass  # Ignore if the directory already exists
+                for file_name in files:
+                    local_file = os.path.join(root_dir, file_name)
+                    remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path)).replace("\\", "/")
+                    upload_file(local_file, remote_file)
+        
+        # Close the FTP connection
+        ftp.quit()
+    except Exception as e:
+        status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+    finally:
+        status_widget.yview(tk.END)
 ####################################################### Get IPs #############################################################
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
@@ -115,13 +156,17 @@ def start_transfer(status_widget):
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
-
+    
     if transfer_type_sel.get() == 'SFTP':
         port = 20022
         # 20022 
     elif transfer_type_sel.get() == 'FTP':
         port = FTP_PORT
+
     print (f"Selected port is {port}")
+    print(f"Login is {username}")
+    print(f"Passwprd is {password}")
+    print(f"{anonymous_check.get()}")
 
     if not local_path:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
@@ -153,7 +198,8 @@ def start_transfer(status_widget):
         if transfer_type_sel.get() == 'SFTP': 
             threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
         elif transfer_type_sel.get() == 'FTP':
-            threading.Thread(target=ftp_transfer, args=(host, 'anonymous', 'anonymous@example.com', local_path, remote_dir, status_widget)).start()
+            # threading.Thread(target=ftp_transfer, args=(host, 'anonymous', 'anonymous@example.com', local_path, remote_dir, status_widget)).start()
+            threading.Thread(target=ftp_transfer_anonymous, args=(host, 'anonymous', 'anonymous@example.com', local_path, remote_dir, status_widget)).start()
 
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
@@ -221,6 +267,31 @@ def validate_ip_format(event):
         ip_entry.config(bg="yellow")
         return False
 
+############################################## Other methods ###############################################################
+def set_anonymous_login():
+    username_entry.delete(0, tk.END)
+    username_entry.insert(0, "anonymous")
+    username_entry.config(state='disabled')
+    
+    password_entry.delete(0, tk.END)
+    password_entry.insert(0, "anonymous@example.com")
+    password_entry.config(state='disabled')
+
+def on_anonymous_check():
+    if anonymous_check.get():
+        set_anonymous_login()
+    else:
+        set_default_login()
+
+def set_default_login():
+    username_entry.config(state='normal')
+    username_entry.delete(0, tk.END)
+    username_entry.insert(0, "Administrator")
+
+    password_entry.config(state='normal')
+    password_entry.delete(0, tk.END)
+    password_entry.insert(0, "1")
+
 ###################################################### Custom paths ##########################################################
 # Global variable to store default paths
 default_paths = ()
@@ -231,8 +302,16 @@ def set_paths():
     default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/Backup/export_to_agv", "/Hard Disk/TwinCAT/Boot")
     if transfer_type_sel.get() == 'SFTP':
         default_paths = default_paths_sftp
+        anonymous_check.set(0)
+        anonymous.config(state='disabled')
+        set_default_login()
+        # username_entry.delete(0, tk.END)
+        # username_entry.insert(0, "Administrator")
+        # username_entry.config(state='normal')
     elif transfer_type_sel.get() == 'FTP':
         default_paths = default_paths_ftp
+        anonymous.config(state='normal')
+          
 
     # Update the Combobox values
     remote_dir_entry['values'] = default_paths + tuple(custom_paths)
@@ -447,6 +526,10 @@ tk.Label(root, text="Enter username:").grid(row=5, column=0, padx=10, pady=10)
 username_entry = tk.Entry(root, width=50)
 username_entry.insert(0, "Administrator")
 username_entry.grid(row=5, column=1, padx=10, pady=10)
+
+anonymous_check = tk.IntVar()
+anonymous = tk.Checkbutton(root, text="Anonymous", variable=anonymous_check, command=on_anonymous_check)
+anonymous.grid(row=5, column=2)
 
 tk.Label(root, text="Enter password:").grid(row=6, column=0, padx=10, pady=10)
 password_entry = tk.Entry(root, width=50, show="*")
