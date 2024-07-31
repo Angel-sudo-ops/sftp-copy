@@ -128,7 +128,7 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
         status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
-        
+
 ####################################################### Get IPs #############################################################
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
@@ -199,8 +199,8 @@ def start_transfer(status_widget):
         if transfer_type_sel.get() == 'SFTP': 
             threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
         elif transfer_type_sel.get() == 'FTP':
-            # threading.Thread(target=ftp_transfer, args=(host, 'anonymous', 'anonymous@example.com', local_path, remote_dir, status_widget)).start()
-            threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+            threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+            # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
 
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
@@ -384,7 +384,9 @@ default_profile = {
     "base_ip":  "192.168.80.10", 
     "ip_range": "1-15,20-35",
     "username": "Administrator",
-    "password": "***********"
+    "password": "***********",
+    "remote_dir": "\\Config",
+    "transfer_type": "SFTP"
 }
 
 def set_profile(profile):
