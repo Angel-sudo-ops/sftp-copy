@@ -64,7 +64,7 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
         
         def download_file(sftp, remote_file_path, local_file_path):
             sftp.get(remote_file_path, local_file_path)
-            status_widget.insert(tk.END, f"File downloaded from {remote_file_path} to {local_file_path}\n")
+            status_widget.insert(tk.END, f"\nSusccessfully downloaded {remote_file_path} to {local_file_path}\n")
             status_widget.yview(tk.END)
 
         def download_folder(sftp, remote_folder_path, local_folder_path):
@@ -90,9 +90,9 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
 
         sftp.close()
         ssh.close()
-        status_widget.insert(tk.END, f"Download from {host} completed successfully.\n")
+        status_widget.insert(tk.END, f"\nDownload from {host} completed successfully.\n")
     except Exception as e:
-        status_widget.insert(tk.END, f"Failed to download from {host}. Error: {e}\n")
+        status_widget.insert(tk.END, f"\nFailed to download from {host}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
 
@@ -221,6 +221,19 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
                 else:
                     download_file(ftp, remote_path, local_path)
         
+        def download_files_only(ftp, remote_folder_path, local_folder_path):
+            os.makedirs(local_folder_path, exist_ok=True)
+            ftp.cwd(remote_folder_path)
+            
+            file_list = ftp.nlst()
+            
+            for file_name in file_list:
+                remote_item_path = os.path.join(remote_folder_path, file_name).replace('\\', '/')
+                local_item_path = os.path.join(local_folder_path, file_name)
+                
+                if not is_ftp_dir(ftp, file_name):
+                    download_file(ftp, remote_item_path, local_item_path)
+
         def is_ftp_dir(ftp, name):
             try:
                 ftp.cwd(name)
@@ -229,10 +242,11 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
             except Exception as e:
                 return False
 
-        if is_ftp_dir(ftp, remote_path):
-            download_folder(ftp, remote_path, local_path)
-        else:
-            download_file(ftp, remote_path, local_path)
+        # if is_ftp_dir(ftp, remote_path):
+        #     download_folder(ftp, remote_path, local_path)
+        # else:
+        #     download_file(ftp, remote_path, local_path)
+        download_files_only(ftp, remote_path, local_path)
         
         # Close the FTP connection
         ftp.quit()
@@ -343,7 +357,7 @@ def start_download(status_widget):
 
     print (f"Selected port is {port}")
     print(f"Login is {username}")
-    print(f"Passwprd is {password}")
+    print(f"Password is {password}")
     print(f"{anonymous_check.get()}")
 
     if not local_root_path:
@@ -513,10 +527,14 @@ def select_mode():
     if mode_selected == 'transfer':
         transfer.config(state='normal')
         download.config(state="disabled")
+        file_path_entry.config(state='normal')
+        browse_btn.config(state='normal')
 
     elif mode_selected == 'download':
         transfer.config(state='disabled')
         download.config(state="normal")
+        file_path_entry.config(state='disabled')
+        browse_btn.config(state='disabled')
     print(f"Selected mode {mode_selected}")
 
 # Load custom paths from a file
@@ -733,10 +751,12 @@ save = tk.Button(root, text="Save Profile", command=save_custom_profile)
 save.grid(row=0, column=2, padx=10, pady=10)
 # save.bind("<Button-1>", validate_ip_format)
 
-tk.Button(root, text="Browse", command=choose_file_or_folder).grid(row=1, column=2, padx=5, pady=10)
+browse_btn = tk.Button(root, text="Browse", command=choose_file_or_folder)
+browse_btn.grid(row=1, column=2, padx=5, pady=10)
 
 # tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
-tk.Entry(root, textvariable=file_path, width=50).grid(row=1, column=1, padx=10, pady=10)
+file_path_entry = tk.Entry(root, textvariable=file_path, width=50)
+file_path_entry.grid(row=1, column=1, padx=10, pady=10)
 
 tk.Label(root, text="Enter Root IP:").grid(row=2, column=0, padx=10, pady=10)
 ip_entry = tk.Entry(root, width=50)
@@ -816,7 +836,7 @@ transfer.configure(font=('Lucida Sans', 12))
 transfer.bind("<Enter>", on_enter)
 transfer.bind("<Leave>", on_leave)
 transfer.bind("<Button-1>", on_enter)
-print(transfer["state"])
+print(f"Transfer button state: {transfer['state']}")
 
 download = tk.Button(root, text="Download", 
                      borderwidth=0,
@@ -834,7 +854,7 @@ download.bind("<Enter>", on_enter)
 download.bind("<Leave>", on_leave)
 download.bind("<Button-1>", on_enter)
 download.config(state="disabled")
-print(download["state"])
+print(f"Download button state: {download['state']}")
 # Avoid color change when hovering when button is disabled
 
 # status_widget = tk.Text(root, height=10, width=80)
