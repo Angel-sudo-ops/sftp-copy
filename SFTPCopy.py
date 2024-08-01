@@ -319,7 +319,7 @@ def start_transfer(status_widget):
 ############################################# Download files from remote server ################################################
 
 def start_download(status_widget):
-    local_path = file_path.get()
+    local_root_path = file_path.get()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
@@ -338,7 +338,7 @@ def start_download(status_widget):
     print(f"{anonymous_check.get()}")
 
     if not local_path:
-        messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
+        messagebox.showerror("Input Error", "Please choose a folder where to download.")
         return
     if not base_ip or base_ip == placeholders[ip_entry]:
         messagebox.showerror("Input Error", "Please enter the base IP.")
@@ -364,6 +364,7 @@ def start_download(status_widget):
         return
 
     for host in ip_list:
+        local_path = os.path.join(local_root_path, f"{host}")
         if transfer_type_sel.get() == 'SFTP': 
             threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, status_widget)).start()
         if transfer_type_sel.get() == 'FTP':
@@ -759,7 +760,7 @@ password_entry = tk.Entry(root, width=50, show="*")
 password_entry.grid(row=6, column=1, padx=10, pady=10)
 
 
-transfer = tk.Button(root, text="Start Transfer", 
+transfer = tk.Button(root, text="Transfer", 
                      borderwidth=0,
                      highlightthickness=0,
                      background='white',
@@ -767,15 +768,15 @@ transfer = tk.Button(root, text="Start Transfer",
                      )
 transfer.grid(row=7, 
               column=0, 
-            #   columnspan=3, 
+              columnspan=2, 
               pady=20,
-              padx=20)
+              padx=0)
 transfer.configure(font=('Lucida Sans', 12))
 transfer.bind("<Enter>", on_enter)
 transfer.bind("<Leave>", on_leave)
 transfer.bind("<Button-1>", on_enter)
 
-download = tk.Button(root, text="Start Download", 
+download = tk.Button(root, text="Download", 
                      borderwidth=0,
                      highlightthickness=0,
                      background='white',
@@ -783,9 +784,9 @@ download = tk.Button(root, text="Start Download",
                      )
 download.grid(row=7, 
               column=1, 
-            #   columnspan=3, 
+              columnspan=2, 
               pady=20,
-              padx=100)
+              padx=10)
 download.configure(font=('Lucida Sans', 12))
 download.bind("<Enter>", on_enter)
 download.bind("<Leave>", on_leave)
