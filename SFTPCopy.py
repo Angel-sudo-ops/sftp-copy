@@ -280,7 +280,7 @@ def start_transfer(status_widget):
 
     print (f"Selected port is {port}")
     print(f"Login is {username}")
-    print(f"Passwprd is {password}")
+    print(f"Password is {password}")
     print(f"{anonymous_check.get()}")
 
     if not local_path:
@@ -507,6 +507,17 @@ def set_paths():
 
     print(f"Default paths set to: {default_paths}")
 
+
+def select_mode():
+    mode_selected = mode_selection.get()
+    if mode_selected == 'transfer':
+        transfer.config(state='normal')
+        download.config(state="disabled")
+
+    elif mode_selected == 'download':
+        transfer.config(state='disabled')
+        download.config(state="normal")
+    print(f"Selected mode {mode_selected}")
 
 # Load custom paths from a file
 def load_custom_paths(transfer_type):
@@ -770,6 +781,26 @@ password_entry = tk.Entry(root, width=50, show="*")
 password_entry.grid(row=6, column=1, padx=10, pady=10)
 
 
+mode_selection = tk.StringVar(value='transfer')
+# Radio buttons for selecting file or folder
+radio_transfer = tk.Radiobutton(root, 
+                                # text="Transfer", 
+                                variable=mode_selection, 
+                                value='transfer', 
+                                command=select_mode)
+# radio_transfer.grid(row=7, column=0, padx=0, pady=10)
+# radio_transfer.grid(row=7, column=0, padx=0, pady=10)
+radio_transfer.place(x=200, y=315)
+
+radio_download = tk.Radiobutton(root, 
+                                # text="Download", 
+                                variable=mode_selection, 
+                                value='download',
+                                command=select_mode)
+# radio_download.grid(row=7, column=2, padx=0, pady=10)
+# radio_download.grid(row=7, column=2, padx=0, pady=10)
+radio_download.place(x=435, y=315)
+
 transfer = tk.Button(root, text="Transfer", 
                      borderwidth=0,
                      highlightthickness=0,
@@ -779,12 +810,13 @@ transfer = tk.Button(root, text="Transfer",
 transfer.grid(row=7, 
               column=0, 
               columnspan=2, 
-              pady=20,
-              padx=0)
+              pady=10,
+              padx=10)
 transfer.configure(font=('Lucida Sans', 12))
 transfer.bind("<Enter>", on_enter)
 transfer.bind("<Leave>", on_leave)
 transfer.bind("<Button-1>", on_enter)
+print(transfer["state"])
 
 download = tk.Button(root, text="Download", 
                      borderwidth=0,
@@ -795,12 +827,15 @@ download = tk.Button(root, text="Download",
 download.grid(row=7, 
               column=1, 
               columnspan=2, 
-              pady=20,
+              pady=10,
               padx=10)
 download.configure(font=('Lucida Sans', 12))
 download.bind("<Enter>", on_enter)
 download.bind("<Leave>", on_leave)
 download.bind("<Button-1>", on_enter)
+download.config(state="disabled")
+print(download["state"])
+# Avoid color change when hovering when button is disabled
 
 # status_widget = tk.Text(root, height=10, width=80)
 status_widget = scrolledtext.ScrolledText(root, 
@@ -818,9 +853,9 @@ set_paths()
 root.mainloop()
 
 ## not showing connection timeout fix that
-## add profiles to save data just like routes
+## add profiles to save data just like routes - DONE
 
-## fix data still gray even after placeholder is not the same
+## fix data still gray even after placeholder is not the same - DONE
 ##  cannot send several files at the same time
 
 ## create tool for layout zipper
