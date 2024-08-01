@@ -189,11 +189,11 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
         ftp.login(user=username, passwd=password)
         
         # Print the current working directory
-        cwd = ftp.pwd()
-        status_widget.insert(tk.END, f"Current working directory: {cwd}\n")
+        # cwd = ftp.pwd()
+        # status_widget.insert(tk.END, f"Current working directory: {cwd}\n")
         
         # Change to the desired directory
-        remote_path = remote_path.replace(" ", "%20")  # Handle spaces in the path
+        # remote_path = remote_path.replace(" ", "%20")  # Handle spaces in the path
         try:
             ftp.cwd(remote_path)
         except Exception as e:
