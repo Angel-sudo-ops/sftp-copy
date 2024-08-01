@@ -129,6 +129,54 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
     finally:
         status_widget.yview(tk.END)
 
+def ftp_download(host, username, password, remote_path, local_path, status_widget):
+    try:
+        status_widget.insert(tk.END, f"Download from {host} in progress...\n")
+        status_widget.yview(tk.END)
+        
+        # Connect to the FTP server
+        ftp = FTP(host)
+        ftp.login(user=username, passwd=password)
+
+        def download_file(ftp, remote_file_path, local_file_path):
+            with open(local_file_path, 'wb') as local_file:
+                ftp.retrbinary(f'RETR {remote_file_path}', local_file.write)
+            status_widget.insert(tk.END, f"\nSuccessfully downloaded {remote_file_path} to\n{local_file_path}\n")
+
+        def download_folder(ftp, remote_folder_path, local_folder_path):
+            os.makedirs(local_folder_path, exist_ok=True)
+            ftp.cwd(remote_folder_path)
+            
+            file_list = ftp.nlst()
+            
+            for file_name in file_list:
+                local_path = os.path.join(local_folder_path, file_name)
+                remote_path = os.path.join(remote_folder_path, file_name).replace('\\', '/')
+                
+                if is_ftp_dir(ftp, file_name):
+                    download_folder(ftp, remote_path, local_path)
+                else:
+                    download_file(ftp, remote_path, local_path)
+        
+        def is_ftp_dir(ftp, name):
+            try:
+                ftp.cwd(name)
+                ftp.cwd('..')
+                return True
+            except Exception as e:
+                return False
+
+        if is_ftp_dir(ftp, remote_path):
+            download_folder(ftp, remote_path, local_path)
+        else:
+            download_file(ftp, remote_path, local_path)
+        
+        # Close the FTP connection
+        ftp.quit()
+    except Exception as e:
+        status_widget.insert(tk.END, f"\nFailed to download {remote_path} from {host}. Error: {e}\n")
+    finally:
+        status_widget.yview(tk.END)
 ####################################################### Get IPs #############################################################
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
@@ -149,7 +197,7 @@ def parse_ip_ranges(base_ip, range_input):
     # print(ip_list)
     return ip_list
 
-
+############################################# Transfer files to remote server ################################################
 def start_transfer(status_widget):
     local_path = file_path.get()
     base_ip = ip_entry.get()
@@ -201,6 +249,59 @@ def start_transfer(status_widget):
         elif transfer_type_sel.get() == 'FTP':
             threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget)).start()
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+
+def start_download(status_widget):
+    local_path = file_path.get()
+    base_ip = ip_entry.get()
+    range_input = range_entry.get()
+    remote_dir = remote_dir_entry.get()
+    username = username_entry.get()
+    password = password_entry.get()
+
+    if transfer_type_sel.get() == 'SFTP':
+        port = 20022
+        # 20022 
+    elif transfer_type_sel.get() == 'FTP':
+        port = FTP_PORT
+
+    print (f"Selected port is {port}")
+    print(f"Login is {username}")
+    print(f"Passwprd is {password}")
+    print(f"{anonymous_check.get()}")
+
+    if not local_path:
+        messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
+        return
+    if not base_ip or base_ip == placeholders[ip_entry]:
+        messagebox.showerror("Input Error", "Please enter the base IP.")
+        return
+    if not range_input or range_input == placeholders[range_entry]:
+        messagebox.showerror("Input Error", "Please enter the IP range.")
+        return
+    if not remote_dir:
+        messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    if not username:
+        messagebox.showerror("Input Error", "Please enter the username.")
+        return
+    if not password:
+        messagebox.showerror("Input Error", "Please enter the password.")
+        return
+
+    status_widget.delete(1.0, tk.END)  # Clear previous status messages
+    ip_list = parse_ip_ranges(base_ip, range_input)
+
+    if ip_list is None:
+        messagebox.showerror("Input Error", "Please provide a valid IP range.")
+        return
+
+    for host in ip_list:
+        # if transfer_type_sel.get() == 'SFTP': 
+        #     threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
+        if transfer_type_sel.get() == 'FTP':
+            threading.Thread(target=ftp_download, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+            # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+
 
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
@@ -380,13 +481,13 @@ def on_add_path():
 ####################################################### Profiles ###############################################################
 
 default_profile = {
-    "name":     "Default",
-    "base_ip":  "192.168.80.10", 
-    "ip_range": "1-15,20-35",
-    "username": "Administrator",
-    "password": "***********",
-    "remote_dir": "\\Config",
-    "transfer_type": "SFTP"
+    "name":         "Default",
+    "base_ip":      "192.168.80.10", 
+    "ip_range":     "1-15,20-35",
+    "username":     "Administrator",
+    "password":     "***********",
+    "remote_dir":   "\\Config",
+    "transfer_type":"SFTP"
 }
 
 def set_profile(profile):
@@ -596,11 +697,31 @@ transfer = tk.Button(root, text="Start Transfer",
                      background='white',
                      command=lambda: start_transfer(status_widget)
                      )
-transfer.grid(row=7, column=0, columnspan=3, pady=20)
+transfer.grid(row=7, 
+              column=0, 
+            #   columnspan=3, 
+              pady=20,
+              padx=20)
 transfer.configure(font=('Lucida Sans', 12))
 transfer.bind("<Enter>", on_enter)
 transfer.bind("<Leave>", on_leave)
 transfer.bind("<Button-1>", on_enter)
+
+download = tk.Button(root, text="Start Download", 
+                     borderwidth=0,
+                     highlightthickness=0,
+                     background='white',
+                     command=lambda: start_download(status_widget)
+                     )
+download.grid(row=7, 
+              column=1, 
+            #   columnspan=3, 
+              pady=20,
+              padx=100)
+download.configure(font=('Lucida Sans', 12))
+download.bind("<Enter>", on_enter)
+download.bind("<Leave>", on_leave)
+download.bind("<Button-1>", on_enter)
 
 # status_widget = tk.Text(root, height=10, width=80)
 status_widget = scrolledtext.ScrolledText(root, 
