@@ -1,4 +1,5 @@
 import paramiko
+import stat
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -49,7 +50,54 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
     finally:
         status_widget.yview(tk.END)
     
+############################################### SFTP Download ###############################################
+
+def download_sftp(host, port, username, password, remote_path, local_path, status_widget):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        status_widget.insert(tk.END, f"Download from {host} in progress...\n")
+        status_widget.yview(tk.END)
+        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
+        sftp = ssh.open_sftp()
+        
+        def download_file(sftp, remote_file_path, local_file_path):
+            sftp.get(remote_file_path, local_file_path)
+            status_widget.insert(tk.END, f"File downloaded from {remote_file_path} to {local_file_path}\n")
+            status_widget.yview(tk.END)
+
+        def download_folder(sftp, remote_folder_path, local_folder_path):
+            os.makedirs(local_folder_path, exist_ok=True)
+            for entry in sftp.listdir_attr(remote_folder_path):
+                remote_path = os.path.join(remote_folder_path, entry.filename).replace('\\', '/')
+                local_path = os.path.join(local_folder_path, entry.filename)
+                if stat.S_ISDIR(entry.st_mode):
+                    download_folder(sftp, remote_path, local_path)
+                else:
+                    download_file(sftp, remote_path, local_path)
+
+        def is_sftp_dir(sftp, path):
+            try:
+                return stat.S_ISDIR(sftp.stat(path).st_mode)
+            except IOError:
+                return False
+        
+        if is_sftp_dir(sftp, remote_path):
+            download_folder(sftp, remote_path, local_path)
+        else:
+            download_file(sftp, remote_path, local_path)
+
+        sftp.close()
+        ssh.close()
+        status_widget.insert(tk.END, f"Download from {host} completed successfully.\n")
+    except Exception as e:
+        status_widget.insert(tk.END, f"Failed to download from {host}. Error: {e}\n")
+    finally:
+        status_widget.yview(tk.END)
+
 ################################################ FTP transfer ###############################################################
+
 def ftp_transfer(host, username, password, local_path, remote_path, status_widget):
     try:
         status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
@@ -129,6 +177,8 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
     finally:
         status_widget.yview(tk.END)
 
+################################################ FTP download ###############################################################
+
 def ftp_download(host, username, password, remote_path, local_path, status_widget):
     try:
         status_widget.insert(tk.END, f"Download from {host} in progress...\n")
@@ -177,6 +227,7 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
         status_widget.insert(tk.END, f"\nFailed to download {remote_path} from {host}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
+        
 ####################################################### Get IPs #############################################################
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
