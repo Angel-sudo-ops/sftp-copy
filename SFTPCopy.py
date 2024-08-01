@@ -52,7 +52,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
     
 ############################################### SFTP Download ###############################################
 
-def download_sftp(host, port, username, password, remote_path, local_path, status_widget):
+def sftp_download(host, port, username, password, remote_path, local_path, status_widget):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -187,6 +187,19 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
         # Connect to the FTP server
         ftp = FTP(host)
         ftp.login(user=username, passwd=password)
+        
+        # Print the current working directory
+        cwd = ftp.pwd()
+        status_widget.insert(tk.END, f"Current working directory: {cwd}\n")
+        
+        # Change to the desired directory
+        remote_path = remote_path.replace(" ", "%20")  # Handle spaces in the path
+        try:
+            ftp.cwd(remote_path)
+        except Exception as e:
+            status_widget.insert(tk.END, f"Error navigating to {remote_path}. {e}\n")
+            ftp.quit()
+            return
 
         def download_file(ftp, remote_file_path, local_file_path):
             with open(local_file_path, 'wb') as local_file:
@@ -227,8 +240,10 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
         status_widget.insert(tk.END, f"\nFailed to download {remote_path} from {host}. Error: {e}\n")
     finally:
         status_widget.yview(tk.END)
-        
+
+
 ####################################################### Get IPs #############################################################
+
 def parse_ip_ranges(base_ip, range_input):
     ip_list = []
     base_ip_parts = base_ip.rsplit('.', 1)
@@ -301,6 +316,8 @@ def start_transfer(status_widget):
             threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget)).start()
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
 
+############################################# Download files from remote server ################################################
+
 def start_download(status_widget):
     local_path = file_path.get()
     base_ip = ip_entry.get()
@@ -347,10 +364,10 @@ def start_download(status_widget):
         return
 
     for host in ip_list:
-        # if transfer_type_sel.get() == 'SFTP': 
-        #     threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
+        if transfer_type_sel.get() == 'SFTP': 
+            threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, status_widget)).start()
         if transfer_type_sel.get() == 'FTP':
-            threading.Thread(target=ftp_download, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+            threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, status_widget)).start()
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
 
 
