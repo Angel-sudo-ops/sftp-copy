@@ -1,44 +1,20 @@
 [
     {
-        "name": "CC1585",
-        "base_ip": "1.2.2",
-        "ip_range": "10-20",
-        "username": "Administrator",
-        "password": "1"
+        "name": "CC1527_GP_Portland_TC2",
+        "base_ip": "172.20.2.50",
+        "ip_range": "1-15,30-42",
+        "username": "anonymous",
+        "password": "anonymous@example.com",
+        "remote_dir": "/Hard Disk/Backup/",
+        "transfer_type": "FTP"
     },
     {
-        "name": "CC_TEST",
-        "base_ip": "180.21.21",
-        "ip_range": "10-20, 30-35",
+        "name": "CC1527_GP_Portland_TC3",
+        "base_ip": "172.20.2.50",
+        "ip_range": "16-18",
         "username": "Administrator",
-        "password": "StandardE80"
-    },
-    {
-        "name": "CC_Test2",
-        "base_ip": "54.1.1",
-        "ip_range": "10-50",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC_Test_RootIP",
-        "base_ip": "172.20.51.10",
-        "ip_range": "1-9,11-15,21-27",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1930_PepsicoSC_Atlanta",
-        "base_ip": "7.219.2.10",
-        "ip_range": "1-47",
-        "username": "Administrator",
-        "password": "1"
-    },
-    {
-        "name": "CC1930_PepsicoSC_Atlanta_Boot",
-        "base_ip": "7.219.2.10",
-        "ip_range": "34",
-        "username": "Administrator",
-        "password": "1"
+        "password": "1",
+        "remote_dir": "\\Config",
+        "transfer_type": "SFTP"
     }
 ]

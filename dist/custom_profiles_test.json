@@ -1,0 +1,9 @@
+[
+    {
+        "name": "CC1930_PepsicoSC_Atlanta",
+        "base_ip": "7.219.2.10",
+        "ip_range": "1-47",
+        "username": "Administrator",
+        "password": "1"
+    }
+]
