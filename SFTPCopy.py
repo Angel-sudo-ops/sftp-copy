@@ -319,7 +319,16 @@ def start_transfer(status_widget):
 ############################################# Download files from remote server ################################################
 
 def start_download(status_widget):
-    local_root_path = file_path.get()
+    # local_root_path = file_path.get()
+    local_root_path = filedialog.askdirectory()
+    if local_root_path:
+        new_folder_name = "Download"
+        new_folder_path = os.path.join(local_root_path, new_folder_name)
+        if not os.path.exists(new_folder_path):
+            os.makedirs(new_folder_path)
+    print({new_folder_path})
+    print({local_root_path})
+
     base_ip = ip_entry.get()
     range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
@@ -337,7 +346,7 @@ def start_download(status_widget):
     print(f"Passwprd is {password}")
     print(f"{anonymous_check.get()}")
 
-    if not local_path:
+    if not local_root_path:
         messagebox.showerror("Input Error", "Please choose a folder where to download.")
         return
     if not base_ip or base_ip == placeholders[ip_entry]:
@@ -364,7 +373,8 @@ def start_download(status_widget):
         return
 
     for host in ip_list:
-        local_path = os.path.join(local_root_path, f"{host}")
+        # local_path = os.path.join(local_root_path, f"{host}")
+        local_path = os.path.join(new_folder_path, f"{host}")
         if transfer_type_sel.get() == 'SFTP': 
             threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, status_widget)).start()
         if transfer_type_sel.get() == 'FTP':
