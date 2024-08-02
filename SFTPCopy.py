@@ -734,8 +734,12 @@ root.resizable(False, False)
 transfer_type_sel = tk.StringVar(value='SFTP')
 
 # Radio buttons for selecting file or folder
-tk.Radiobutton(root, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths).grid(row=0, column=0, padx=10, pady=0, sticky='w')
-tk.Radiobutton(root, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_paths).grid(row=0, column=0, padx=60, pady=0, sticky='w')
+sftp_option = tk.Radiobutton(root, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths)
+sftp_option.grid(row=0, column=0, padx=10, pady=0, sticky='w')
+ftp_option = tk.Radiobutton(root, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_paths)
+ftp_option.grid(row=0, column=0, padx=60, pady=0, sticky='w')
+net_option = tk.Radiobutton(root, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_paths)
+net_option.place(x=120, y=10)
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
@@ -812,7 +816,9 @@ anonymous_check = tk.IntVar()
 anonymous = tk.Checkbutton(root, text="Anonymous", variable=anonymous_check, command=on_anonymous_check)
 anonymous.grid(row=5, column=2)
 
-tk.Label(root, text="Enter password:").grid(row=6, column=0, padx=10, pady=10)
+password_label = tk.Label(root, text="Enter password:")
+password_label.grid(row=6, column=0, padx=10, pady=10)
+# password_label.place(x=70, y=270)
 password_entry = tk.Entry(root, width=50, show="*")
 password_entry.grid(row=6, column=1, padx=10, pady=10)
 
