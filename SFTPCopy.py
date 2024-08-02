@@ -497,6 +497,7 @@ def set_paths():
     global default_paths, custom_paths
     default_paths_sftp = ("\Config", "\TwinCAT\Boot", "\Layout")
     default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/Backup/export_to_agv", "/Hard Disk/TwinCAT/Boot")
+    default_paths_net = ("/Backup", "/Backup/export_to_agv") #examples for now, get real ones later
     transfer_type = transfer_type_sel.get()
 
     # Load custom paths based on the transfer type
@@ -511,6 +512,9 @@ def set_paths():
     elif transfer_type == 'FTP':
         default_paths = default_paths_ftp
         anonymous.config(state='normal')
+    
+    elif transfer_type == 'NET':
+        default_paths = default_paths_net
 
     # Update the Combobox values
     remote_dir_entry['values'] = default_paths + tuple(custom_paths)
