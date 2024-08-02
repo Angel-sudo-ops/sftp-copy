@@ -16,5 +16,23 @@
         "password": "1",
         "remote_dir": "\\Config",
         "transfer_type": "SFTP"
+    },
+    {
+        "name": "CC1527_GP_Portland_TC2_test",
+        "base_ip": "172.20.2.50",
+        "ip_range": "1-15,30-42",
+        "remote_dir": "\\Config",
+        "username": "Administrator",
+        "password": "1",
+        "transfer_type": "SFTP"
+    },
+    {
+        "name": "CC1527_GP_Portland_TC3_test",
+        "base_ip": "172.20.2.50",
+        "ip_range": "16-18",
+        "remote_dir": "/Hard Disk/Backup/laserview/ini",
+        "username": "Administrator",
+        "password": "1",
+        "transfer_type": "FTP"
     }
 ]

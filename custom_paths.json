@@ -1,1 +1,1 @@
-{"FTP": ["/Hard Disk/Backup/ini", "/Hard Disk/Backup/laserview/ini"], "SFTP": ["\\Config\\ini", "\\Config\\Laserview"]}
+{"FTP": ["/Hard Disk/Backup/ini", "/Hard Disk/Backup/laserview/ini", "/Hard Disk/Backup/GuidanceLog"], "SFTP": ["\\Config\\ini", "\\Config\\Laserview", "\\Config\\test", "\\Config\\test2"]}

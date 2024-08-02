@@ -574,17 +574,20 @@ def save_custom_path():
 def add_path(new_path):
     transfer_type = transfer_type_sel.get()
     paths = load_custom_paths(transfer_type)
-    if new_path not in paths:
+    if (new_path not in paths) and (new_path not in default_paths):
         paths.append(new_path)
         save_custom_paths(paths, transfer_type)
         messagebox.showinfo("Saved", f"Path '{new_path}' saved successfully.")
+    else:
+        messagebox.showinfo("Info", f"Path '{new_path}' already exists.")
 
 def on_add_path():
     new_path = remote_dir_entry.get()
     if new_path:
         add_path(new_path)
         set_paths()  # Update the paths to reflect the new addition
-        # remote_dir_entry.delete(0, tk.END)  # Clear the entry widget
+        remote_dir_entry.delete(0, tk.END)  # Clear the entry widget
+        remote_dir_entry.insert(0, new_path)
 
 ####################################################### Profiles ###############################################################
 
@@ -642,7 +645,7 @@ def save_custom_profile():
     dir_entry = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
-    transfer_mode = transfer_type.get()
+    transfer_mode = transfer_type_sel.get()
 
     if not custom_profile_name or custom_profile_name == "Select a profile":
         messagebox.showerror("Error", "Please enter a profile name")
@@ -668,12 +671,12 @@ def save_custom_profile():
     
     custom_profile = {
         "name":             custom_profile_name,
-        "base_ip":          ip_entry.get(),
-        "ip_range":         range_entry.get(),
-        "remote_dir":       remote_dir_entry.get(),
-        "username":         username_entry.get(),
-        "password":         password_entry.get(),
-        "transfer_type":    transfer_type_sel.get()    
+        "base_ip":          base_ip,
+        "ip_range":         range_input,
+        "remote_dir":       dir_entry,
+        "username":         username,
+        "password":         password,
+        "transfer_type":    transfer_mode
     }
 
     custom_profiles = load_custom_profiles()
@@ -683,13 +686,15 @@ def save_custom_profile():
     for existing_profile in custom_profiles:
         if existing_profile["name"] == custom_profile_name:
             existing_profile.update(custom_profile)
+            messagebox.showinfo("Success", "Existing profile updated.")
             break
     else:
         custom_profiles.append(custom_profile)
+        messagebox.showinfo("Success", "New profile saved successfully")
     
     save_custom_profiles(custom_profiles)
     profiles_combobox['values'] = tuple(profile_names) + ("Default",)
-    messagebox.showinfo("Success", "Profile saved successfully")
+    # messagebox.showinfo("Success", "Profile saved successfully")
 
 def load_profile_by_name(event=None):
     selected_profile_name = profiles_combobox.get()
@@ -711,10 +716,12 @@ def load_profile_names(event=None):
 
 ####################################################################################################################
 def on_enter(e):
-    e.widget['background'] = 'LightSkyBlue1'
+    if e.widget['state']== "normal":
+        e.widget['background'] = 'LightSkyBlue1'
 
 def on_leave(e):
-    e.widget['background'] = 'ghost white'
+    if e.widget['state'] == "normal":
+        e.widget['background'] = 'ghost white'
 
 ######################################################## Create UI ##################################################
 
@@ -723,7 +730,7 @@ root.title("Super File Transfer")
 
 root.resizable(False, False)
 
-transfer_type = tk.StringVar()
+# transfer_type = tk.StringVar()
 transfer_type_sel = tk.StringVar(value='SFTP')
 
 # Radio buttons for selecting file or folder
@@ -747,12 +754,18 @@ profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 
-save = tk.Button(root, text="Save Profile", command=save_custom_profile)
-save.grid(row=0, column=2, padx=10, pady=10)
+save_profile = tk.Button(root, text="Save Profile", command=save_custom_profile)
+save_profile.grid(row=0, column=2, padx=10, pady=10)
+save_profile.bind("<Enter>", on_enter)
+save_profile.bind("<Leave>", on_leave)
+save_profile.bind("<Button-1>", on_enter)
 # save.bind("<Button-1>", validate_ip_format)
 
 browse_btn = tk.Button(root, text="Browse", command=choose_file_or_folder)
 browse_btn.grid(row=1, column=2, padx=5, pady=10)
+browse_btn.bind("<Enter>", on_enter)
+browse_btn.bind("<Leave>", on_leave)
+browse_btn.bind("<Button-1>", on_enter)
 
 # tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
 file_path_entry = tk.Entry(root, textvariable=file_path, width=50)
@@ -784,6 +797,9 @@ save_path = tk.Button(root, text="Save Path",
         #   command=save_custom_path)
         command=on_add_path)
 save_path.grid(row=4, column=2, padx=5, pady=10)
+save_path.bind("<Enter>", on_enter)
+save_path.bind("<Leave>", on_leave)
+save_path.bind("<Button-1>", on_enter)
 
 # create_placeholder(remote_dir_entry, "e.g., /remote/config/")
 
