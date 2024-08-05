@@ -684,14 +684,15 @@ def save_custom_profile():
     }
 
     custom_profiles = load_custom_profiles()
-    profile_names = [profile["name"] for profile in custom_profiles]
+    profile_names = [profile['name'] for profile in custom_profiles]
 
     # Check for duplicate profile names and update if found
     for existing_profile in custom_profiles:
-        if existing_profile["name"] == custom_profile_name:
+        if (existing_profile['name'] == custom_profile_name):
             existing_profile.update(custom_profile)
             messagebox.showinfo("Success", "Existing profile updated.")
             break
+        # fix default profile is updated with same name, not save that profile, that is just an example!!!
     else:
         custom_profiles.append(custom_profile)
         messagebox.showinfo("Success", "New profile saved successfully")
