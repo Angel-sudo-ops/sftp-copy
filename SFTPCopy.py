@@ -739,14 +739,27 @@ def button_design(entry):
 root = tk.Tk()
 root.title("Super File Transfer")
 
-root.resizable(False, False)
+# root.resizable(False, False)
+
+frame_profile = tk.Frame(root)
+frame_profile.grid(row=0, column=1, padx=10, pady=5, sticky='w')
+# Create a listbox to display saved profiles
+profiles_combobox = ttk.Combobox(frame_profile, width=40)
+profiles_combobox.set("Select a profile")
+profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+profiles_combobox.bind("<ButtonPress>", load_profile_names)
+profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
+
+save_profile = tk.Button(frame_profile, text="Save Profile", bg='ghost white', command=save_custom_profile)
+save_profile.grid(row=0, column=1, padx=5, pady=5)
+button_design(save_profile)
 
 
 # transfer_type = tk.StringVar()
 transfer_type_sel = tk.StringVar(value='SFTP')
 
-frame_transfer = tk.Frame(root)
-frame_transfer.grid(row=0, column=0, padx=5, pady=5, sticky='w')
+frame_transfer = tk.Frame(root, bd=1, relief='groove')
+frame_transfer.grid(row=0, column=0, padx=0, pady=5, sticky='e')
 # Radio buttons for selecting file or folder
 sftp_option = tk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths)
 sftp_option.grid(row=0, column=0, padx=0, pady=0, sticky='w')
@@ -755,25 +768,15 @@ ftp_option.grid(row=0, column=1, padx=0, pady=0, sticky='w')
 net_option = tk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_paths)
 net_option.grid(row=0, column=2, padx=0, pady=0, sticky='w')
 
-frame_profile = tk.Frame(root)
-frame_profile.grid(row=0, column=1, padx=5, pady=5, sticky='e')
-# Create a listbox to display saved profiles
-profiles_combobox = ttk.Combobox(frame_profile, width=40)
-profiles_combobox.set("Select a profile")
-profiles_combobox.grid(row=0, column=0,padx=5, pady=5)
-profiles_combobox.bind("<ButtonPress>", load_profile_names)
-profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 
-save_profile = tk.Button(frame_profile, text="Save Profile", bg='ghost white', command=save_custom_profile)
-save_profile.grid(row=0, column=1, padx=5, pady=5)
-button_design(save_profile)
-# save.bind("<Button-1>", validate_ip_format)
+frame_path = tk.Frame(root)
+frame_path.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-
-frame_file = tk.Frame(root)
-frame_file.grid (row=1, column=0, columnspan=2, padx=5, pady=5, sticky='w')
+frame_file = tk.Frame(frame_path)
+frame_file.grid (row=0, column=0, columnspan=2, padx=5, pady=5)
 # Variable to store the user's choice (file or folder)
 selection = tk.StringVar(value='file')
+
 frame_file_selection = tk.Frame(frame_file)
 frame_file_selection.grid(row=0, column=0, padx=5, pady=5)
 
@@ -786,7 +789,7 @@ folder_radio.grid(row=0, column=0, padx=0, pady=0)
 # Variable to store the file or folder path
 file_path = tk.StringVar()
 # tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
-file_path_entry = tk.Entry(frame_file, textvariable=file_path, width=50)
+file_path_entry = tk.Entry(frame_file, textvariable=file_path, width=60)
 file_path_entry.grid(row=0, column=1, padx=5, pady=5)
 
 browse_btn = tk.Button(frame_file, text="Browse", bg='ghost white', command=choose_file_or_folder)
@@ -794,15 +797,15 @@ browse_btn.grid(row=0, column=2, padx=5, pady=5)
 button_design(browse_btn)
 
 
-frame_remote = tk.Frame(root)
-frame_remote.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky='w')
+frame_remote = tk.Frame(frame_path)
+frame_remote.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
 remote_dir_label = tk.Label(frame_remote, text="Remote directory:")
 remote_dir_label.grid(row=0, column=0, padx=10, pady=10)
 
 remote_dir_entry = ttk.Combobox(frame_remote, 
                                 # values=default_paths + tuple(custom_paths), 
-                                width=47)
+                                width=55)
 # if default_paths:
 #     remote_dir_entry.insert(0, default_paths[0])
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
@@ -820,7 +823,7 @@ frame_lgv_login.grid(row=3, column=0, columnspan=2, padx=5, pady=0)
 
 
 frame_lgvs = tk.Frame(frame_lgv_login)
-frame_lgvs.grid(row=0, column=0, columnspan=1, padx=5, pady=5)
+frame_lgvs.grid(row=0, column=0, columnspan=1, padx=5, pady=5, sticky='e')
 
 frame_ip = tk.Frame(frame_lgvs)
 frame_ip.grid(row=0, column=0, padx=5, pady=5)
