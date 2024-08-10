@@ -329,6 +329,7 @@ def start_transfer(status_widget):
         elif transfer_type_sel.get() == 'FTP':
             threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget)).start()
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+        
 
 ############################################# Download files from remote server ################################################
 
@@ -395,7 +396,7 @@ def start_download(status_widget):
             threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, status_widget)).start()
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
 
-
+############################################################ Choose file to transfer ################################################
 def choose_file_or_folder():
     file_path.set("")  # Clear previous selection
     if selection.get() == 'file':
@@ -497,7 +498,7 @@ def set_paths():
     global default_paths, custom_paths
     default_paths_sftp = ("\Config", "\TwinCAT\Boot", "\Layout")
     default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/Backup/export_to_agv", "/Hard Disk/TwinCAT/Boot")
-    default_paths_net = ("/Backup", "/Backup/export_to_agv") #examples for now, get real ones later
+    default_paths_net = ("\Backup", "\Backup\export_to_agv") #examples for now, get real ones later
     transfer_type = transfer_type_sel.get()
 
     # Load custom paths based on the transfer type
@@ -728,6 +729,11 @@ def on_leave(e):
     if e.widget['state'] == "normal":
         e.widget['background'] = 'ghost white'
 
+def button_design(entry):
+    entry.bind("<Enter>", on_enter)
+    entry.bind("<Leave>", on_leave)
+    entry.bind("<Button-1>", on_enter)
+
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
@@ -746,14 +752,17 @@ ftp_option.grid(row=0, column=0, padx=60, pady=0, sticky='w')
 net_option = tk.Radiobutton(root, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_paths)
 net_option.place(x=120, y=10)
 
-# Variable to store the file or folder path
-file_path = tk.StringVar()
+
+frame_selection = tk.Frame(root)
+frame_selection.grid(row=1, column=0, padx=5, pady=5, sticky='e')
 # Variable to store the user's choice (file or folder)
 selection = tk.StringVar(value='file')
 
 # Radio buttons for selecting file or folder
-tk.Radiobutton(root, text="File", variable=selection, value='file').grid(row=1, column=0, padx=10, pady=10, sticky='w')
-tk.Radiobutton(root, text="Folder:", variable=selection, value='folder').grid(row=1, column=0, padx=60, pady=10, sticky='w')
+file_radio = tk.Radiobutton(frame_selection, text="File:", variable=selection, value='file')
+file_radio.grid(row=0, column=1, padx=5, pady=5, sticky='w')
+folder_radio = tk.Radiobutton(frame_selection, text="Folder", variable=selection, value='folder')
+folder_radio.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 # Create a listbox to display saved profiles
 profiles_combobox = ttk.Combobox(root, width=40)
@@ -763,70 +772,84 @@ profiles_combobox.grid(row=0, column=1,padx=10, pady=10)
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 
-save_profile = tk.Button(root, text="Save Profile", command=save_custom_profile)
+save_profile = tk.Button(root, text="Save Profile", bg='ghost white', command=save_custom_profile)
 save_profile.grid(row=0, column=2, padx=10, pady=10)
-save_profile.bind("<Enter>", on_enter)
-save_profile.bind("<Leave>", on_leave)
-save_profile.bind("<Button-1>", on_enter)
+button_design(save_profile)
 # save.bind("<Button-1>", validate_ip_format)
 
-browse_btn = tk.Button(root, text="Browse", command=choose_file_or_folder)
+browse_btn = tk.Button(root, text="Browse", bg='ghost white', command=choose_file_or_folder)
 browse_btn.grid(row=1, column=2, padx=5, pady=10)
-browse_btn.bind("<Enter>", on_enter)
-browse_btn.bind("<Leave>", on_leave)
-browse_btn.bind("<Button-1>", on_enter)
+button_design(browse_btn)
 
+# Variable to store the file or folder path
+file_path = tk.StringVar()
 # tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
 file_path_entry = tk.Entry(root, textvariable=file_path, width=50)
 file_path_entry.grid(row=1, column=1, padx=10, pady=10)
 
-tk.Label(root, text="Enter Root IP:").grid(row=2, column=0, padx=10, pady=10)
-ip_entry = tk.Entry(root, width=50)
-ip_entry.grid(row=2, column=1, padx=10, pady=10)
+frame_lgvs = tk.Frame(root)
+frame_lgvs.grid(row=3, column=0, columnspan=3, padx=5, pady=5)
+
+frame_ip = tk.Frame(frame_lgvs)
+frame_ip.grid(row=0, column=0, padx=5, pady=5)
+
+ip_label = tk.Label(frame_ip, text="Root IP:")
+ip_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
+
+ip_entry = tk.Entry(frame_ip, width=20)
+ip_entry.grid(row=0, column=1, padx=5, pady=5)
 create_placeholder(ip_entry, "e.g., 7.204.194.10")
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
+frame_range = tk.Frame(frame_lgvs)
+frame_range.grid(row=0, column=1, padx=5, pady=5)
 
-tk.Label(root, text="Enter LGV range:").grid(row=3, column=0, padx=10, pady=10)
-range_entry = tk.Entry(root, width=50)
-range_entry.grid(row=3, column=1, padx=10, pady=10)
+range_label = tk.Label(frame_range, text="LGV range:")
+range_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
+
+range_entry = tk.Entry(frame_range, width=25)
+range_entry.grid(row=0, column=1, padx=5, pady=5)
 create_placeholder(range_entry, "e.g., 1-9,11-25,27,29,31-40")
 
 
-tk.Label(root, text="Enter remote directory:").grid(row=4, column=0, padx=10, pady=10)
+tk.Label(root, text="Remote directory:").grid(row=2, column=0, padx=10, pady=10, sticky='e')
 remote_dir_entry = ttk.Combobox(root, 
                                 # values=default_paths + tuple(custom_paths), 
                                 width=47)
 # if default_paths:
 #     remote_dir_entry.insert(0, default_paths[0])
-remote_dir_entry.grid(row=4, column=1, padx=10, pady=10)
+remote_dir_entry.grid(row=2, column=1, padx=10, pady=10)
 
 # Add a button to save a custom path
-save_path = tk.Button(root, text="Save Path", 
-        #   command=save_custom_path)
-        command=on_add_path)
-save_path.grid(row=4, column=2, padx=5, pady=10)
-save_path.bind("<Enter>", on_enter)
-save_path.bind("<Leave>", on_leave)
-save_path.bind("<Button-1>", on_enter)
+save_path = tk.Button(root, text="Save Path",
+                      bg='ghost white',
+                      command=on_add_path)
+save_path.grid(row=2, column=2, padx=5, pady=10)
+button_design(save_path)
 
-# create_placeholder(remote_dir_entry, "e.g., /remote/config/")
+frame_login = tk.Frame(root)
+frame_login.grid(row=5, column=0, columnspan=3, padx=5, pady=5)
 
-tk.Label(root, text="Enter username:").grid(row=5, column=0, padx=10, pady=10)
-username_entry = tk.Entry(root, width=50)
+frame_user = tk.Frame(frame_login)
+frame_user.grid(row=0, column=0, padx=5, pady=5)
+
+username_label = tk.Label(frame_user, text="Username:")
+username_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
+username_entry = tk.Entry(frame_user)
 username_entry.insert(0, "Administrator")
-username_entry.grid(row=5, column=1, padx=10, pady=10)
+username_entry.grid(row=0, column=1, padx=5, pady=5)
+
+frame_password = tk.Frame(frame_login)
+frame_password.grid(row=0, column=1, padx=5, pady=5)
+
+password_label = tk.Label(frame_password, text="Password:")
+password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
+password_entry = tk.Entry(frame_password, show="*")
+password_entry.grid(row=0, column=1, padx=5, pady=5)
 
 anonymous_check = tk.IntVar()
 anonymous = tk.Checkbutton(root, text="Anonymous", variable=anonymous_check, command=on_anonymous_check)
-anonymous.grid(row=5, column=2)
-
-password_label = tk.Label(root, text="Enter password:")
-password_label.grid(row=6, column=0, padx=10, pady=10)
-# password_label.place(x=70, y=270)
-password_entry = tk.Entry(root, width=50, show="*")
-password_entry.grid(row=6, column=1, padx=10, pady=10)
-
+anonymous.grid(row=5, column=2, padx=10, pady=5)
 
 mode_selection = tk.StringVar(value='transfer')
 # Radio buttons for selecting file or folder
@@ -852,6 +875,7 @@ transfer = tk.Button(root, text="Transfer",
                      borderwidth=0,
                      highlightthickness=0,
                      background='white',
+                     bg='ghost white',
                      command=lambda: start_transfer(status_widget)
                      )
 transfer.grid(row=7, 
@@ -860,15 +884,14 @@ transfer.grid(row=7,
               pady=10,
               padx=10)
 transfer.configure(font=('Lucida Sans', 12))
-transfer.bind("<Enter>", on_enter)
-transfer.bind("<Leave>", on_leave)
-transfer.bind("<Button-1>", on_enter)
+button_design(transfer)
 print(f"Transfer button state: {transfer['state']}")
 
 download = tk.Button(root, text="Download", 
                      borderwidth=0,
                      highlightthickness=0,
                      background='white',
+                     bg='ghost white',
                      command=lambda: start_download(status_widget)
                      )
 download.grid(row=7, 
@@ -877,9 +900,7 @@ download.grid(row=7,
               pady=10,
               padx=10)
 download.configure(font=('Lucida Sans', 12))
-download.bind("<Enter>", on_enter)
-download.bind("<Leave>", on_leave)
-download.bind("<Button-1>", on_enter)
+button_design(download)
 download.config(state="disabled")
 print(f"Download button state: {download['state']}")
 # Avoid color change when hovering when button is disabled
