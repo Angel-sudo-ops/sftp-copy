@@ -734,6 +734,12 @@ def button_design(entry):
     entry.bind("<Leave>", on_leave)
     entry.bind("<Button-1>", on_enter)
 
+############################Closing window ##################################
+def on_closing():
+    if messagebox.askokcancel("Quit", "Do you want to quit?"):
+
+        root.destroy()
+
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
@@ -837,7 +843,7 @@ create_placeholder(ip_entry, "e.g., 7.204.194.10")
 ip_entry.bind("<KeyRelease>", validate_ip_format)
 
 frame_range = tk.Frame(frame_lgvs)
-frame_range.grid(row=1, column=0, padx=5, pady=5)
+frame_range.grid(row=1, column=0, padx=5, pady=10)
 
 range_label = tk.Label(frame_range, text="Range:")
 range_label.grid(row=0, column=0, padx=5, pady=5)
@@ -861,7 +867,7 @@ username_entry.insert(0, "Administrator")
 username_entry.grid(row=0, column=1, padx=5, pady=5)
 
 frame_password = tk.Frame(frame_login)
-frame_password.grid(row=1, column=0, padx=5, pady=5)
+frame_password.grid(row=1, column=0, padx=5, pady=10)
 
 password_label = tk.Label(frame_password, text="Password:")
 password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
@@ -936,16 +942,17 @@ print(f"Download button state: {download['state']}")
 # status_widget = tk.Text(root, height=10, width=80)
 status_widget = scrolledtext.ScrolledText(root, 
                                           undo=True,
-                                          height=15,
+                                          height=17,
                                           width=70
                                           )
 status_font = font.Font(family="Consolas", size=11)
 status_widget.configure(font=status_font)
-status_widget.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
+status_widget.grid(row=5, column=0, columnspan=2, padx=15, pady=15)
 status_widget.bind("<Key>", lambda e: "break")
 
 set_paths()
 
+# root.protocol("WM_DELETE_WINDOW", on_closing)
 root.mainloop()
 
 ## not showing connection timeout fix that
@@ -955,3 +962,7 @@ root.mainloop()
 ##  cannot send several files at the same time
 
 ## create tool for layout zipper
+
+##check that range is valid for the root IP (not exceding .255)
+##check the input range to be in the format 1-5,10-15,45
+## also check that the range is ascending, i.e. 1-5, 10-15, not in the form 15-10,9-1
