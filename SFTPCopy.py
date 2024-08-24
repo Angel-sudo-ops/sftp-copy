@@ -747,6 +747,18 @@ def on_closing():
 root = tk.Tk()
 root.title(f"Super File Transfer {__version__}")
 
+# Check if running as a script or frozen executable
+if getattr(sys, 'frozen', False):
+    icon_path = os.path.join(sys._MEIPASS, "./transfer.ico")
+else:
+    icon_path = os.path.abspath("./transfer.ico")
+root.iconbitmap(icon_path)
+
+window_width = 600
+window_lenght = 670
+root.geometry(f"{window_width}x{window_lenght}")
+root.minsize(window_width, window_lenght)
+
 # root.resizable(False, False)
 
 frame_profile = tk.Frame(root)
