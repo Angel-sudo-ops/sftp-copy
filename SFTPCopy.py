@@ -23,6 +23,8 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
+    success = True  # Track overall success for the entire transfer process
+
     try:
         status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
         status_widget.yview(tk.END)
@@ -30,9 +32,12 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
-            sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
-            status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
-            result = "Success"
+            try:
+                sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
+                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
+            except Exception as e:
+                status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+                success = False
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -40,23 +45,32 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path))
                     try:
                         sftp.mkdir(remote_dir)
-                    except:
-                        pass  # Ignore if the directory already exists
+                    except Exception as e:
+                        status_widget.insert(tk.END, f"Failed to create directory {remote_dir} on {host}: {e}\n")
+                        success = False
+                        continue  # Continue with other directories/files even if one fails
+
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
-                    sftp.put(local_file, remote_file)
-                    status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
-                    result = "Success"
+                    try:
+                        sftp.put(local_file, remote_file)
+                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+                    except Exception as e:
+                        status_widget.insert(tk.END, f"Failed to transfer {local_file} to {remote_file} on {host}: {e}\n")
+                        success = False
+
         sftp.close()
         ssh.close()
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
-        result = "Failed"
+        status_widget.insert(tk.END, f"\nFailed to initiate transfer to\n\\{host}. Error: {e}\n")
+        success = False
     finally:
+        result = "Success" if success else "Failed"
         status_widget.yview(tk.END)
         # Put the result in the queue with associated host information
         result_queue.put((host, result))
+
 ############################################### SFTP Download ###############################################
 
 def sftp_download(host, port, username, password, remote_path, local_path, status_widget):
@@ -371,7 +385,7 @@ def monitor_threads(threads, result_queue, status_widget):
         total=total+1
 
     if failed_hosts:
-        status_widget.insert(tk.END, f"\nFailed to connect to {failed} out of {total} hosts:\n")
+        status_widget.insert(tk.END, f"\nConnection failed for {failed} out of {total} hosts:\n")
         for host in failed_hosts:
             status_widget.insert(tk.END, f"{host}\n")
     else:
@@ -489,10 +503,11 @@ def disable_placeholder(entry, entry_style):
         entry.delete(0, tk.END)
     # entry.config(fg='black')
     entry.config(style=entry_style)
+    entry.bind("<KeyRelease>")
 
 def on_combobox_change(event):
     for entry in entries:
-        disable_placeholder(entry, "IP.TEntry")
+        disable_placeholder(entry, "RootIP.TEntry")
 
 def combined_combobox_selected(event):
     on_combobox_change(event)
@@ -503,7 +518,7 @@ def combined_combobox_selected(event):
 good_input_bg = 'white'
 bad_input_bg = '#fbcbcb' # light red
 good_input_fg = 'black'
-bad_input_fg = '#de021a'
+bad_input_fg = '#de021a' # red 
 placeholder_fg = 'grey'
 
 def validate_entry(entry, style_name, validate_func):
@@ -907,7 +922,7 @@ root.after(100, set_icon)
 
 style = ttk.Style()
 # Create a style for the Entry widget
-style.configure('IP.TEntry', foreground='black')
+style.configure('RootIP.TEntry', foreground='black')
 style.configure('Range.TEntry', foreground='black')
 
 style.configure('Placeholder.TEntry', foreground='grey')
@@ -1018,8 +1033,8 @@ ip_label.grid(row=0, column=0, padx=5, pady=5)
 
 ip_entry = ttk.Entry(frame_ip, width=25)
 ip_entry.grid(row=0, column=1, padx=5, pady=5)
-create_placeholder(ip_entry, "e.g., 7.204.194.10", "IP.TEntry", "Placeholder.TEntry")
-ip_entry.bind("<KeyRelease>", validate_entry(ip_entry, "IP.TEntry", validate_base_ip))
+create_placeholder(ip_entry, "e.g., 7.204.194.10", "RootIP.TEntry", "Placeholder.TEntry")
+ip_entry.bind("<KeyRelease>", validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip))
 
 frame_range = tk.Frame(frame_lgvs)
 frame_range.grid(row=1, column=0, padx=5, pady=10)
@@ -1030,7 +1045,7 @@ range_label.grid(row=0, column=0, padx=5, pady=5)
 range_entry = ttk.Entry(frame_range, width=25)
 range_entry.grid(row=0, column=1, padx=5, pady=5)
 create_placeholder(range_entry, "e.g., 1-9,27,29,31-40", "Range.TEntry", "Placeholder.TEntry")
-range_entry.bind("<KeyRelease>", validate_entry(range_entry, "Range.TEntry", validate_range))
+range_entry.bind("<KeyRelease>", validate_entry(range_entry, 'Range.TEntry', validate_range))
 
 
 frame_login = tk.Frame(frame_lgv_login)
