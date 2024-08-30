@@ -105,7 +105,7 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
 
 ################################################ FTP transfer ###############################################################
 
-def ftp_transfer(host, username, password, local_path, remote_path, status_widget):
+def ftp_transfer(host, username, password, local_path, remote_path, status_widget, result_queue):
     try:
         status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
         status_widget.yview(tk.END)
@@ -119,6 +119,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
             with open(local_path, 'rb') as file:
                 ftp.storbinary(f"STOR {os.path.join(remote_path, os.path.basename(local_path))}", file)
             status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
+            result = "Success"
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -134,13 +135,16 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                     with open(local_file, 'rb') as file:
                         ftp.storbinary(f"STOR {remote_file}", file)
                     status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+                    result = "Success"
         
         # Close the FTP connection
         ftp.quit()
     except Exception as e:
         status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+        result = "Failed"
     finally:
         status_widget.yview(tk.END)
+        result_queue.put((host, result))
 
 def ftp_transfer_anonymous(host, username, password, local_path, remote_path, status_widget):
     try:
@@ -339,7 +343,7 @@ def start_transfer(status_widget):
         if transfer_type_sel.get() == 'SFTP': 
             t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget, result_queue))
         elif transfer_type_sel.get() == 'FTP':
-            t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget))
+            t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget, result_queue))
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
         
         t.start()
@@ -350,15 +354,31 @@ def start_transfer(status_widget):
 
 ################################ Monitor threads ############################################
 def monitor_threads(threads, result_queue, status_widget):
+    # Wait for all threads to complete
     for t in threads:
-        t.join()  # Wait for all threads to complete
-    status_widget.insert(tk.END, "\nFailed to connect to: \n")
+        t.join()
+    
+    # Check for any failed results
+    failed_hosts = []
+    failed = 0
+    total = 0
+
     while not result_queue.empty():
         host, result = result_queue.get()
         if result == "Failed":
-            # status_widget.insert(tk.END, f"Host: {host}, Result: {result}\n")
+            failed_hosts.append(host)
+            failed=failed+1
+        total=total+1
+
+    if failed_hosts:
+        status_widget.insert(tk.END, f"\nFailed to connect to {failed} out of {total} hosts:\n")
+        for host in failed_hosts:
             status_widget.insert(tk.END, f"{host}\n")
-        status_widget.yview(tk.END)
+    else:
+        status_widget.insert(tk.END, "\nAll transfers successful\n")
+
+    # Ensure the status widget updates properly
+    status_widget.yview(tk.END)
 
 ############################################# Download files from remote server ################################################
 
@@ -745,7 +765,7 @@ def save_custom_profiles(profile):
 
 
 def save_custom_profile():
-    custom_profile_name = profiles_combobox.get().lower()
+    custom_profile_name = profiles_combobox.get()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
     dir_entry = remote_dir_entry.get()
@@ -753,7 +773,7 @@ def save_custom_profile():
     password = password_entry.get()
     transfer_mode = transfer_type_sel.get()
 
-    if not custom_profile_name or custom_profile_name == "select a profile" or custom_profile_name == "default":
+    if not custom_profile_name or custom_profile_name.lower() == "select a profile" or custom_profile_name.lower() == "default":
         messagebox.showerror("Error", "Please enter a profile name")
         return
     # if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
