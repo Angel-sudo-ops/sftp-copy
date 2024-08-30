@@ -16,14 +16,5 @@
         "password": "1",
         "remote_dir": "\\Config",
         "transfer_type": "SFTP"
-    },
-    {
-        "name": "Default",
-        "base_ip": "192.168.80.10",
-        "ip_range": "1-15,20-35",
-        "remote_dir": "\\Config",
-        "username": "Administrator",
-        "password": "1",
-        "transfer_type": "SFTP"
     }
 ]

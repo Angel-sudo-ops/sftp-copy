@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox
 from tkinter import font, ttk
 import tkinter.scrolledtext as scrolledtext
 import threading
+import queue
 import json
 import re
 import sys
@@ -14,11 +15,11 @@ from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
 
-__version__ = '3.1'
+__version__ = '3.3.1'
 
 ############################################### SFTP Transfer ###############################################
 
-def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget):
+def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget, result_queue):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -31,6 +32,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
         if os.path.isfile(local_path):
             sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
             status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
+            result = "Success"
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -45,13 +47,16 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     sftp.put(local_file, remote_file)
                     status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+                    result = "Success"
         sftp.close()
         ssh.close()
     except Exception as e:
         status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+        result = "Failed"
     finally:
         status_widget.yview(tk.END)
-    
+        # Put the result in the queue with associated host information
+        result_queue.put((host, result))
 ############################################### SFTP Download ###############################################
 
 def sftp_download(host, port, username, password, remote_path, local_path, status_widget):
@@ -302,10 +307,12 @@ def start_transfer(status_widget):
     if not local_path:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
         return
-    if not base_ip or base_ip == placeholders[ip_entry]:
+    # if not base_ip or base_ip == placeholders[ip_entry]:
+    if not validate_base_ip():
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input or range_input == placeholders[range_entry]:
+    # if not range_input or range_input == placeholders[range_entry]:
+    if not validate_range():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not remote_dir:
@@ -325,13 +332,33 @@ def start_transfer(status_widget):
         messagebox.showerror("Input Error", "Please provide a valid IP range.")
         return
 
+    result_queue = queue.Queue()
+    threads = []
+
     for host in ip_list:
         if transfer_type_sel.get() == 'SFTP': 
-            threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget)).start()
+            t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget, result_queue))
         elif transfer_type_sel.get() == 'FTP':
-            threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+            t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget))
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
         
+        t.start()
+        threads.append(t)
+
+    # Start a separate thread to monitor the worker threads
+    threading.Thread(target=monitor_threads, args=(threads, result_queue, status_widget)).start()
+
+################################ Monitor threads ############################################
+def monitor_threads(threads, result_queue, status_widget):
+    for t in threads:
+        t.join()  # Wait for all threads to complete
+    status_widget.insert(tk.END, "\nFailed to connect to: \n")
+    while not result_queue.empty():
+        host, result = result_queue.get()
+        if result == "Failed":
+            # status_widget.insert(tk.END, f"Host: {host}, Result: {result}\n")
+            status_widget.insert(tk.END, f"{host}\n")
+        status_widget.yview(tk.END)
 
 ############################################# Download files from remote server ################################################
 
@@ -366,10 +393,12 @@ def start_download(status_widget):
     if not local_root_path:
         messagebox.showerror("Input Error", "Please choose a folder where to download.")
         return
-    if not base_ip or base_ip == placeholders[ip_entry]:
+    # if not base_ip or base_ip == placeholders[ip_entry]:
+    if not validate_range():
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input or range_input == placeholders[range_entry]:
+    # if not range_input or range_input == placeholders[range_entry]:
+    if not validate_base_ip():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not remote_dir:
@@ -415,41 +444,107 @@ def choose_file_or_folder():
 placeholders = {}
 entries = []
 
-def create_placeholder(entry, placeholder_text):
+def create_placeholder(entry, placeholder_text, entry_style, placeholder_style):
     entry.insert(0, placeholder_text)
-    entry.bind("<FocusIn>", lambda event: on_focus_in(entry, placeholder_text))
-    entry.bind("<FocusOut>", lambda event: on_focus_out(entry, placeholder_text))
-    entry.config(fg="grey")
+    entry.config(style=placeholder_style)
+    entry.bind("<FocusIn>", lambda event: on_focus_in(entry, placeholder_text, entry_style))
+    entry.bind("<FocusOut>", lambda event: on_focus_out(entry, placeholder_text, placeholder_style))
     placeholders[entry] = placeholder_text
     entries.append(entry)
 
-def on_focus_in(entry, placeholder_text):
+def on_focus_in(entry, placeholder_text, entry_style):
     if entry.get() == placeholder_text:
         entry.delete(0, tk.END)
-        entry.config(fg='black')
+        entry.config(style=entry_style)
 
-def on_focus_out(entry, placeholder_text):
+def on_focus_out(entry, placeholder_text, placeholder_style):
     if not entry.get():
         entry.insert(0, placeholder_text)
-        entry.config(fg='grey')
+        entry.config(style=placeholder_style)
 
-def disable_placeholder(entry):
+def disable_placeholder(entry, entry_style):
     entry.unbind("<FocusIn>")
     entry.unbind("<FocusOut>")
     if entry.get() == placeholders[entry]:
         entry.delete(0, tk.END)
-    entry.config(fg='black')
+    # entry.config(fg='black')
+    entry.config(style=entry_style)
 
 def on_combobox_change(event):
     for entry in entries:
-        disable_placeholder(entry)
+        disable_placeholder(entry, "IP.TEntry")
 
 def combined_combobox_selected(event):
     on_combobox_change(event)
     load_profile_by_name(event)
     set_paths()
 
-# ############################################### Validate IP address format ################################################
+# ############################################### Validate inputs ################################################
+good_input_bg = 'white'
+bad_input_bg = '#fbcbcb' # light red
+good_input_fg = 'black'
+bad_input_fg = '#de021a'
+placeholder_fg = 'grey'
+
+def validate_entry(entry, style_name, validate_func):
+    def inner_validate(*args):
+        if entry.get() != placeholders[entry]:
+            result = validate_func(entry)
+            if result:
+                style.configure(style_name, background=good_input_bg, foreground=good_input_fg)
+            else:
+                style.configure(style_name, background=bad_input_bg, foreground=bad_input_fg)
+        else:
+             style.configure(style_name, background=good_input_bg, foreground=placeholder_fg)
+    return inner_validate
+
+def validate_range(*args):
+    pattern = r"^\d+(-\d+)?(,\d+(-\d+)?)*$"
+    input_range = range_entry.get().strip()
+    
+    # If the input is empty, reset to good input colors and return False
+    if not input_range or input_range == placeholders[range_entry]:
+        return False
+    
+    # Check if the input matches the pattern
+    if re.match(pattern, input_range):
+        ranges = input_range.split(',')
+        
+        # Check that each range is in increasing order, starts with a number greater than 0,
+        # and does not have leading zeros
+        for r in ranges:
+            if '-' in r:
+                start, end = r.split('-')
+                if not start.isdigit() or not end.isdigit() or int(start) <= 0 or int(start) > int(end) or start != str(int(start)) or end != str(int(end)):
+                    return False
+            else:
+                # If it's a single number, ensure it's greater than 0 and does not have leading zeros
+                if not r.isdigit() or int(r) <= 0 or r != str(int(r)):
+                    return False
+        return True
+    else:
+        return False
+    
+def validate_base_ip(*args):
+    base_ip = ip_entry.get().strip()
+    if validate_ip(base_ip):
+        return True
+    elif not base_ip or base_ip == placeholders[ip_entry]:      
+        return False
+    else:
+        return False
+
+# Function to validate IP address format
+def validate_ip(ip):
+    # Compile the regex pattern for the base IP format 'xxx.xxx.xxx.xxx'
+    pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')  # Match format 'xxx.xxx.xxx.xxx'
+    # Check if the input matches the pattern
+    if pattern.match(ip):
+        # Split the IP into parts and check if each part is between 0 and 255
+        parts = ip.split('.')
+        return all(0 <= int(num) <= 255 for num in parts)
+    return False
+
 def validate_ip_format(event):
     ip = ip_entry.get()
     pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')  # Match format 'xxx.xxx.xxx.xxx'
@@ -536,12 +631,16 @@ def select_mode():
         download.config(state="disabled")
         file_path_entry.config(state='normal')
         browse_btn.config(state='normal')
+        folder_radio.config(state='normal')
+        file_radio.config(state='normal')
 
     elif mode_selected == 'download':
         transfer.config(state='disabled')
         download.config(state="normal")
         file_path_entry.config(state='disabled')
         browse_btn.config(state='disabled')
+        folder_radio.config(state='disabled')
+        file_radio.config(state='disabled')
     print(f"Selected mode {mode_selected}")
 
 # Load custom paths from a file
@@ -646,7 +745,7 @@ def save_custom_profiles(profile):
 
 
 def save_custom_profile():
-    custom_profile_name = profiles_combobox.get()
+    custom_profile_name = profiles_combobox.get().lower()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
     dir_entry = remote_dir_entry.get()
@@ -654,13 +753,15 @@ def save_custom_profile():
     password = password_entry.get()
     transfer_mode = transfer_type_sel.get()
 
-    if not custom_profile_name or custom_profile_name == "Select a profile":
+    if not custom_profile_name or custom_profile_name == "select a profile" or custom_profile_name == "default":
         messagebox.showerror("Error", "Please enter a profile name")
         return
-    if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
+    # if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
+    if not validate_base_ip():
         messagebox.showerror("Input Error", "Please enter the base IP.")
         return
-    if not range_input or range_input == placeholders[range_entry]:
+    # if not range_input or range_input == placeholders[range_entry]:
+    if not validate_range():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     if not dir_entry:
@@ -742,6 +843,26 @@ def on_closing():
 
         root.destroy()
 
+############################ Remove focus ############################
+def remove_focus(event):
+    root.focus()
+
+def disable_focus(widget):
+    try:
+        widget.configure(takefocus=0)
+    except tk.TclError:
+        pass  # Skip widgets that do not support takefocus
+    for child in widget.winfo_children():
+        disable_focus(child)
+
+############################# Set GUI icon ##########################
+def set_icon():
+    if os.path.exists(icon_path):
+        root.iconbitmap(icon_path)
+    else:
+        print("Icon file not found.")
+
+
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
@@ -752,7 +873,7 @@ if getattr(sys, 'frozen', False):
     icon_path = os.path.join(sys._MEIPASS, "./transfer.ico")
 else:
     icon_path = os.path.abspath("./transfer.ico")
-root.iconbitmap(icon_path)
+# root.iconbitmap(icon_path)
 
 window_width = 600
 window_lenght = 670
@@ -760,6 +881,16 @@ root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
 
 # root.resizable(False, False)
+
+# Apply the icon after the window is initialized
+root.after(100, set_icon)
+
+style = ttk.Style()
+# Create a style for the Entry widget
+style.configure('IP.TEntry', foreground='black')
+style.configure('Range.TEntry', foreground='black')
+
+style.configure('Placeholder.TEntry', foreground='grey')
 
 frame_profile = tk.Frame(root)
 frame_profile.grid(row=0, column=1, padx=10, pady=5, sticky='w')
@@ -770,23 +901,35 @@ profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 
-save_profile = tk.Button(frame_profile, text="Save Profile", bg='ghost white', command=save_custom_profile)
+save_profile = ttk.Button(frame_profile, 
+                          text="Save Profile", 
+                        #   bg='ghost white', 
+                          command=save_custom_profile)
 save_profile.grid(row=0, column=1, padx=5, pady=5)
-button_design(save_profile)
+# button_design(save_profile)
+
+
+# Customize the focus ring (or border) of the Radiobutton
+style.configure("Custom.TRadiobutton", focuscolor="lightblue", highlightthickness=2)
 
 
 # transfer_type = tk.StringVar()
 transfer_type_sel = tk.StringVar(value='SFTP')
-
+# style.configure("Transfer.TLabelframe.Label", relief='groove', font=("Segoe UI", 10, "italic"))
 frame_transfer = tk.Frame(root, bd=1, relief='groove')
 frame_transfer.grid(row=0, column=0, padx=0, pady=5, sticky='e')
 # Radio buttons for selecting file or folder
-sftp_option = tk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths)
+sftp_option = ttk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths, style="Custom.TRadiobutton")
 sftp_option.grid(row=0, column=0, padx=0, pady=0, sticky='w')
-ftp_option = tk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_paths)
+ftp_option = ttk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_paths, style="Custom.TRadiobutton")
 ftp_option.grid(row=0, column=1, padx=0, pady=0, sticky='w')
-net_option = tk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_paths)
+net_option = ttk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_paths, style="Custom.TRadiobutton")
 net_option.grid(row=0, column=2, padx=0, pady=0, sticky='w')
+
+# Bind the radio buttons to the function that removes focus
+# ftp_option.bind("<ButtonRelease-1>", remove_focus)
+# sftp_option.bind("<ButtonRelease-1>", remove_focus)
+# net_option.bind("<ButtonRelease-1>", remove_focus)
 
 
 frame_path = tk.Frame(root)
@@ -801,26 +944,28 @@ frame_file_selection = tk.Frame(frame_file)
 frame_file_selection.grid(row=0, column=0, padx=5, pady=5)
 
 # Radio buttons for selecting file or folder
-file_radio = tk.Radiobutton(frame_file_selection, text="File:", variable=selection, value='file')
+file_radio = ttk.Radiobutton(frame_file_selection, text="File:", variable=selection, value='file')
 file_radio.grid(row=0, column=1, padx=0, pady=0)
-folder_radio = tk.Radiobutton(frame_file_selection, text="Folder", variable=selection, value='folder')
+folder_radio = ttk.Radiobutton(frame_file_selection, text="Folder", variable=selection, value='folder')
 folder_radio.grid(row=0, column=0, padx=0, pady=0)
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
 # tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
-file_path_entry = tk.Entry(frame_file, textvariable=file_path, width=60)
+file_path_entry = ttk.Entry(frame_file, textvariable=file_path, width=60)
 file_path_entry.grid(row=0, column=1, padx=5, pady=5)
 
-browse_btn = tk.Button(frame_file, text="Browse", bg='ghost white', command=choose_file_or_folder)
+browse_btn = ttk.Button(frame_file, text="Browse",
+                        # bg='ghost white', 
+                        command=choose_file_or_folder)
 browse_btn.grid(row=0, column=2, padx=5, pady=5)
-button_design(browse_btn)
+# button_design(browse_btn)
 
 
 frame_remote = tk.Frame(frame_path)
 frame_remote.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-remote_dir_label = tk.Label(frame_remote, text="Remote directory:")
+remote_dir_label = ttk.Label(frame_remote, text="Remote directory:")
 remote_dir_label.grid(row=0, column=0, padx=10, pady=10)
 
 remote_dir_entry = ttk.Combobox(frame_remote, 
@@ -831,11 +976,11 @@ remote_dir_entry = ttk.Combobox(frame_remote,
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
 
 # Add a button to save a custom path
-save_path = tk.Button(frame_remote, text="Save Path",
-                      bg='ghost white',
+save_path = ttk.Button(frame_remote, text="Save Path",
+                    #   bg='ghost white',
                       command=on_add_path)
 save_path.grid(row=0, column=2, padx=5, pady=10)
-button_design(save_path)
+# button_design(save_path)
 
 
 frame_lgv_login = tk.Frame(root)
@@ -848,23 +993,24 @@ frame_lgvs.grid(row=0, column=0, columnspan=1, padx=5, pady=5, sticky='e')
 frame_ip = tk.Frame(frame_lgvs)
 frame_ip.grid(row=0, column=0, padx=5, pady=5)
 
-ip_label = tk.Label(frame_ip, text="Root IP:")
+ip_label = ttk.Label(frame_ip, text="Root IP:")
 ip_label.grid(row=0, column=0, padx=5, pady=5)
 
-ip_entry = tk.Entry(frame_ip, width=25)
+ip_entry = ttk.Entry(frame_ip, width=25)
 ip_entry.grid(row=0, column=1, padx=5, pady=5)
-create_placeholder(ip_entry, "e.g., 7.204.194.10")
-ip_entry.bind("<KeyRelease>", validate_ip_format)
+create_placeholder(ip_entry, "e.g., 7.204.194.10", "IP.TEntry", "Placeholder.TEntry")
+ip_entry.bind("<KeyRelease>", validate_entry(ip_entry, "IP.TEntry", validate_base_ip))
 
 frame_range = tk.Frame(frame_lgvs)
 frame_range.grid(row=1, column=0, padx=5, pady=10)
 
-range_label = tk.Label(frame_range, text="Range:")
+range_label = ttk.Label(frame_range, text="Range:")
 range_label.grid(row=0, column=0, padx=5, pady=5)
 
-range_entry = tk.Entry(frame_range, width=25)
+range_entry = ttk.Entry(frame_range, width=25)
 range_entry.grid(row=0, column=1, padx=5, pady=5)
-create_placeholder(range_entry, "e.g., 1-9,27,29,31-40")
+create_placeholder(range_entry, "e.g., 1-9,27,29,31-40", "Range.TEntry", "Placeholder.TEntry")
+range_entry.bind("<KeyRelease>", validate_entry(range_entry, "Range.TEntry", validate_range))
 
 
 frame_login = tk.Frame(frame_lgv_login)
@@ -873,24 +1019,24 @@ frame_login.grid(row=0, column=1, columnspan=1, padx=5, pady=5)
 frame_user = tk.Frame(frame_login)
 frame_user.grid(row=0, column=0, padx=5, pady=5)
 
-username_label = tk.Label(frame_user, text="Username:")
+username_label = ttk.Label(frame_user, text="Username:")
 username_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
-username_entry = tk.Entry(frame_user)
+username_entry = ttk.Entry(frame_user)
 username_entry.insert(0, "Administrator")
 username_entry.grid(row=0, column=1, padx=5, pady=5)
 
 frame_password = tk.Frame(frame_login)
 frame_password.grid(row=1, column=0, padx=5, pady=10)
 
-password_label = tk.Label(frame_password, text="Password:")
+password_label = ttk.Label(frame_password, text="Password:")
 password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
-password_entry = tk.Entry(frame_password, show="*")
+password_entry = ttk.Entry(frame_password, show="*")
 password_entry.grid(row=0, column=1, padx=5, pady=5)
 
 anonymous_check = tk.IntVar()
-anonymous = tk.Checkbutton(frame_login, text="Anonymous", variable=anonymous_check, command=on_anonymous_check)
+anonymous = ttk.Checkbutton(frame_login, text="Anonymous", variable=anonymous_check, command=on_anonymous_check)
 anonymous.grid(row=0, rowspan=2, column=1, padx=5, pady=5)
 
 
@@ -902,44 +1048,53 @@ mode_selection = tk.StringVar(value='transfer')
 
 frame_transfer = tk.Frame(frame_mode)
 frame_transfer.grid(row=0, column=0, padx=20, pady=10)
-radio_transfer = tk.Radiobutton(frame_transfer, 
+
+radio_transfer = ttk.Radiobutton(frame_transfer, 
                                 # text="Transfer", 
                                 variable=mode_selection, 
                                 value='transfer', 
-                                command=select_mode)
+                                takefocus=0,
+                                command=select_mode
+                                )
 radio_transfer.grid(row=0, column=0, padx=0, pady=0, sticky='e')
 
-transfer = tk.Button(frame_transfer, text="Transfer", 
-                     borderwidth=0,
-                     highlightthickness=0,
-                     background='white',
-                     bg='ghost white',
-                     command=lambda: start_transfer(status_widget)
-                     )
+style.configure('TD.TButton', font=('Lucida Sans', 12))
+transfer = ttk.Button(frame_transfer, 
+                      text="Transfer", 
+                    #  borderwidth=0,
+                    #  highlightthickness=0,
+                    #  background='white',
+                    #  bg='ghost white',
+                      style="TD.TButton",
+                      command=lambda: start_transfer(status_widget)
+                    )
 transfer.grid(row=0, 
               column=1, 
               pady=0,
               padx=0, 
               sticky='w')
-transfer.configure(font=('Lucida Sans', 12))
-button_design(transfer)
+# transfer.configure(font=('Lucida Sans', 12))
+# button_design(transfer)
 print(f"Transfer button state: {transfer['state']}")
 
 frame_download = tk.Frame(frame_mode)
 frame_download.grid(row=0, column=1, padx=20, pady=10)
 
-radio_download = tk.Radiobutton(frame_download, 
+radio_download = ttk.Radiobutton(frame_download, 
                                 # text="Download", 
                                 variable=mode_selection, 
                                 value='download',
-                                command=select_mode)
+                                takefocus=0,
+                                command=select_mode
+                                )
 radio_download.grid(row=0, column=2, padx=0, pady=0, sticky='w')
 
-download = tk.Button(frame_download, text="Download", 
-                     borderwidth=0,
-                     highlightthickness=0,
-                     background='white',
-                     bg='ghost white',
+download = ttk.Button(frame_download, text="Download", 
+                    #  borderwidth=0,
+                    #  highlightthickness=0,
+                    #  background='white',
+                    #  bg='ghost white',
+                     style="TD.TButton",
                      command=lambda: start_download(status_widget)
                      )
 download.grid(row=0, 
@@ -947,8 +1102,8 @@ download.grid(row=0,
               pady=0,
               padx=0,
               sticky='e')
-download.configure(font=('Lucida Sans', 12))
-button_design(download)
+# download.configure(font=('Lucida Sans', 12))
+# button_design(download)
 download.config(state="disabled")
 print(f"Download button state: {download['state']}")
 # Avoid color change when hovering when button is disabled
@@ -965,6 +1120,9 @@ status_widget.grid(row=5, column=0, columnspan=2, padx=15, pady=15)
 status_widget.bind("<Key>", lambda e: "break")
 
 set_paths()
+
+# Disable focus for all widgets
+# disable_focus(root)
 
 # root.protocol("WM_DELETE_WINDOW", on_closing)
 root.mainloop()
