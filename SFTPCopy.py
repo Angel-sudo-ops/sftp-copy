@@ -63,7 +63,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
         sftp.close()
         ssh.close()
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to initiate transfer to\n\\{host}. Error: {e}\n")
+        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\\{host}. \nError: {e}\n")
         success = False
     finally:
         result = "Success" if success else "Failed"
@@ -120,20 +120,24 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
 ################################################ FTP transfer ###############################################################
 
 def ftp_transfer(host, username, password, local_path, remote_path, status_widget, result_queue):
+    success = True  # Track overall success for the entire transfer process
+
     try:
         status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
         status_widget.yview(tk.END)
         
         # Connect to the FTP server
-        ftp = FTP(host)
+        ftp = FTP(host, timeout=15)
         ftp.login(user=username, passwd=password)
-        # ftp.login(user='anonymous', passwd='anonymous@example.com')  # You can use any email as password
 
         if os.path.isfile(local_path):
-            with open(local_path, 'rb') as file:
-                ftp.storbinary(f"STOR {os.path.join(remote_path, os.path.basename(local_path))}", file)
-            status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
-            result = "Success"
+            try:
+                with open(local_path, 'rb') as file:
+                    ftp.storbinary(f"STOR {os.path.join(remote_path, os.path.basename(local_path)).replace('\\', '/')}", file)
+                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
+            except Exception as e:
+                status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+                success = False
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -142,21 +146,28 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                     try:
                         ftp.mkd(remote_dir)
                     except Exception as e:
-                        status_widget.insert(tk.END, f"\nDirectory {remote_dir} might already exist. Error: {e}\n")
+                        status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}. Error: {e}\n")
+                        success = False
+                        continue  # Continue with other directories/files even if one fails
+
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path)).replace("\\", "/")
-                    with open(local_file, 'rb') as file:
-                        ftp.storbinary(f"STOR {remote_file}", file)
-                    status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
-                    result = "Success"
+                    try:
+                        with open(local_file, 'rb') as file:
+                            ftp.storbinary(f"STOR {remote_file}", file)
+                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+                    except Exception as e:
+                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}. Error: {e}\n")
+                        success = False
         
         # Close the FTP connection
         ftp.quit()
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
-        result = "Failed"
+        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\\{host}. \nError: {e}\n")
+        success = False
     finally:
+        result = "Success" if success else "Failed"
         status_widget.yview(tk.END)
         result_queue.put((host, result))
 
@@ -476,7 +487,7 @@ def choose_file_or_folder():
 ################################################## Placeholder #######################################################################
 # Dictionary to store entry widgets and their placeholder texts
 placeholders = {}
-entries = []
+entries = {}
 
 def create_placeholder(entry, placeholder_text, entry_style, placeholder_style):
     entry.insert(0, placeholder_text)
@@ -484,7 +495,7 @@ def create_placeholder(entry, placeholder_text, entry_style, placeholder_style):
     entry.bind("<FocusIn>", lambda event: on_focus_in(entry, placeholder_text, entry_style))
     entry.bind("<FocusOut>", lambda event: on_focus_out(entry, placeholder_text, placeholder_style))
     placeholders[entry] = placeholder_text
-    entries.append(entry)
+    entries[entry] = entry_style
 
 def on_focus_in(entry, placeholder_text, entry_style):
     if entry.get() == placeholder_text:
@@ -503,14 +514,16 @@ def disable_placeholder(entry, entry_style):
         entry.delete(0, tk.END)
     # entry.config(fg='black')
     entry.config(style=entry_style)
-    entry.bind("<KeyRelease>")
+    # entry.bind("<KeyRelease>")
 
 def on_combobox_change(event):
     for entry in entries:
-        disable_placeholder(entry, "RootIP.TEntry")
+        disable_placeholder(entry, entries[entry])
 
 def combined_combobox_selected(event):
     on_combobox_change(event)
+    validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
+    validate_entry(range_entry, 'Range.TEntry', validate_range)
     load_profile_by_name(event)
     set_paths()
 
@@ -531,6 +544,7 @@ def validate_entry(entry, style_name, validate_func):
                 style.configure(style_name, background=bad_input_bg, foreground=bad_input_fg)
         else:
              style.configure(style_name, background=good_input_bg, foreground=placeholder_fg)
+    print(inner_validate)
     return inner_validate
 
 def validate_range(*args):
