@@ -45,7 +45,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path))
                     try:
                         sftp.mkdir(remote_dir)
-                    except Exception as e:
+                    except Exception as e: #One error is when directory already exists, maybe remove this condition for folder
                         status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}: {e}\n")
                         # success = False
                         continue  # Continue with other directories/files even if one fails
@@ -63,7 +63,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
         sftp.close()
         ssh.close()
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\\{host}. \nError: {e}\n")
+        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\{host}. \nError: {e}\n")
         success = False
     finally:
         result = "Success" if success else "Failed"
@@ -73,9 +73,11 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
 
 ############################################### SFTP Download ###############################################
 
-def sftp_download(host, port, username, password, remote_path, local_path, status_widget):
+def sftp_download(host, port, username, password, remote_path, local_path, status_widget, result_queue):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    success = True  # Track overall success for the entire download process
 
     try:
         status_widget.insert(tk.END, f"Download from {host} in progress...\n")
@@ -84,9 +86,15 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
         sftp = ssh.open_sftp()
         
         def download_file(sftp, remote_file_path, local_file_path):
-            sftp.get(remote_file_path, local_file_path)
-            status_widget.insert(tk.END, f"\nSusccessfully downloaded {remote_file_path} to {local_file_path}\n")
-            status_widget.yview(tk.END)
+            try:
+                sftp.get(remote_file_path, local_file_path)
+                status_widget.insert(tk.END, f"\nSuccessfully downloaded {remote_file_path} to {local_file_path}\n")
+            except Exception as e:
+                status_widget.insert(tk.END, f"\nFailed to download {remote_file_path} to {local_file_path}. Error: {e}\n")
+                nonlocal success
+                success = False
+            finally:
+                status_widget.yview(tk.END)
 
         def download_folder(sftp, remote_folder_path, local_folder_path):
             os.makedirs(local_folder_path, exist_ok=True)
@@ -111,11 +119,17 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
 
         sftp.close()
         ssh.close()
-        status_widget.insert(tk.END, f"\nDownload from {host} completed successfully.\n")
+        if success:
+            status_widget.insert(tk.END, f"\nDownload from {host} completed successfully.\n")
+        else:
+            status_widget.insert(tk.END, f"\nDownload from {host} completed with some errors.\n")
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to download from {host}. Error: {e}\n")
+        status_widget.insert(tk.END, f"\nFailed to initiate download from \\{host}. \nError: {e}\n")
+        success = False
     finally:
+        result = "Success" if success else "Failed"
         status_widget.yview(tk.END)
+        result_queue.put((host, result))
 
 ################################################ FTP transfer ###############################################################
 
@@ -145,7 +159,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                     remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path)).replace("\\", "/")
                     try:
                         ftp.mkd(remote_dir)
-                    except Exception as e:
+                    except Exception as e: #One error is when directory already exists, maybe remove this condition for folder
                         status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}. Error: {e}\n")
                         # success = False
                         continue  # Continue with other directories/files even if one fails
@@ -164,7 +178,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
         # Close the FTP connection
         ftp.quit()
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\\{host}. \nError: {e}\n")
+        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\{host}. \nError: {e}\n")
         success = False
     finally:
         result = "Success" if success else "Failed"
@@ -396,11 +410,11 @@ def monitor_threads(threads, result_queue, status_widget):
         total=total+1
 
     if failed_hosts:
-        status_widget.insert(tk.END, f"\n\n*****Connection failed for {failed} out of {total} hosts:*****\n")
+        status_widget.insert(tk.END, f"\n\n*****Connection failed for {failed} out of {total} hosts*****\n")
         for host in failed_hosts:
             status_widget.insert(tk.END, f"{host}\n")
     else:
-        status_widget.insert(tk.END, "\n\n*****All transfers successfull!!*****\n")
+        status_widget.insert(tk.END, "\n\n*****All transfers successfull*****\n")
 
     # Ensure the status widget updates properly
     status_widget.yview(tk.END)
@@ -410,11 +424,12 @@ def monitor_threads(threads, result_queue, status_widget):
 def start_download(status_widget):
     # local_root_path = file_path.get()
     local_root_path = filedialog.askdirectory()
-    if local_root_path:
-        new_folder_name = "Download"
-        new_folder_path = os.path.join(local_root_path, new_folder_name)
-        if not os.path.exists(new_folder_path):
-            os.makedirs(new_folder_path)
+    if not local_root_path:
+        return
+    new_folder_name = "Download"
+    new_folder_path = os.path.join(local_root_path, new_folder_name)
+    if not os.path.exists(new_folder_path):
+        os.makedirs(new_folder_path)
     print({new_folder_path})
     print({local_root_path})
 
@@ -463,14 +478,23 @@ def start_download(status_widget):
         messagebox.showerror("Input Error", "Please provide a valid IP range.")
         return
 
+    result_queue = queue.Queue()
+    threads = []
+
     for host in ip_list:
         # local_path = os.path.join(local_root_path, f"{host}")
         local_path = os.path.join(new_folder_path, f"{host}")
         if transfer_type_sel.get() == 'SFTP': 
-            threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, status_widget)).start()
+            t = threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, status_widget, result_queue))
         if transfer_type_sel.get() == 'FTP':
-            threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, status_widget)).start()
+            t = threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, status_widget))
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+
+        t.start()
+        threads.append(t)
+    
+    # Start a separate thread to monitor the worker threads
+    threading.Thread(target=monitor_threads, args=(threads, result_queue, status_widget)).start()
 
 ############################################################ Choose file to transfer ################################################
 def choose_file_or_folder():
@@ -518,12 +542,15 @@ def disable_placeholder(entry, entry_style):
 
 def on_combobox_change(event):
     for entry in entries:
-        disable_placeholder(entry, entries[entry])
+        entry.config(style=entries[entry])
+        # disable_placeholder(entry, entries[entry])
 
 def combined_combobox_selected(event):
+    style.configure('RootIP.TEntry', foreground=good_input_fg)
+    style.configure('Range.TEntry', foreground=good_input_fg) 
     on_combobox_change(event)
-    validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
-    validate_entry(range_entry, 'Range.TEntry', validate_range)
+    # validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
+    # validate_entry(range_entry, 'Range.TEntry', validate_range)
     load_profile_by_name(event)
     set_paths()
 
@@ -544,7 +571,7 @@ def validate_entry(entry, style_name, validate_func):
                 style.configure(style_name, background=bad_input_bg, foreground=bad_input_fg)
         else:
              style.configure(style_name, background=good_input_bg, foreground=placeholder_fg)
-    print(inner_validate)
+    # print(inner_validate)
     return inner_validate
 
 def validate_range(*args):
