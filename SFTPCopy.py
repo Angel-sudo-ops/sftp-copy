@@ -55,9 +55,9 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     try:
                         sftp.put(local_file, remote_file)
-                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file_name} to\n\\{host}{remote_file}\n")
+                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
                     except Exception as e:
-                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to {remote_file} on {host}: {e}\n")
+                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}: {e}\n")
                         success = False
 
         sftp.close()
