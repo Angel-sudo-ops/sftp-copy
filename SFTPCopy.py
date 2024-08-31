@@ -15,7 +15,7 @@ from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
 
-__version__ = '3.3.1'
+__version__ = '3.3.2'
 
 ############################################### SFTP Transfer ###############################################
 
@@ -229,7 +229,9 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
 
 ################################################ FTP download ###############################################################
 
-def ftp_download(host, username, password, remote_path, local_path, status_widget):
+def ftp_download(host, username, password, remote_path, local_path, status_widget, result_queue):
+    success = True  # Track overall success for the entire download process
+
     try:
         status_widget.insert(tk.END, f"Download from {host} in progress...\n")
         status_widget.yview(tk.END)
@@ -238,23 +240,25 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
         ftp = FTP(host)
         ftp.login(user=username, passwd=password)
         
-        # Print the current working directory
-        # cwd = ftp.pwd()
-        # status_widget.insert(tk.END, f"Current working directory: {cwd}\n")
-        
-        # Change to the desired directory
-        # remote_path = remote_path.replace(" ", "%20")  # Handle spaces in the path
         try:
             ftp.cwd(remote_path)
         except Exception as e:
             status_widget.insert(tk.END, f"Error navigating to {remote_path}. {e}\n")
             ftp.quit()
+            success = False
             return
 
         def download_file(ftp, remote_file_path, local_file_path):
-            with open(local_file_path, 'wb') as local_file:
-                ftp.retrbinary(f'RETR {remote_file_path}', local_file.write)
-            status_widget.insert(tk.END, f"\nSuccessfully downloaded {remote_file_path} to\n{local_file_path}\n")
+            try:
+                with open(local_file_path, 'wb') as local_file:
+                    ftp.retrbinary(f'RETR {remote_file_path}', local_file.write)
+                status_widget.insert(tk.END, f"\nSuccessfully downloaded {remote_file_path} to\n{local_file_path}\n")
+            except Exception as e:
+                status_widget.insert(tk.END, f"\nFailed to download {remote_file_path} to\n{local_file_path}. \nError: {e}\n")
+                nonlocal success
+                success = False
+            finally:
+                status_widget.yview(tk.END)
 
         def download_folder(ftp, remote_folder_path, local_folder_path):
             os.makedirs(local_folder_path, exist_ok=True)
@@ -292,19 +296,22 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
             except Exception as e:
                 return False
 
-        # if is_ftp_dir(ftp, remote_path):
-        #     download_folder(ftp, remote_path, local_path)
-        # else:
-        #     download_file(ftp, remote_path, local_path)
         download_files_only(ftp, remote_path, local_path)
         
         # Close the FTP connection
         ftp.quit()
-    except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to download {remote_path} from {host}. Error: {e}\n")
-    finally:
-        status_widget.yview(tk.END)
 
+        if success:
+            status_widget.insert(tk.END, f"\nDownload from {host} completed successfully.\n")
+        else:
+            status_widget.insert(tk.END, f"\nDownload from {host} completed with some errors.\n")
+    except Exception as e:
+        status_widget.insert(tk.END, f"\nFailed to initiate download {remote_path} from {host}. \nError: {e}\n")
+        success = False
+    finally:
+        result = "Success" if success else "Failed"
+        status_widget.yview(tk.END)
+        result_queue.put((host, result))
 
 ####################################################### Get IPs #############################################################
 
@@ -346,6 +353,7 @@ def start_transfer(status_widget):
     print(f"Login is {username}")
     print(f"Password is {password}")
     print(f"{anonymous_check.get()}")
+    print(local_path)
 
     if not local_path:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
@@ -422,17 +430,6 @@ def monitor_threads(threads, result_queue, status_widget):
 ############################################# Download files from remote server ################################################
 
 def start_download(status_widget):
-    # local_root_path = file_path.get()
-    local_root_path = filedialog.askdirectory()
-    if not local_root_path:
-        return
-    new_folder_name = "Download"
-    new_folder_path = os.path.join(local_root_path, new_folder_name)
-    if not os.path.exists(new_folder_path):
-        os.makedirs(new_folder_path)
-    print({new_folder_path})
-    print({local_root_path})
-
     base_ip = ip_entry.get()
     range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
@@ -450,12 +447,10 @@ def start_download(status_widget):
     print(f"Password is {password}")
     print(f"{anonymous_check.get()}")
 
-    if not local_root_path:
-        messagebox.showerror("Input Error", "Please choose a folder where to download.")
-        return
+
     # if not base_ip or base_ip == placeholders[ip_entry]:
     if not validate_range():
-        messagebox.showerror("Input Error", "Please enter the base IP.")
+        messagebox.showerror("Input Error", "Please enter a valid IP.")
         return
     # if not range_input or range_input == placeholders[range_entry]:
     if not validate_base_ip():
@@ -469,6 +464,22 @@ def start_download(status_widget):
         return
     if not password:
         messagebox.showerror("Input Error", "Please enter the password.")
+        return
+
+    # local_root_path = file_path.get()
+    local_root_path = filedialog.askdirectory()
+    if not local_root_path:
+        messagebox.showerror("Input Error", "Please choose a folder where to download.")
+        return
+    new_folder_name = "Download"
+    new_folder_path = os.path.join(local_root_path, new_folder_name)
+    if not os.path.exists(new_folder_path):
+        os.makedirs(new_folder_path)
+    print(new_folder_path)
+    print(local_root_path)
+
+    if not local_root_path:
+        messagebox.showerror("Input Error", "Please choose a folder where to download.")
         return
 
     status_widget.delete(1.0, tk.END)  # Clear previous status messages
@@ -487,7 +498,7 @@ def start_download(status_widget):
         if transfer_type_sel.get() == 'SFTP': 
             t = threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, status_widget, result_queue))
         if transfer_type_sel.get() == 'FTP':
-            t = threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, status_widget))
+            t = threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, status_widget, result_queue))
             # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
 
         t.start()
@@ -834,7 +845,7 @@ def save_custom_profile():
         return
     # if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
     if not validate_base_ip():
-        messagebox.showerror("Input Error", "Please enter the base IP.")
+        messagebox.showerror("Input Error", "Please enter valid base IP.")
         return
     # if not range_input or range_input == placeholders[range_entry]:
     if not validate_range():
@@ -1187,6 +1198,7 @@ print(f"Download button state: {download['state']}")
 # status_widget = tk.Text(root, height=10, width=80)
 status_widget = scrolledtext.ScrolledText(root, 
                                           undo=True,
+                                          wrap = tk.WORD,
                                           height=17,
                                           width=70
                                           )
