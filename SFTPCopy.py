@@ -46,8 +46,8 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     try:
                         sftp.mkdir(remote_dir)
                     except Exception as e:
-                        status_widget.insert(tk.END, f"Failed to create directory {remote_dir} on {host}: {e}\n")
-                        success = False
+                        status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}: {e}\n")
+                        # success = False
                         continue  # Continue with other directories/files even if one fails
 
                 for file_name in files:
@@ -57,7 +57,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                         sftp.put(local_file, remote_file)
                         status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
                     except Exception as e:
-                        status_widget.insert(tk.END, f"Failed to transfer {local_file} to {remote_file} on {host}: {e}\n")
+                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}: {e}\n")
                         success = False
 
         sftp.close()
@@ -147,7 +147,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                         ftp.mkd(remote_dir)
                     except Exception as e:
                         status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}. Error: {e}\n")
-                        success = False
+                        # success = False
                         continue  # Continue with other directories/files even if one fails
 
                 for file_name in files:
@@ -396,11 +396,11 @@ def monitor_threads(threads, result_queue, status_widget):
         total=total+1
 
     if failed_hosts:
-        status_widget.insert(tk.END, f"\nConnection failed for {failed} out of {total} hosts:\n")
+        status_widget.insert(tk.END, f"\n\n*****Connection failed for {failed} out of {total} hosts:*****\n")
         for host in failed_hosts:
             status_widget.insert(tk.END, f"{host}\n")
     else:
-        status_widget.insert(tk.END, "\nAll transfers successful\n")
+        status_widget.insert(tk.END, "\n\n*****All transfers successfull!!*****\n")
 
     # Ensure the status widget updates properly
     status_widget.yview(tk.END)
