@@ -15,28 +15,28 @@ from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
 
-__version__ = '3.3.2'
+__version__ = '3.4.2'
 
 ############################################### SFTP Transfer ###############################################
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget, result_queue):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
+    local_file_name = os.path.basename(local_path)
     success = True  # Track overall success for the entire transfer process
 
     try:
-        status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
+        status_widget.insert(tk.END, f"Transferring {local_file_name} to {host}...\n")
         status_widget.yview(tk.END)
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
             try:
-                sftp.put(local_path, os.path.join(remote_path, os.path.basename(local_path)))
-                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
+                sftp.put(local_path, os.path.join(remote_path, local_file_name))
+                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file_name} to\n\\{host}{remote_path}\n")
             except Exception as e:
-                status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+                status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to\n\\{host}{remote_path}. Error: {e}\n")
                 success = False
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -55,9 +55,9 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     try:
                         sftp.put(local_file, remote_file)
-                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file_name} to\n\\{host}{remote_file}\n")
                     except Exception as e:
-                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}: {e}\n")
+                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to {remote_file} on {host}: {e}\n")
                         success = False
 
         sftp.close()
@@ -80,7 +80,7 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
     success = True  # Track overall success for the entire download process
 
     try:
-        status_widget.insert(tk.END, f"Download from {host} in progress...\n")
+        status_widget.insert(tk.END, f"Downloading from {host}...\n")
         status_widget.yview(tk.END)
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
@@ -135,9 +135,9 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
 
 def ftp_transfer(host, username, password, local_path, remote_path, status_widget, result_queue):
     success = True  # Track overall success for the entire transfer process
-
+    local_file_name = os.path.basename(local_path)
     try:
-        status_widget.insert(tk.END, f"Transfer to {host} in progress...\n")
+        status_widget.insert(tk.END, f"Transferring {local_file_name} to {host}...\n")
         status_widget.yview(tk.END)
         
         # Connect to the FTP server
@@ -147,10 +147,10 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
         if os.path.isfile(local_path):
             try:
                 with open(local_path, 'rb') as file:
-                    ftp.storbinary(f"STOR {os.path.join(remote_path, os.path.basename(local_path)).replace('\\', '/')}", file)
-                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_path} to\n\\{host}{remote_path}\n")
+                    ftp.storbinary(f"STOR {os.path.join(remote_path, local_file_name).replace('\\', '/')}", file)
+                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file_name} to\n\\{host}{remote_path}\n")
             except Exception as e:
-                status_widget.insert(tk.END, f"\nFailed to transfer {local_path} to\n\\{host}{remote_path}. Error: {e}\n")
+                status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to\n\\{host}{remote_path}. Error: {e}\n")
                 success = False
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -233,7 +233,7 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
     success = True  # Track overall success for the entire download process
 
     try:
-        status_widget.insert(tk.END, f"Download from {host} in progress...\n")
+        status_widget.insert(tk.END, f"Downloading from {host}...\n")
         status_widget.yview(tk.END)
         
         # Connect to the FTP server
@@ -336,7 +336,7 @@ def parse_ip_ranges(base_ip, range_input):
 
 ############################################# Transfer files to remote server ################################################
 def start_transfer(status_widget):
-    local_path = file_path.get()
+    local_path_string = file_path.get()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
@@ -349,13 +349,16 @@ def start_transfer(status_widget):
     elif transfer_type_sel.get() == 'FTP':
         port = FTP_PORT
 
+    local_paths = local_path_string.split(',')
+    local_paths = [path.strip() for path in local_paths]
+
     print (f"Selected port is {port}")
     print(f"Login is {username}")
     print(f"Password is {password}")
     print(f"{anonymous_check.get()}")
-    print(local_path)
+    print(local_paths)
 
-    if not local_path:
+    if not local_paths:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
         return
     # if not base_ip or base_ip == placeholders[ip_entry]:
@@ -387,17 +390,18 @@ def start_transfer(status_widget):
     threads = []
 
     for host in ip_list:
-        if transfer_type_sel.get() == 'SFTP': 
-            t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget, result_queue))
-        elif transfer_type_sel.get() == 'FTP':
-            t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget, result_queue))
-            # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
-        
-        t.start()
-        threads.append(t)
+        for local_path in local_paths:
+            if transfer_type_sel.get() == 'SFTP': 
+                t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget, result_queue))
+            elif transfer_type_sel.get() == 'FTP':
+                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget, result_queue))
+                # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
+            
+            threads.append(t)
+            t.start()
 
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue, status_widget)).start()
+    threading.Thread(target=monitor_threads_transfer, args=(threads, result_queue, status_widget)).start()
 
 ################################ Monitor threads ############################################
 def monitor_threads(threads, result_queue, status_widget):
@@ -427,6 +431,39 @@ def monitor_threads(threads, result_queue, status_widget):
     # Ensure the status widget updates properly
     status_widget.yview(tk.END)
 
+
+def monitor_threads_transfer(threads, result_queue, status_widget):
+    # Wait for all threads to complete
+    for t in threads:
+        t.join()
+
+    # Check for any failed results grouped by host
+    results_by_host = {}
+    while not result_queue.empty():
+        host, result = result_queue.get()
+        if host not in results_by_host:
+            results_by_host[host] = {"total": 0, "failed": 0}
+        results_by_host[host]["total"] += 1
+        if result == "Failed":
+            results_by_host[host]["failed"] += 1
+
+    # Now summarize the results
+    failed_hosts = []
+    total_hosts = 0
+    failed_hosts_count = 0
+
+    for host, counts in results_by_host.items():
+        total_hosts += 1
+        if counts["failed"] > 0:
+            failed_hosts.append(host)
+            failed_hosts_count += 1
+
+    if failed_hosts:
+        status_widget.insert(tk.END, f"\n\n*****Connection failed for {failed_hosts_count} out of {total_hosts} hosts*****\n")
+        for host in failed_hosts:
+            status_widget.insert(tk.END, f"{host}\n")
+    else:
+        status_widget.insert(tk.END, "\n\n*****All transfers successful*****\n")
 ############################################# Download files from remote server ################################################
 
 def start_download(status_widget):
