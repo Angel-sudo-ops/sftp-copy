@@ -15,7 +15,7 @@ from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
 
-__version__ = '3.4.2'
+__version__ = '3.4.3'
 
 ############################################### SFTP Transfer ###############################################
 
@@ -42,13 +42,17 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
                     local_dir = os.path.join(root_dir, dir_name)
-                    remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path))
+                    remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path)).replace("\\", "/")
                     try:
-                        sftp.mkdir(remote_dir)
-                    except Exception as e: #One error is when directory already exists, maybe remove this condition for folder
-                        status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}: {e}\n")
-                        # success = False
-                        continue  # Continue with other directories/files even if one fails
+                        # Check if the remote directory exists
+                        sftp.stat(remote_dir)  # This will throw an exception if the directory does not exist
+                    except IOError:  # Directory does not exist, so we create it
+                        try:
+                            sftp.mkdir(remote_dir)
+                            status_widget.insert(tk.END, f"Created directory {remote_dir} on {host}\n")
+                        except Exception as e:
+                            status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}: {e}\n")
+                            continue  # Continue with other directories/files even if one fails
 
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
@@ -158,11 +162,16 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                     local_dir = os.path.join(root_dir, dir_name)
                     remote_dir = os.path.join(remote_path, os.path.relpath(local_dir, local_path)).replace("\\", "/")
                     try:
-                        ftp.mkd(remote_dir)
-                    except Exception as e: #One error is when directory already exists, maybe remove this condition for folder
-                        status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}. Error: {e}\n")
-                        # success = False
-                        continue  # Continue with other directories/files even if one fails
+                        # Change to the directory to check if it exists
+                        ftp.cwd(remote_dir)
+                    except Exception as e:
+                        # If the directory does not exist, create it
+                        try:
+                            ftp.mkd(remote_dir)
+                            status_widget.insert(tk.END, f"Created directory {remote_dir} on {host}\n")
+                        except Exception as e:
+                            status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}. Error: {e}\n")
+                            continue  # Continue with other directories/files even if one fails
 
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
@@ -464,6 +473,8 @@ def monitor_threads_transfer(threads, result_queue, status_widget):
             status_widget.insert(tk.END, f"{host}\n")
     else:
         status_widget.insert(tk.END, "\n\n*****All transfers successful*****\n")
+
+    status_widget.yview(tk.END)
 ############################################# Download files from remote server ################################################
 
 def start_download(status_widget):
