@@ -9,12 +9,30 @@
         "transfer_type": "FTP"
     },
     {
-        "name": "CC1527_GP_Portland_TC3",
+        "name": "CC1527_GP_Portland_TC3_CB25",
         "base_ip": "172.20.2.50",
         "ip_range": "16-18",
         "username": "Administrator",
         "password": "1",
         "remote_dir": "\\Config",
         "transfer_type": "SFTP"
+    },
+    {
+        "name": "CC1527_GP_Portland_TC2_CB16",
+        "base_ip": "172.20.2.50",
+        "ip_range": "30-42",
+        "remote_dir": "/Hard Disk/Backup/",
+        "username": "anonymous",
+        "password": "anonymous@example.com",
+        "transfer_type": "FTP"
+    },
+    {
+        "name": "CC1527_GP_Portland_TC2_CB25",
+        "base_ip": "172.20.2.50",
+        "ip_range": "1-15",
+        "remote_dir": "/Hard Disk/Backup/",
+        "username": "anonymous",
+        "password": "anonymous@example.com",
+        "transfer_type": "FTP"
     }
 ]

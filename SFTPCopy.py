@@ -15,7 +15,7 @@ from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
 
-__version__ = '3.4.3'
+__version__ = '3.4.4'
 
 ############################################### SFTP Transfer ###############################################
 
@@ -38,6 +38,8 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
             except Exception as e:
                 status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to\n\\{host}{remote_path}. Error: {e}\n")
                 success = False
+            finally:
+                status_widget.yview(tk.END)
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -53,6 +55,8 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                         except Exception as e:
                             status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}: {e}\n")
                             continue  # Continue with other directories/files even if one fails
+                        finally:
+                            status_widget.yview(tk.END)
 
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
@@ -63,6 +67,8 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     except Exception as e:
                         status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}: {e}\n")
                         success = False
+                    finally:
+                        status_widget.yview(tk.END)
 
         sftp.close()
         ssh.close()
@@ -71,9 +77,9 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
         success = False
     finally:
         result = "Success" if success else "Failed"
-        status_widget.yview(tk.END)
         # Put the result in the queue with associated host information
         result_queue.put((host, result))
+        status_widget.yview(tk.END)
 
 ############################################### SFTP Download ###############################################
 
@@ -127,6 +133,8 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
             status_widget.insert(tk.END, f"\nDownload from {host} completed successfully.\n")
         else:
             status_widget.insert(tk.END, f"\nDownload from {host} completed with some errors.\n")
+        status_widget.yview(tk.END)
+        
     except Exception as e:
         status_widget.insert(tk.END, f"\nFailed to initiate download from \\{host}. \nError: {e}\n")
         success = False
@@ -156,6 +164,8 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
             except Exception as e:
                 status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to\n\\{host}{remote_path}. Error: {e}\n")
                 success = False
+            finally:
+                status_widget.yview(tk.END)
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -172,7 +182,8 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                         except Exception as e:
                             status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}. Error: {e}\n")
                             continue  # Continue with other directories/files even if one fails
-
+                        finally:
+                            status_widget.yview(tk.END)
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path)).replace("\\", "/")
@@ -183,6 +194,8 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                     except Exception as e:
                         status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}. Error: {e}\n")
                         success = False
+                    finally:
+                        status_widget.yview(tk.END)
         
         # Close the FTP connection
         ftp.quit()
@@ -256,6 +269,8 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
             ftp.quit()
             success = False
             return
+        finally:
+            status_widget.yview(tk.END)
 
         def download_file(ftp, remote_file_path, local_file_path):
             try:
@@ -314,6 +329,7 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
             status_widget.insert(tk.END, f"\nDownload from {host} completed successfully.\n")
         else:
             status_widget.insert(tk.END, f"\nDownload from {host} completed with some errors.\n")
+        status_widget.yview(tk.END)
     except Exception as e:
         status_widget.insert(tk.END, f"\nFailed to initiate download {remote_path} from {host}. \nError: {e}\n")
         success = False
