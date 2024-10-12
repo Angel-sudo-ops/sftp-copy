@@ -15,7 +15,7 @@ from ftplib import FTP_PORT
 # import pystray
 # from PIL import Image
 
-__version__ = '3.4.4'
+__version__ = '3.4.5'
 
 ############################################### SFTP Transfer ###############################################
 
@@ -578,10 +578,25 @@ def choose_file_or_folder():
         file_or_folder = filedialog.askopenfilenames()  # Select files
         if file_or_folder:
             file_path.set(", ".join(file_or_folder))
+            check_source_path_for_keywords(file_or_folder)
     elif selection.get() == 'folder':
         file_or_folder = filedialog.askdirectory()  # Select a folder
         if file_or_folder:
             file_path.set(file_or_folder)
+            check_source_path_for_keywords(file_or_folder)
+
+############################################################ Check source path for keywords ################################################
+def check_source_path_for_keywords(file_or_folder):
+    # Convert the selected path to a string
+    source_path = str(file_or_folder)
+    
+    # Check if the source path contains specific keywords
+    if "boot" in source_path.lower() or "twincat" in source_path.lower():
+        remote_dir_entry.set(default_paths[1])
+    elif "layout" in source_path.lower() or "segments" in source_path.lower():
+        remote_dir_entry.set(default_paths[2])
+    else:
+        remote_dir_entry.set(default_paths[0])  # Or set to a default path if needed
 
 ################################################## Placeholder #######################################################################
 # Dictionary to store entry widgets and their placeholder texts
@@ -745,8 +760,8 @@ custom_paths = []
 def set_paths():
     global default_paths, custom_paths
     default_paths_sftp = (r"\Config", r"\TwinCAT\Boot", r"\Layout")
-    default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/Backup/export_to_agv", "/Hard Disk/TwinCAT/Boot")
-    default_paths_net = (r"\Backup", r"\Backup\export_to_agv") #examples for now, get real ones later
+    default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/TwinCAT/Boot", "/Hard Disk/Backup/export_to_agv")
+    default_paths_net = (r"\Backup", r"\TwinCAT\Boot", r"\Backup\export_to_agv") #examples for now, get real ones later
     transfer_type = transfer_type_sel.get()
 
     # Load custom paths based on the transfer type

@@ -34,5 +34,14 @@
         "username": "anonymous",
         "password": "anonymous@example.com",
         "transfer_type": "FTP"
+    },
+    {
+        "name": "CC200_Hilmar_Dodge",
+        "base_ip": "10.40.10.69",
+        "ip_range": "1-10",
+        "remote_dir": "\\Config",
+        "username": "Administrator",
+        "password": "1",
+        "transfer_type": "SFTP"
     }
 ]
