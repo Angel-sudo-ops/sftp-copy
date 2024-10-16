@@ -12,10 +12,11 @@ import re
 import sys
 from ftplib import FTP, error_perm
 from ftplib import FTP_PORT
+from datetime import datetime
 # import pystray
 # from PIL import Image
 
-__version__ = '3.4.5'
+__version__ = '3.4.6'
 
 ############################################### SFTP Transfer ###############################################
 
@@ -452,6 +453,11 @@ def monitor_threads(threads, result_queue, status_widget):
             status_widget.insert(tk.END, f"{host}\n")
     else:
         status_widget.insert(tk.END, "\n\n*****All transfers successfull*****\n")
+    
+    current_time = datetime.now()
+    formatted_time = current_time.strftime("%H:%M:%S")
+    print(f"At {formatted_time}")
+    status_widget.insert(tk.END, f"\nOperation performed at {formatted_time}")
 
     # Ensure the status widget updates properly
     status_widget.yview(tk.END)
@@ -489,6 +495,11 @@ def monitor_threads_transfer(threads, result_queue, status_widget):
             status_widget.insert(tk.END, f"{host}\n")
     else:
         status_widget.insert(tk.END, "\n\n*****All transfers successful*****\n")
+
+    current_time = datetime.now()
+    formatted_time = current_time.strftime("%H:%M:%S")
+    print(f"At {formatted_time}")
+    status_widget.insert(tk.END, f"\nOperation performed at {formatted_time}")
 
     status_widget.yview(tk.END)
 ############################################# Download files from remote server ################################################
@@ -1307,3 +1318,6 @@ root.mainloop()
 ## also check that the range is ascending, i.e. 1-5, 10-15, not in the form 15-10,9-1+
 
 ##CAmbiar a tabla en vez de label
+
+
+# Add time when transfer is done
