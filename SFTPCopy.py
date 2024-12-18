@@ -16,7 +16,7 @@ from datetime import datetime
 # import pystray
 # from PIL import Image
 
-__version__ = '3.4.6'
+__version__ = '3.4.7'
 
 ############################################### SFTP Transfer ###############################################
 
@@ -748,7 +748,7 @@ def set_anonymous_login():
     password_entry.insert(0, "anonymous@example.com")
     password_entry.config(state='disabled')
 
-def on_anonymous_check():
+def on_anonymous_check(*args):
     if anonymous_check.get():
         set_anonymous_login()
     else:
@@ -782,7 +782,7 @@ def set_paths():
         default_paths = default_paths_sftp
         anonymous_check.set(0)
         anonymous.config(state='disabled')
-        set_default_login()
+        # set_default_login()
 
     elif transfer_type == 'FTP':
         default_paths = default_paths_ftp
@@ -1121,7 +1121,7 @@ frame_file_selection = tk.Frame(frame_file)
 frame_file_selection.grid(row=0, column=0, padx=5, pady=5)
 
 # Radio buttons for selecting file or folder
-file_radio = ttk.Radiobutton(frame_file_selection, text="File:", variable=selection, value='file')
+file_radio = ttk.Radiobutton(frame_file_selection, text="Files:", variable=selection, value='file')
 file_radio.grid(row=0, column=1, padx=0, pady=0)
 folder_radio = ttk.Radiobutton(frame_file_selection, text="Folder", variable=selection, value='folder')
 folder_radio.grid(row=0, column=0, padx=0, pady=0)
@@ -1130,7 +1130,7 @@ folder_radio.grid(row=0, column=0, padx=0, pady=0)
 file_path = tk.StringVar()
 # tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
 file_path_entry = ttk.Entry(frame_file, textvariable=file_path, width=60)
-file_path_entry.grid(row=0, column=1, padx=5, pady=5)
+file_path_entry.grid(row=0, column=1, padx=(0,5), pady=5)
 
 browse_btn = ttk.Button(frame_file, text="Browse",
                         # bg='ghost white', 
@@ -1321,3 +1321,7 @@ root.mainloop()
 
 
 # Add time when transfer is done
+
+# Poner Files para que el usuario sepa que puede seleccionar varios
+
+# Line 586, make user able to save local paths, and separate if they are either folders or filesand when opening a new one pop up a message if they want to actually save that path

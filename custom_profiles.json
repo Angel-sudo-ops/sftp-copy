@@ -34,5 +34,14 @@
         "username": "anonymous",
         "password": "anonymous@example.com",
         "transfer_type": "FTP"
+    },
+    {
+        "name": "CC2002_Pepsico_StoneMt",
+        "base_ip": "7.34.130.9",
+        "ip_range": "1-25",
+        "remote_dir": "\\Config",
+        "username": "Administrator",
+        "password": "E80Lgv!",
+        "transfer_type": "SFTP"
     }
 ]
