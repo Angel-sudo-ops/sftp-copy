@@ -5,7 +5,7 @@ a = Analysis(
     ['SFTPCopy.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('transfer.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
