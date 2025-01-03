@@ -1294,32 +1294,37 @@ def on_add_path():
 #############################################################################################################
 
 default_profile = {
-    "name":         "Default",
-    "base_ip":      "192.168.80.10", 
-    "ip_range":     "1-15,20-35",
-    "username":     "Administrator",
-    "password":     "***********",
-    "remote_dir":   "\\Config",
-    "transfer_type":"SFTP"
+    "name"          : "Default",
+    "base_ip"       : "192.168.80.10", 
+    "ip_range"      : "1-15,20-35",
+    "username"      : "Administrator",
+    "password"      : "***********",
+    "local_dir"     : " ",
+    "remote_dir"    : "\\Config",
+    "transfer_type" : "SFTP"
 }
 
-def set_profile(profile):
+def set_profile(subprofile):
+    """Set the entries based on the selected sub-profile."""
     ip_entry.delete(0, tk.END)
-    ip_entry.insert(0, profile["base_ip"])
+    ip_entry.insert(0, subprofile["base_ip"])
 
     range_entry.delete(0, tk.END)
-    range_entry.insert(0, profile["ip_range"])
+    range_entry.insert(0, subprofile["ip_range"])
+
+    file_path_entry.delete(0, tk.END)
+    file_path_entry.insert(0, subprofile["local_dir"])
 
     remote_dir_entry.delete(0, tk.END)
-    remote_dir_entry.insert(0, profile["remote_dir"])
+    remote_dir_entry.insert(0, subprofile["remote_dir"])
 
     username_entry.delete(0, tk.END)
-    username_entry.insert(0, profile["username"])
+    username_entry.insert(0, subprofile["username"])
 
     password_entry.delete(0, tk.END)
-    password_entry.insert(0, profile["password"])
+    password_entry.insert(0, subprofile["password"])
 
-    transfer_type_sel.set(profile["transfer_type"])
+    transfer_type_sel.set(subprofile["transfer_type"])
 
 def load_custom_profiles():
     try:
@@ -1400,6 +1405,7 @@ def save_custom_profile():
     save_custom_profiles(custom_profiles)
     profiles_combobox['values'] = tuple(profile_names) + ("Default",)
     # messagebox.showinfo("Success", "Profile saved successfully")
+
 
 def load_profile_by_name(event=None):
     selected_profile_name = profiles_combobox.get()
@@ -1523,6 +1529,7 @@ profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 
 subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
+subprofiles_combobox.set("Select a subprofile")
 subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
 subprofiles_combobox.bind("<Tab>", filter_subprofile_combobox)
 
