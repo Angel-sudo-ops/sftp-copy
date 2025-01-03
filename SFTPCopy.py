@@ -1408,17 +1408,29 @@ def save_custom_profile():
 
 
 def load_profile_by_name(event=None):
+    """Load the selected profile and sub-profile."""
     selected_profile_name = profiles_combobox.get()
-    # save_custom_profiles([default_profile]) #option to save default profile on file at first cycle
+    selected_subprofile_name = subprofiles_combobox.get()
+
     profiles = load_custom_profiles()
 
     if selected_profile_name == "Default":
         set_profile(default_profile)
-    else:
-        for profile in profiles:
-            if profile["name"] == selected_profile_name:
-                set_profile(profile)
-                break
+        return
+    
+    for profile in profiles:
+        if profile["name"] == selected_profile_name:
+            # Find the selected sub-profile within the profile
+            for subprofile in profile.get("sub_profiles", []):
+                if subprofile["sub_name"] == selected_subprofile_name:
+                    set_profile(subprofile)
+                    return
+                
+    # If no match is found, show an error
+    messagebox.showerror(
+        "Error", 
+        f"Sub-profile '{selected_subprofile_name}' not found in profile '{selected_profile_name}'"
+    )
 
 def load_profile_names(event=None):
     custom_profiles = load_custom_profiles()
