@@ -8,6 +8,7 @@
     ],
     "FTP": [
         "/Hard Disk/Backup/ini",
-        "/Hard Disk/Backup/laserview/ini"
+        "/Hard Disk/Backup/laserview/ini",
+        "/Hard Disk/Backup/export_to_agv/ini"
     ]
 }

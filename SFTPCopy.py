@@ -19,10 +19,10 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.2'
+__version__ = '3.4.7.5'
 
 
-LGV_DATA = "lgv_data.xml"
+LGV_DATA = "lgv_address_list.xml"
 ############################################## Load/Save LGV Data #############################################
 def extract_lgv_name(input_name):
     # Regex pattern to capture 'LGV' followed by numbers
@@ -59,6 +59,8 @@ def populate_table_from_xml(path=None):
             messagebox.showerror("Error", "XML file does not contain the expected 'RemoteConnections' structure.")
             return
         
+        open_lgv_table_window_cond()
+
         data = treeview.get_children()
         # Clear the existing table data
         if data is not None:
@@ -102,7 +104,7 @@ def populate_table_from_xml(path=None):
             type_tc = "TC3" if route.find('Flags') is not None else "TC2"
             
             # Append the tuple to the list
-            routes_data.append((lgv_name, net_id, type_tc))
+            routes_data.append((lgv_name, address, type_tc))
         
         # Warn the user about invalid routes
         if invalid_routes:
@@ -117,6 +119,9 @@ def populate_table_from_xml(path=None):
         # messagebox.showinfo("Success", "Data loaded successfully from the XML file.")
         
     save_table_data_to_xml(treeview)
+
+    # Enable menu for Show LGV Table if table is updated
+    update_menu()
 
 
 def read_db3_file(db3_file_path, table_name):
@@ -171,6 +176,8 @@ def populate_table_from_db3():
     if rows_param is None:
         return
     
+    open_lgv_table_window_cond()
+
     # # print(columns, rows)
     
     # Clear the existing table data
@@ -197,15 +204,15 @@ def populate_table_from_db3():
             net_id = f"{address}.1.1"
             
             # if route['Dbf_Comm_Library']>20 or 
-            if route['LayoutCopy_Protocol']=="SFTP":
+            if str(route['LayoutCopy_Protocol']).lower()=="sftp":
                 type_tc = "TC3" 
-            elif route['LayoutCopy_Protocol']=="FTP" or route['LayoutCopy_Protocol']=="NETFOLDER":
+            elif str(route['LayoutCopy_Protocol']).lower()=="ftp" or str(route['LayoutCopy_Protocol']).lower()=="netfolder":
                 type_tc = "TC2" 
             else:
                 type_tc = default_type_tc 
         
             # Append the tuple to the list
-            routes_data.append((name, net_id, type_tc))
+            routes_data.append((name, address, type_tc))
     
     # Populate the Treeview with the data
     for item in routes_data:
@@ -213,7 +220,7 @@ def populate_table_from_db3():
 
     save_table_data_to_xml(treeview)
 
-    # Enable menu for Read/Write if table is updated
+    # Enable menu for Show LGV Table if table is updated
     update_menu()
 
 
@@ -231,7 +238,8 @@ def save_table_data_to_xml(tree, filename=LGV_DATA):
         lgv_data = tree.item(row)["values"]
         current_data.append({
             "Name": lgv_data[0],
-            "AMSNetId": lgv_data[1],
+            "IPAddress": lgv_data[1],
+            # "AMSNetId": lgv_data[2],
             "Type": lgv_data[2]
         })
 
@@ -249,7 +257,8 @@ def save_table_data_to_xml(tree, filename=LGV_DATA):
         for lgv in lgv_list.findall("LGV"):
             existing_data.append({
                 "Name": lgv.find("Name").text,
-                "AMSNetId": lgv.find("AMSNetId").text,
+                "IPAddress": lgv.find("IPAddress").text,
+                # "AMSNetId": lgv.find("AMSNetId").text,
                 "Type": lgv.find("Type").text
             })
 
@@ -265,7 +274,8 @@ def save_table_data_to_xml(tree, filename=LGV_DATA):
     for lgv in current_data:
         lgv_element = ET.SubElement(lgv_list, "LGV")
         ET.SubElement(lgv_element, "Name").text = lgv["Name"]
-        ET.SubElement(lgv_element, "AMSNetId").text = lgv["AMSNetId"]
+        ET.SubElement(lgv_element, "IPAddress").text = lgv["IPAddress"]
+        # ET.SubElement(lgv_element, "AMSNetId").text = lgv["AMSNetId"]
         ET.SubElement(lgv_element, "Type").text = lgv["Type"]
     
     # Convert to a pretty XML string
@@ -286,33 +296,132 @@ def load_table_data_from_xml(tree, filename=LGV_DATA):
 
         # Check if there are any <LGV> elements
         if not lgv_list.findall("LGV"):
-            print("The XML file has no LGV data, loading default table.")
-            # messagebox.showwarning("Warning", "The XML file contains no LGV data. Loading default table.")
-            messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
-            populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+            # print("The XML file has no LGV data, loading default table.")
+            # # messagebox.showwarning("Warning", "The XML file contains no LGV data. Loading default table.")
+            # messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
+            # populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
             return
 
         for lgv in lgv_list.findall("LGV"):
             lgv_name = lgv.find("Name").text
-            ams_net_id = lgv.find("AMSNetId").text
+            ip_address = lgv.find("IPAddress").text
+            # ams_net_id = lgv.find("AMSNetId").text
             tc_type = lgv.find("Type").text
-            tree.insert("", "end", values=(lgv_name, ams_net_id, tc_type))
+            tree.insert("", "end", values=(lgv_name, ip_address, tc_type))
+    # else:
+        # print("No saved XML data found, loading default table.")
+        # if os.path.exists("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml"):
+        #     # Populate table the first time with current StaticRoutes.xml file
+        #     populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+        #     messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
+        # else:
+        #     messagebox.showerror("Attention", "Default StaticRoutes.xml file not found")
+
+def update_menu():
+    if os.path.exists(LGV_DATA):
+        options_menu.entryconfig("Show LGV Table", state="normal")  # Enable if file exists
     else:
-        print("No saved XML data found, loading default table.")
-        # Populate table the first time with current StaticRoutes.xml file
-        messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
-        populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+        options_menu.entryconfig("Show LGV Table", state="disabled")  # Disable if file doesn't exist
 
-# With DEL key
-# def delete_selected_record(event):
-#     selected_items = treeview.selection()
-#     for item in selected_items:
-#         if item:
-#             treeview.delete(item)
+############################################## Open LGV Table Window ####################################
+lgv_table_window = None
 
-def show_lgv_table():
-    print("LGV table")
+def open_lgv_table_window_cond():
+    global lgv_table_window
 
+    if lgv_table_window is not None and lgv_table_window.winfo_exists():
+        lgv_table_window.lift()
+        lgv_table_window.focus_force()
+    else:
+        open_lgv_table_window()
+
+def open_lgv_table_window():
+    global lgv_table_window
+
+    lgv_table_window = tk.Toplevel(root)
+    lgv_table_window.title("LGV Data ")
+
+    window_width = 300
+    window_lenght = 300
+    lgv_table_window.geometry(f"{window_width}x{window_lenght}")
+    lgv_table_window.minsize(window_width, window_lenght)
+
+    global treeview
+
+    # # With DEL key
+    # def delete_selected_record(event):
+    #     selected_items = treeview.selection()
+    #     for item in selected_items:
+    #         if item:
+    #             treeview.delete(item)
+
+    # Dictionary to maintain custom headings
+    headings = {
+        'Name'      : 'Name',
+        'IPAddress' : 'IPAddress',
+        'Type'      : 'Type'
+    }
+
+    def setup_treeview():
+        for col in treeview['columns']:
+            treeview.heading(col, text=headings[col], command=lambda _col=col: treeview_sort_column(treeview, _col, False), anchor='w')
+
+    def treeview_sort_column(tv, col, reverse):
+        # Retrieve all data from the treeview
+        l = [(tv.set(k, col), k) for k in tv.get_children('')]
+        
+        # Sort the data
+        l.sort(reverse=reverse, key=lambda t: natural_keys(t[0]))
+
+        # Rearrange items in sorted positions
+        for index, (val, k) in enumerate(l):
+            tv.move(k, '', index)
+
+        # Change the heading to show the sort direction
+        for column in tv['columns']:
+            heading_text = headings[column] + (' ↓' if reverse and column == col else ' ↑' if not reverse and column == col else '')
+            tv.heading(column, text=heading_text, command=lambda _col=column: treeview_sort_column(tv, _col, not reverse))
+
+    def natural_keys(text):
+        """
+        Alphanumeric (natural) sort to handle numbers within strings correctly
+        """
+        return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
+    # Create a frame for the table (Treeview)
+    table_frame = ttk.Frame(lgv_table_window)
+    table_frame.grid(row=0, column=0, padx=10, pady=20, sticky='nsew')
+
+    treeview_style = ttk.Style()
+    treeview_style.configure("Treeview", rowheight=23)  # Increase row height for more space between items
+    treeview_style.configure("Treeview", font=("Segoe UI", 10))  # Adjust font size if necessary
+    treeview_style.configure("Treeview", padding=(5, 5))  # Add padding to rows (optional)
+
+    # Create the Treeview (table)
+    columns = ("Name", "IPAddress", "Type")
+    treeview = ttk.Treeview(table_frame, columns=columns, show="headings")
+
+    # Define the column widths
+    treeview.column("Name", width=80, anchor='w')
+    treeview.column("IPAddress", width=120, anchor='w')
+    treeview.column("Type", width=50, anchor='w')
+
+    setup_treeview()
+
+    # Add the treeview to the table frame
+    treeview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    # treeview.bind("<<TreeviewSelect>>", on_treeview_select)
+    # treeview.bind('<Delete>', delete_selected_record)
+
+    # bind_treeview_focus_action(treeview, focus_shortcuts=['<Control-t>', '<Control-T>'])
+
+    # Create a vertical scrollbar for the table
+    scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=treeview.yview)
+    treeview.configure(yscroll=scrollbar.set)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    load_table_data_from_xml(treeview)
 ############################################### SFTP Transfer ###############################################
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget, result_queue):
@@ -1379,7 +1488,7 @@ file_menu.add_command(label=" Exit ", command=root.quit)  # Add Exit option
 menu_bar.add_cascade(label="  File ", menu=file_menu)
 
 options_menu = tk.Menu(menu_bar, tearoff=0)
-options_menu.add_command(label="Show LGV Table    ", command=show_lgv_table)
+options_menu.add_command(label="Show LGV Table", command=open_lgv_table_window_cond)
 menu_bar.add_cascade(label=" Options ", menu=options_menu) 
 
 # about_menu = tk.Menu(menu_bar, tearoff=0)
@@ -1618,6 +1727,9 @@ status_widget.grid(row=5, column=0, columnspan=2, padx=15, pady=15)
 status_widget.bind("<Key>", lambda e: "break")
 
 set_paths()
+
+# Enable menu for Show LGV Table if table is updated
+update_menu()
 
 # Disable focus for all widgets
 # disable_focus(root)
