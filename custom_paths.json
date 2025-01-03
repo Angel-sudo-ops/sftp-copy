@@ -1,1 +1,13 @@
-{"FTP": ["/Hard Disk/Backup/ini", "/Hard Disk/Backup/laserview/ini"], "SFTP": ["\\Config\\ini", "\\Config\\Laserview"], "NET": ["/Backup/Laserview/ini"]}
+{
+    "SFTP": [
+        "\\Config\\ini",
+        "\\Config\\Laserview"
+    ],
+    "NET": [
+        "\\Backup\\Laserview\\ini"
+    ],
+    "FTP": [
+        "/Hard Disk/Backup/ini",
+        "/Hard Disk/Backup/laserview/ini"
+    ]
+}

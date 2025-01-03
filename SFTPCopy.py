@@ -16,7 +16,7 @@ from datetime import datetime
 # import pystray
 # from PIL import Image
 
-__version__ = '3.4.7'
+__version__ = '3.4.7.1'
 
 ############################################### SFTP Transfer ###############################################
 
@@ -820,27 +820,31 @@ def select_mode():
         file_radio.config(state='disabled')
     print(f"Selected mode {mode_selected}")
 
+# Helper function to load a JSON file 
+def load_json_file(file_path):
+    try:
+        with open(file_path, "r") as file:
+            try:
+                return json.load(file)
+            except json.JSONDecodeError:
+                # Handle case when file is empty or not a valid JSON
+                return {}
+    except FileNotFoundError:
+        return {}
+
 # Load custom paths from a file
 def load_custom_paths(transfer_type):
-    try:
-        with open("custom_paths.json", "r") as file:
-            all_paths = json.load(file)
-            return all_paths.get(transfer_type, [])
-    except FileNotFoundError:
-        return []
+    all_paths = load_json_file("custom_paths.json")
+    return all_paths.get(transfer_type, [])
 
 # Save custom paths to a file
 def save_custom_paths(paths, transfer_type):
-    try:
-        with open("custom_paths.json", "r") as file:
-            all_paths = json.load(file)
-    except FileNotFoundError:
-        all_paths = {}
+    all_paths = load_json_file("custom_paths.json")
 
     all_paths[transfer_type] = paths
 
     with open("custom_paths.json", "w") as file:
-        json.dump(all_paths, file)
+        json.dump(all_paths, file, indent=4)
 
 # Initialize custom paths
 # custom_paths = load_custom_paths()
