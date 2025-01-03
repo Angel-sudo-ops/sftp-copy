@@ -422,6 +422,11 @@ def open_lgv_table_window():
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     load_table_data_from_xml(treeview)
+
+#############################################################################################################
+########################################### File transfer methods ###########################################
+#############################################################################################################
+
 ############################################### SFTP Transfer ###############################################
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget, result_queue):
@@ -742,6 +747,10 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
         result = "Success" if success else "Failed"
         status_widget.yview(tk.END)
         result_queue.put((host, result))
+
+#############################################################################################################
+#############################################################################################################
+#############################################################################################################
 
 ####################################################### Get IPs #############################################################
 
@@ -1280,7 +1289,9 @@ def on_add_path():
         remote_dir_entry.delete(0, tk.END)  # Clear the entry widget
         remote_dir_entry.insert(0, new_path)
 
+#############################################################################################################
 ####################################################### Profiles ###############################################################
+#############################################################################################################
 
 default_profile = {
     "name":         "Default",
@@ -1408,6 +1419,10 @@ def load_profile_names(event=None):
     profile_names = [profile["name"] for profile in custom_profiles]
     profiles_combobox['values'] = tuple(profile_names) + ("Default",)
 
+
+def filter_subprofile_combobox():
+    print("Filter_subprofile")
+
 ####################################################################################################################
 def on_enter(e):
     if e.widget['state']== "normal":
@@ -1506,6 +1521,10 @@ profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
+
+subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
+subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+subprofiles_combobox.bind("<Tab>", filter_subprofile_combobox)
 
 save_profile = ttk.Button(frame_profile, 
                           text="Save Profile", 
