@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.3'
+__version__ = '3.4.7.4'
 
 
 LGV_DATA = "lgv_data.xml"
@@ -102,7 +102,7 @@ def populate_table_from_xml(path=None):
             type_tc = "TC3" if route.find('Flags') is not None else "TC2"
             
             # Append the tuple to the list
-            routes_data.append((lgv_name, address, net_id, type_tc))
+            routes_data.append((lgv_name, address, type_tc))
         
         # Warn the user about invalid routes
         if invalid_routes:
@@ -251,7 +251,7 @@ def save_table_data_to_xml(tree, filename=LGV_DATA):
             existing_data.append({
                 "Name": lgv.find("Name").text,
                 "IPAddress": lgv.find("IPAddress").text,
-                "AMSNetId": lgv.find("AMSNetId").text,
+                # "AMSNetId": lgv.find("AMSNetId").text,
                 "Type": lgv.find("Type").text
             })
 
@@ -268,7 +268,7 @@ def save_table_data_to_xml(tree, filename=LGV_DATA):
         lgv_element = ET.SubElement(lgv_list, "LGV")
         ET.SubElement(lgv_element, "Name").text = lgv["Name"]
         ET.SubElement(lgv_element, "IPAddress").text = lgv["IPAddress"]
-        ET.SubElement(lgv_element, "AMSNetId").text = lgv["AMSNetId"]
+        # ET.SubElement(lgv_element, "AMSNetId").text = lgv["AMSNetId"]
         ET.SubElement(lgv_element, "Type").text = lgv["Type"]
     
     # Convert to a pretty XML string
@@ -298,14 +298,17 @@ def load_table_data_from_xml(tree, filename=LGV_DATA):
         for lgv in lgv_list.findall("LGV"):
             lgv_name = lgv.find("Name").text
             ip_address = lgv.find("IPAddress").text
-            ams_net_id = lgv.find("AMSNetId").text
+            # ams_net_id = lgv.find("AMSNetId").text
             tc_type = lgv.find("Type").text
             tree.insert("", "end", values=(lgv_name, ip_address, tc_type))
     else:
         print("No saved XML data found, loading default table.")
-        # Populate table the first time with current StaticRoutes.xml file
-        messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
-        populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+        if os.path.exists("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml"):
+            # Populate table the first time with current StaticRoutes.xml file
+            populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+            messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
+        else:
+            messagebox.showerror("Attention", "Default StaticRoutes.xml file not found")
 
 ############################################## Open LGV Table Window ####################################
 lgv_table_window = None
@@ -342,7 +345,7 @@ def open_lgv_table_window():
     # Dictionary to maintain custom headings
     headings = {
         'Name'      : 'Name',
-        'IP Address': 'IP Address',
+        'IPAddress' : 'IPAddress',
         'Type'      : 'Type'
     }
 
@@ -382,12 +385,12 @@ def open_lgv_table_window():
     treeview_style.configure("Treeview", padding=(5, 5))  # Add padding to rows (optional)
 
     # Create the Treeview (table)
-    columns = ("Name", "IP Address", "Type")
+    columns = ("Name", "IPAddress", "Type")
     treeview = ttk.Treeview(table_frame, columns=columns, show="headings")
 
     # Define the column widths
     treeview.column("Name", width=80, anchor='w')
-    treeview.column("IP Address", width=120, anchor='w')
+    treeview.column("IPAddress", width=120, anchor='w')
     treeview.column("Type", width=50, anchor='w')
 
     setup_treeview()
