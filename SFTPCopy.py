@@ -19,10 +19,10 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.4'
+__version__ = '3.4.7.5'
 
 
-LGV_DATA = "lgv_data.xml"
+LGV_DATA = "lgv_address_list.xml"
 ############################################## Load/Save LGV Data #############################################
 def extract_lgv_name(input_name):
     # Regex pattern to capture 'LGV' followed by numbers
@@ -59,6 +59,8 @@ def populate_table_from_xml(path=None):
             messagebox.showerror("Error", "XML file does not contain the expected 'RemoteConnections' structure.")
             return
         
+        open_lgv_table_window_cond()
+
         data = treeview.get_children()
         # Clear the existing table data
         if data is not None:
@@ -118,6 +120,9 @@ def populate_table_from_xml(path=None):
         
     save_table_data_to_xml(treeview)
 
+    # Enable menu for Show LGV Table if table is updated
+    update_menu()
+
 
 def read_db3_file(db3_file_path, table_name):
     try:
@@ -171,6 +176,8 @@ def populate_table_from_db3():
     if rows_param is None:
         return
     
+    open_lgv_table_window_cond()
+
     # # print(columns, rows)
     
     # Clear the existing table data
@@ -213,7 +220,7 @@ def populate_table_from_db3():
 
     save_table_data_to_xml(treeview)
 
-    # Enable menu for Read/Write if table is updated
+    # Enable menu for Show LGV Table if table is updated
     update_menu()
 
 
@@ -289,10 +296,10 @@ def load_table_data_from_xml(tree, filename=LGV_DATA):
 
         # Check if there are any <LGV> elements
         if not lgv_list.findall("LGV"):
-            print("The XML file has no LGV data, loading default table.")
-            # messagebox.showwarning("Warning", "The XML file contains no LGV data. Loading default table.")
-            messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
-            populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+            # print("The XML file has no LGV data, loading default table.")
+            # # messagebox.showwarning("Warning", "The XML file contains no LGV data. Loading default table.")
+            # messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
+            # populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
             return
 
         for lgv in lgv_list.findall("LGV"):
@@ -301,14 +308,20 @@ def load_table_data_from_xml(tree, filename=LGV_DATA):
             # ams_net_id = lgv.find("AMSNetId").text
             tc_type = lgv.find("Type").text
             tree.insert("", "end", values=(lgv_name, ip_address, tc_type))
+    # else:
+        # print("No saved XML data found, loading default table.")
+        # if os.path.exists("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml"):
+        #     # Populate table the first time with current StaticRoutes.xml file
+        #     populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+        #     messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
+        # else:
+        #     messagebox.showerror("Attention", "Default StaticRoutes.xml file not found")
+
+def update_menu():
+    if os.path.exists(LGV_DATA):
+        options_menu.entryconfig("Show LGV Table", state="normal")  # Enable if file exists
     else:
-        print("No saved XML data found, loading default table.")
-        if os.path.exists("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml"):
-            # Populate table the first time with current StaticRoutes.xml file
-            populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
-            messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
-        else:
-            messagebox.showerror("Attention", "Default StaticRoutes.xml file not found")
+        options_menu.entryconfig("Show LGV Table", state="disabled")  # Disable if file doesn't exist
 
 ############################################## Open LGV Table Window ####################################
 lgv_table_window = None
@@ -335,12 +348,12 @@ def open_lgv_table_window():
 
     global treeview
 
-    # With DEL key
-    def delete_selected_record(event):
-        selected_items = treeview.selection()
-        for item in selected_items:
-            if item:
-                treeview.delete(item)
+    # # With DEL key
+    # def delete_selected_record(event):
+    #     selected_items = treeview.selection()
+    #     for item in selected_items:
+    #         if item:
+    #             treeview.delete(item)
 
     # Dictionary to maintain custom headings
     headings = {
@@ -399,7 +412,7 @@ def open_lgv_table_window():
     treeview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     # treeview.bind("<<TreeviewSelect>>", on_treeview_select)
-    treeview.bind('<Delete>', delete_selected_record)
+    # treeview.bind('<Delete>', delete_selected_record)
 
     # bind_treeview_focus_action(treeview, focus_shortcuts=['<Control-t>', '<Control-T>'])
 
@@ -1475,7 +1488,7 @@ file_menu.add_command(label=" Exit ", command=root.quit)  # Add Exit option
 menu_bar.add_cascade(label="  File ", menu=file_menu)
 
 options_menu = tk.Menu(menu_bar, tearoff=0)
-options_menu.add_command(label="Show LGV Table    ", command=open_lgv_table_window_cond)
+options_menu.add_command(label="Show LGV Table", command=open_lgv_table_window_cond)
 menu_bar.add_cascade(label=" Options ", menu=options_menu) 
 
 # about_menu = tk.Menu(menu_bar, tearoff=0)
@@ -1714,6 +1727,9 @@ status_widget.grid(row=5, column=0, columnspan=2, padx=15, pady=15)
 status_widget.bind("<Key>", lambda e: "break")
 
 set_paths()
+
+# Enable menu for Show LGV Table if table is updated
+update_menu()
 
 # Disable focus for all widgets
 # disable_focus(root)
