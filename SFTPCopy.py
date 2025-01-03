@@ -15,8 +15,303 @@ from ftplib import FTP_PORT
 from datetime import datetime
 # import pystray
 # from PIL import Image
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+import sqlite3
 
-__version__ = '3.4.7.1'
+__version__ = '3.4.7.2'
+
+
+LGV_DATA = "lgv_data.xml"
+############################################## Load/Save LGV Data #############################################
+def extract_lgv_name(input_name):
+    # Regex pattern to capture 'LGV' followed by numbers
+    pattern = r"(LGV\d+)"
+    match = re.search(pattern, input_name)
+    if match:
+        return match.group(1)  # Return the matched 'LGVxx' or 'LGVxxx'
+    return None
+
+def populate_table_from_xml(path=None):
+    if not path:
+        # Ask the user to select an XML file
+        file_path = filedialog.askopenfilename(title="Select StaticRoutes file", 
+                                            initialdir="C:\\TwinCAT\\3.1\\Target",
+                                            filetypes=[("XML files", "*.xml")])
+    else:
+        file_path = path
+
+    if file_path and not os.path.exists(file_path):
+        print(f"The file {path} does not exist.")
+        return
+    
+    if file_path:
+        try:
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+        except ET.ParseError:
+            messagebox.showerror("Error", "The selected file is not a valid XML file.")
+            return
+
+        # Check for the expected root elements
+        remote_connections = root.find('RemoteConnections')
+        if remote_connections is None:
+            messagebox.showerror("Error", "XML file does not contain the expected 'RemoteConnections' structure.")
+            return
+        
+        data = treeview.get_children()
+        # Clear the existing table data
+        if data is not None:
+            for i in data:
+                treeview.delete(i)
+            
+        # Initialize an empty list to hold the data
+        routes_data = []
+        seen_lgv_names = set()
+        invalid_routes = []
+        
+        # Iterate through each <Route> element in the XML
+        for route in remote_connections.findall('Route'):
+            name = route.find('Name')
+            address = route.find('Address')
+            net_id = route.find('NetId')
+
+            if None in (name, address, net_id):
+                messagebox.showwarning("Warning", "One or more routes are missing required fields (Name, Address, NetId).")
+                invalid_routes.append("Missing fields (Name, Address, NetId)")
+                continue  # Skip this route and move to the next
+
+            name = name.text
+            address = address.text
+            net_id = net_id.text
+
+            # Extract the LGV name
+            lgv_name = extract_lgv_name(name)
+            if not lgv_name:
+                invalid_routes.append(f"Invalid name format: {name}")
+                continue
+
+            # Check for duplicate LGV names
+            if lgv_name in seen_lgv_names:
+                messagebox.showerror("Duplicate Entry", f"Duplicate LGV name found: {lgv_name}. File cannot be loaded.")
+                return None  # Abort loading the file
+
+            # Mark the LGV name as seen
+            seen_lgv_names.add(lgv_name)
+
+            type_tc = "TC3" if route.find('Flags') is not None else "TC2"
+            
+            # Append the tuple to the list
+            routes_data.append((lgv_name, net_id, type_tc))
+        
+        # Warn the user about invalid routes
+        if invalid_routes:
+            messagebox.showwarning(
+                "Invalid Routes",
+                f"The following routes were skipped:\n" + "\n".join(invalid_routes)
+            )
+        
+        # Populate the Treeview with the data
+        for item in routes_data:
+            treeview.insert("", "end", values=item)
+        # messagebox.showinfo("Success", "Data loaded successfully from the XML file.")
+        
+    save_table_data_to_xml(treeview)
+
+
+def read_db3_file(db3_file_path, table_name):
+    try:
+        # Connect to the .db3 file
+        conn = sqlite3.connect(db3_file_path)
+        cursor = conn.cursor()
+
+        # Check if the table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+        if not cursor.fetchone():
+            # messagebox.showerror("Error", f"Table '{table_name}' does not exist in the database.")
+            messagebox.showerror("Error", f"Wrong database format.")
+            conn.close()
+            return None
+
+        # Query to get all rows from the specified table
+        cursor.execute(f"SELECT * FROM {table_name}")
+        
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Get column names
+        column_names = [description[0] for description in cursor.description]
+
+        # Convert the rows into a list of dictionaries
+        dict_rows = [dict(zip(column_names, row)) for row in rows]
+
+        # Close the connection
+        conn.close()
+
+        return dict_rows
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
+        return None
+
+
+def populate_table_from_db3():
+    db3_path = filedialog.askopenfilename(title="Select config.db3 file", 
+                                          initialdir="C:\\Program Files (x86)\\Elettric80",
+                                          filetypes=[("DB3 files", "*.db3")])
+    if not db3_path:
+        return
+    
+    table_agvs = "tbl_AGVs"
+    rows_agvs = read_db3_file(db3_path, table_agvs)
+    if rows_agvs is None:
+        return
+    
+    table_param = "tbl_Parameter"
+    rows_param = read_db3_file(db3_path, table_param)
+    if rows_param is None:
+        return
+    
+    # # print(columns, rows)
+    
+    # Clear the existing table data
+    for i in treeview.get_children():
+        treeview.delete(i)
+    
+    # Default type_tc based on the transfer mode
+    default_type_tc = "TC2"  # Assume TC2 unless specified otherwise
+    for row_param in rows_param:
+        if row_param['dbf_Name'] == "agvlayoutloadmethod" and row_param['dbf_Value'] == "SFTP":
+            default_type_tc = "TC3" # If SFTP, set all to TC3
+
+    # Initialize an empty list to hold the data
+    routes_data = []
+    # Iterate through each <Route> element in the XML
+    for route in rows_agvs:
+        if route['dbf_Enabled']: 
+        # if None in (name, address, net_id):
+        #     messagebox.showwarning("Warning", "One or more routes are missing required fields (Name, Address, NetId).")
+        #     continue  # Skip this route and move to the next
+
+            name = f"LGV{str(route['dbf_ID']).zfill(2)}"
+            address = route['dbf_IP']
+            net_id = f"{address}.1.1"
+            
+            # if route['Dbf_Comm_Library']>20 or 
+            if route['LayoutCopy_Protocol']=="SFTP":
+                type_tc = "TC3" 
+            elif route['LayoutCopy_Protocol']=="FTP" or route['LayoutCopy_Protocol']=="NETFOLDER":
+                type_tc = "TC2" 
+            else:
+                type_tc = default_type_tc 
+        
+            # Append the tuple to the list
+            routes_data.append((name, net_id, type_tc))
+    
+    # Populate the Treeview with the data
+    for item in routes_data:
+        treeview.insert("", "end", values=item)
+
+    save_table_data_to_xml(treeview)
+
+    # Enable menu for Read/Write if table is updated
+    update_menu()
+
+
+# Save data to XML
+def save_table_data_to_xml(tree, filename=LGV_DATA):
+
+    # Check if there is any data in the Treeview
+    if not tree.get_children():
+        print("Treeview is empty. No data to save.")
+        return  # Exit the function if the Treeview is empty
+    
+    # Create the current data structure from the Treeview
+    current_data = []
+    for row in tree.get_children():
+        lgv_data = tree.item(row)["values"]
+        current_data.append({
+            "Name": lgv_data[0],
+            "AMSNetId": lgv_data[1],
+            "Type": lgv_data[2]
+        })
+
+    # Sort the current data to ensure consistent ordering
+    current_data.sort(key=lambda x: x["Name"])
+
+
+    # If the file exists, compare it with the current data
+    if os.path.exists(filename):
+        tree_xml = ET.parse(filename)
+        lgv_list = tree_xml.getroot()
+
+        # Extract the existing data from the XML file
+        existing_data = []
+        for lgv in lgv_list.findall("LGV"):
+            existing_data.append({
+                "Name": lgv.find("Name").text,
+                "AMSNetId": lgv.find("AMSNetId").text,
+                "Type": lgv.find("Type").text
+            })
+
+        # Sort the existing data to ensure consistent ordering
+        existing_data.sort(key=lambda x: x["Name"])
+
+        # Compare existing data with current data
+        if existing_data == current_data:
+            print("No changes detected. Data not saved.")
+            return  # Exit if there are no changes
+        
+    lgv_list = ET.Element("LGVData")
+    for lgv in current_data:
+        lgv_element = ET.SubElement(lgv_list, "LGV")
+        ET.SubElement(lgv_element, "Name").text = lgv["Name"]
+        ET.SubElement(lgv_element, "AMSNetId").text = lgv["AMSNetId"]
+        ET.SubElement(lgv_element, "Type").text = lgv["Type"]
+    
+    # Convert to a pretty XML string
+    xmlstr = minidom.parseString(ET.tostring(lgv_list, 'utf-8')).toprettyxml(indent="    ")
+
+    # Write to a file
+    with open(filename, "w", encoding='utf-8') as f:
+        f.write(xmlstr)
+
+    print(f"Data successfully saved to {filename}.")
+    messagebox.showinfo("Attention", f"LGV data successfully saved to {filename}.")
+
+# Load data from XML
+def load_table_data_from_xml(tree, filename=LGV_DATA):
+    if os.path.exists(filename):       
+        tree_xml = ET.parse(filename)
+        lgv_list = tree_xml.getroot()
+
+        # Check if there are any <LGV> elements
+        if not lgv_list.findall("LGV"):
+            print("The XML file has no LGV data, loading default table.")
+            # messagebox.showwarning("Warning", "The XML file contains no LGV data. Loading default table.")
+            messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
+            populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+            return
+
+        for lgv in lgv_list.findall("LGV"):
+            lgv_name = lgv.find("Name").text
+            ams_net_id = lgv.find("AMSNetId").text
+            tc_type = lgv.find("Type").text
+            tree.insert("", "end", values=(lgv_name, ams_net_id, tc_type))
+    else:
+        print("No saved XML data found, loading default table.")
+        # Populate table the first time with current StaticRoutes.xml file
+        messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
+        populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
+
+# With DEL key
+# def delete_selected_record(event):
+#     selected_items = treeview.selection()
+#     for item in selected_items:
+#         if item:
+#             treeview.delete(item)
+
+def show_lgv_table():
+    print("LGV table")
 
 ############################################### SFTP Transfer ###############################################
 
@@ -1072,6 +1367,27 @@ style.configure('RootIP.TEntry', foreground='black')
 style.configure('Range.TEntry', foreground='black')
 
 style.configure('Placeholder.TEntry', foreground='grey')
+
+
+# Create the menu bar
+menu_bar = tk.Menu(root)
+
+file_menu = tk.Menu(menu_bar, tearoff=0)
+file_menu.add_command(label=" Load Config.db3 ", command=populate_table_from_db3)  # Add Load Config option
+file_menu.add_command(label=" Load StaticRoutes.xml", command=populate_table_from_xml) # Add Load StaticRoutes option
+file_menu.add_command(label=" Exit ", command=root.quit)  # Add Exit option
+menu_bar.add_cascade(label="  File ", menu=file_menu)
+
+options_menu = tk.Menu(menu_bar, tearoff=0)
+options_menu.add_command(label="Show LGV Table    ", command=show_lgv_table)
+menu_bar.add_cascade(label=" Options ", menu=options_menu) 
+
+# about_menu = tk.Menu(menu_bar, tearoff=0)
+# about_menu.add_command(label="Info    ", command=open_shortcuts_window_cond)
+# menu_bar.add_cascade(label=" About", menu=about_menu)
+
+root.config(menu=menu_bar)
+
 
 frame_profile = tk.Frame(root)
 frame_profile.grid(row=0, column=1, padx=10, pady=5, sticky='w')
