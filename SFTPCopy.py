@@ -303,15 +303,83 @@ def load_table_data_from_xml(tree, filename=LGV_DATA):
         messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
         populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
 
-# With DEL key
-# def delete_selected_record(event):
-#     selected_items = treeview.selection()
-#     for item in selected_items:
-#         if item:
-#             treeview.delete(item)
+
 
 def show_lgv_table():
-    print("LGV table")
+    global treeview
+    # With DEL key
+    def delete_selected_record(event):
+        selected_items = treeview.selection()
+        for item in selected_items:
+            if item:
+                treeview.delete(item)
+
+    # Dictionary to maintain custom headings
+    headings = {
+        'Name': 'Name',
+        'NetId': 'AMS Net Id',
+        'Type': 'Type'
+    }
+
+    def setup_treeview():
+        for col in treeview['columns']:
+            treeview.heading(col, text=headings[col], command=lambda _col=col: treeview_sort_column(treeview, _col, False), anchor='w')
+
+    def treeview_sort_column(tv, col, reverse):
+        # Retrieve all data from the treeview
+        l = [(tv.set(k, col), k) for k in tv.get_children('')]
+        
+        # Sort the data
+        l.sort(reverse=reverse, key=lambda t: natural_keys(t[0]))
+
+        # Rearrange items in sorted positions
+        for index, (val, k) in enumerate(l):
+            tv.move(k, '', index)
+
+        # Change the heading to show the sort direction
+        for column in tv['columns']:
+            heading_text = headings[column] + (' ↓' if reverse and column == col else ' ↑' if not reverse and column == col else '')
+            tv.heading(column, text=heading_text, command=lambda _col=column: treeview_sort_column(tv, _col, not reverse))
+
+    def natural_keys(text):
+        """
+        Alphanumeric (natural) sort to handle numbers within strings correctly
+        """
+        return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
+    # Create a frame for the table (Treeview)
+    table_frame = ttk.Frame(root)
+    table_frame.grid(row=1, column=0, padx=10, pady=20, sticky='nsew')
+
+    treeview_style = ttk.Style()
+    treeview_style.configure("Treeview", rowheight=23)  # Increase row height for more space between items
+    treeview_style.configure("Treeview", font=("Segoe UI", 10))  # Adjust font size if necessary
+    treeview_style.configure("Treeview", padding=(5, 5))  # Add padding to rows (optional)
+
+    # Create the Treeview (table)
+    columns = ("Name", "NetId", "Type")
+    treeview = ttk.Treeview(table_frame, columns=columns, show="headings")
+
+    # Define the column widths
+    treeview.column("Name", width=80, anchor='w')
+    treeview.column("NetId", width=120, anchor='w')
+    treeview.column("Type", width=50, anchor='w')
+
+    setup_treeview()
+
+    # Add the treeview to the table frame
+    treeview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    # treeview.bind("<<TreeviewSelect>>", on_treeview_select)
+    treeview.bind('<Delete>', delete_selected_record)
+
+    # bind_treeview_focus_action(treeview, focus_shortcuts=['<Control-t>', '<Control-T>'])
+
+    # Create a vertical scrollbar for the table
+    scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=treeview.yview)
+    treeview.configure(yscroll=scrollbar.set)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
 
 ############################################### SFTP Transfer ###############################################
 
