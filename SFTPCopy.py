@@ -204,15 +204,15 @@ def populate_table_from_db3():
             net_id = f"{address}.1.1"
             
             # if route['Dbf_Comm_Library']>20 or 
-            if route['LayoutCopy_Protocol']=="SFTP":
+            if str(route['LayoutCopy_Protocol']).lower()=="sftp":
                 type_tc = "TC3" 
-            elif route['LayoutCopy_Protocol']=="FTP" or route['LayoutCopy_Protocol']=="NETFOLDER":
+            elif str(route['LayoutCopy_Protocol']).lower()=="ftp" or str(route['LayoutCopy_Protocol']).lower()=="netfolder":
                 type_tc = "TC2" 
             else:
                 type_tc = default_type_tc 
         
             # Append the tuple to the list
-            routes_data.append((name, address, net_id, type_tc))
+            routes_data.append((name, address, type_tc))
     
     # Populate the Treeview with the data
     for item in routes_data:
