@@ -41,6 +41,16 @@
                 "username": "anonymous",
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB25_TC2_config",
+                "base_ip": "172.20.2.50",
+                "ip_range": "1-15",
+                "local_dir": "C:/localpath/example5.xml",
+                "remote_dir": "/Hard Disk/Backup/",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
             }
         ]
     },

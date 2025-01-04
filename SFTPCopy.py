@@ -1495,6 +1495,69 @@ def load_profile_names(event=None):
     profiles_combobox.bind("<<ComboboxSelected>>", update_subprofiles)
 
 
+def delete_profile_or_subprofile():
+    """Delete the selected profile or sub-profile.
+        Delete Sub-Profile:
+        If a sub-profile is selected in the subprofiles_combobox, delete that sub-profile from its parent profile.
+        Delete Profile:
+        If no sub-profile is selected (or the sub-profile field is empty), delete the entire profile."""
+    
+    profile_name = profiles_combobox.get().strip()
+    subprofile_name = subprofiles_combobox.get().strip()
+
+    if not profile_name or profile_name.lower() == "default":
+        messagebox.showerror("Error", "Cannot delete the default profile.")
+        return
+
+    custom_profiles = load_custom_profiles()
+
+    for profile in custom_profiles:
+        if profile["profile_name"] == profile_name:
+            if subprofile_name:
+                # Delete the sub-profile
+                subprofiles = profile.get("sub_profiles", [])
+                for subprofile in subprofiles:
+                    if subprofile["sub_name"] == subprofile_name:
+                        subprofiles.remove(subprofile)
+                        messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' deleted successfully.")
+                        break
+                else:
+                    messagebox.showerror("Error", f"Sub-profile '{subprofile_name}' not found.")
+                    return
+
+                # If no sub-profiles are left, ask if the user wants to delete the entire profile
+                if not subprofiles:
+                    confirm = messagebox.askyesno(
+                        "Confirmation", 
+                        f"Profile '{profile_name}' has no sub-profiles left. Do you want to delete it?"
+                    )
+                    if confirm:
+                        custom_profiles.remove(profile)
+                        messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                break
+            else:
+                # Delete the profile
+                confirm = messagebox.askyesno(
+                    "Confirmation", 
+                    f"Are you sure you want to delete the profile '{profile_name}' and all its sub-profiles?"
+                )
+                if confirm:
+                    custom_profiles.remove(profile)
+                    messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+            break
+    else:
+        messagebox.showerror("Error", f"Profile '{profile_name}' not found.")
+        return
+
+    # Save updated profiles to file
+    save_custom_profiles(custom_profiles)
+
+    # Update combobox values
+    load_profile_names()
+    subprofiles_combobox.set("")
+
+
+
 # Filter profiles on Tab key
 def filter_profiles(event):
     """Filter profiles in the profiles_combobox based on user input."""
@@ -1643,10 +1706,14 @@ subprofiles_combobox.bind("<Tab>", filter_subprofiles)
 
 save_profile = ttk.Button(frame_profile, 
                           text="Save Profile", 
-                        #   bg='ghost white', 
                           command=save_custom_profile)
 save_profile.grid(row=0, column=1, padx=5, pady=5)
 # button_design(save_profile)
+
+delete_profile = ttk.Button(frame_profile, 
+                          text=" Delete ", 
+                          command=delete_profile_or_subprofile)
+delete_profile.grid(row=1, column=1, padx=5, pady=5)
 
 
 # Customize the focus ring (or border) of the Radiobutton
