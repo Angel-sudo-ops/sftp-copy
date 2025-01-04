@@ -1473,7 +1473,11 @@ def load_profile_names(event=None):
     """Load profiles into the profiles_combobox and set up sub-profiles."""
     custom_profiles = load_custom_profiles()
 
-    profile_names = [profile["profile_name"] for profile in custom_profiles]
+    # Populate the profiles_combobox woth sorted profile names
+    profile_names = sorted(
+        [profile["profile_name"] for profile in custom_profiles],
+        key=str.lower
+    )
     profiles_combobox['values'] = tuple(profile_names) + ("Default",)
 
     # Set a callback to update sub-profiles when a profile is selected
@@ -1484,7 +1488,10 @@ def load_profile_names(event=None):
         # Find the selected profile and populate subprofiles_combobox
         for profile in custom_profiles:
             if profile["profile_name"] == selected_profile_name:
-                subprofile_names = [sub["sub_name"] for sub in profile.get("sub_profiles", [])]
+                subprofile_names = sorted(
+                    [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
+                    key=str.lower
+                )
                 subprofiles_combobox['values'] = tuple(subprofile_names)
                 return
 
@@ -1570,8 +1577,11 @@ def filter_profiles(event):
     typed_text = profiles_combobox.get().strip()
     custom_profiles = load_custom_profiles()
 
-    # Get matching profile names
-    profile_names = [profile["profile_name"] for profile in custom_profiles]
+    # Get matching profile names and sort them
+    profile_names = sorted(
+        [profile["profile_name"] for profile in custom_profiles],
+        key=str.lower
+    )
     filtered_profiles = [name for name in profile_names if typed_text.lower() in name.lower()]
 
     # Update the combobox with filtered profiles
@@ -1590,12 +1600,15 @@ def filter_subprofiles(event):
     # Find the selected profile and its sub-profiles
     for profile in custom_profiles:
         if profile["profile_name"] == selected_profile_name:
-            subprofile_names = [sub["sub_name"] for sub in profile.get("sub_profiles", [])]
+            subprofile_names = sorted(
+                [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
+                key=str.lower
+            )
             break
     else:
         subprofile_names = []
 
-    # Get matching sub-profile names
+    # Get matching sub-profile names and sort them
     filtered_subprofiles = [name for name in subprofile_names if typed_text.lower() in name.lower()]
 
     # Update the combobox with filtered sub-profiles
