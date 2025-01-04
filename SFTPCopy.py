@@ -1346,65 +1346,102 @@ def save_custom_profiles(profile):
 
 
 def save_custom_profile():
-    custom_profile_name = profiles_combobox.get()
-    base_ip = ip_entry.get()
-    range_input = range_entry.get()
-    dir_entry = remote_dir_entry.get()
-    username = username_entry.get()
-    password = password_entry.get()
+    """Save a custom profile and its sub-profile."""
+    profile_name = profiles_combobox.get().strip()
+    subprofile_name = subprofiles_combobox.get().strip()
+
+    base_ip = ip_entry.get().strip()
+    range_input = range_entry.get().strip()
+    local_dir = file_path_entry.get().strip()
+    remote_dir = remote_dir_entry.get().strip()
+    username = username_entry.get().strip()
+    password = password_entry.get().strip()
     transfer_mode = transfer_type_sel.get()
 
-    if not custom_profile_name or custom_profile_name.lower() == "select a profile" or custom_profile_name.lower() == "default":
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == "default":
         messagebox.showerror("Error", "Please enter a profile name")
         return
-    # if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
+    
+    if not subprofile_name or profile_name.lower() == "select a profile":
+        messagebox.showerror("Error", "Please enter a valid sub-profile name.")
+        return
+    
     if not validate_base_ip():
         messagebox.showerror("Input Error", "Please enter valid base IP.")
         return
-    # if not range_input or range_input == placeholders[range_entry]:
+    
     if not validate_range():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
-    if not dir_entry:
+    
+    if not local_dir:
+        messagebox.showerror("Input Error", "Please enter a local directory.")
+        return
+    
+    if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
         return
+    
     if not username:
         messagebox.showerror("Input Error", "Please enter the username.")
         return
+    
     if not password:
         messagebox.showerror("Input Error", "Please enter the password.")
         return
+    
     # if not transfer_mode:
     #     messagebox.showerror("Input Error", "Please enter the transfer type.")
     #     return
     
-    custom_profile = {
-        "name":             custom_profile_name,
+    subprofile = {
+        "sub_name":         subprofile_name,
         "base_ip":          base_ip,
         "ip_range":         range_input,
-        "remote_dir":       dir_entry,
+        "local_dir":        local_dir,
+        "remote_dir":       remote_dir,
         "username":         username,
         "password":         password,
         "transfer_type":    transfer_mode
     }
 
     custom_profiles = load_custom_profiles()
-    profile_names = [profile['name'] for profile in custom_profiles]
+
+    # profile_names = [profile['name'] for profile in custom_profiles]
 
     # Check for duplicate profile names and update if found
-    for existing_profile in custom_profiles:
-        if (existing_profile['name'] == custom_profile_name):
-            existing_profile.update(custom_profile)
-            messagebox.showinfo("Success", "Existing profile updated.")
-            break
-        # fix default profile is updated with same name, not save that profile, that is just an example!!!
+    for profile in custom_profiles:
+        if profile['profile_name'] == profile_name:
+            # Check if the sub-profile exists
+            for existing_subprofile in profile.get("sub_profiles", []):
+                if existing_subprofile["sub_name"] == subprofile_name:
+                    # Update the existing sub-profile
+                    existing_subprofile.update(subprofile)
+                    messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' updated successfully.")
+                    break
+            else:
+                # Add a new sub-profile to the profile
+                profile.setdefault("sub_profiles", []).append(subprofile)
+                messagebox.showinfo("Success", f"New sub-profile '{subprofile_name}' added to profile '{profile_name}'.")
+            break 
     else:
-        custom_profiles.append(custom_profile)
-        messagebox.showinfo("Success", "New profile saved successfully")
+        # Add a new profile with the sub-profile
+        custom_profiles.append({
+            "profile_name": profile_name,
+            "sub_profiles": [subprofile]
+        })
+        messagebox.showinfo("Success", f"New profile '{profile_name}' created with sub-profile '{subprofile_name}'.")
     
     save_custom_profiles(custom_profiles)
+
+    # Update combobox values
+    profile_names = [profile["profile_name"] for profile in custom_profiles]
     profiles_combobox['values'] = tuple(profile_names) + ("Default",)
-    # messagebox.showinfo("Success", "Profile saved successfully")
+
+    # Update sub-profiles for the current profile
+    if profile_name == profiles_combobox.get():
+        subprofile_names = [sub["sub_name"] for sub in custom_profiles[-1]["sub_profiles"]]
+        subprofiles_combobox['values'] = tuple(subprofile_names)
 
 
 def load_profile_by_name(event=None):
@@ -1457,8 +1494,46 @@ def load_profile_names(event=None):
     # Bind the update_subprofiles function to the profiles_combobox selection event
     profiles_combobox.bind("<<ComboboxSelected>>", update_subprofiles)
 
-def filter_subprofile_combobox():
-    print("Filter_subprofile")
+
+# Filter profiles on Tab key
+def filter_profiles(event):
+    """Filter profiles in the profiles_combobox based on user input."""
+    typed_text = profiles_combobox.get().strip()
+    custom_profiles = load_custom_profiles()
+
+    # Get matching profile names
+    profile_names = [profile["profile_name"] for profile in custom_profiles]
+    filtered_profiles = [name for name in profile_names if typed_text.lower() in name.lower()]
+
+    # Update the combobox with filtered profiles
+    profiles_combobox['values'] = tuple(filtered_profiles) + ("Default",)
+    if filtered_profiles:
+        profiles_combobox.event_generate("<Down>")
+
+# Filter sub-profiles on Tab key
+def filter_subprofiles(event):
+    """Filter sub-profiles in the subprofiles_combobox based on user input."""
+    typed_text = subprofiles_combobox.get().strip()
+    selected_profile_name = profiles_combobox.get().strip()
+
+    custom_profiles = load_custom_profiles()
+
+    # Find the selected profile and its sub-profiles
+    for profile in custom_profiles:
+        if profile["profile_name"] == selected_profile_name:
+            subprofile_names = [sub["sub_name"] for sub in profile.get("sub_profiles", [])]
+            break
+    else:
+        subprofile_names = []
+
+    # Get matching sub-profile names
+    filtered_subprofiles = [name for name in subprofile_names if typed_text.lower() in name.lower()]
+
+    # Update the combobox with filtered sub-profiles
+    subprofiles_combobox['values'] = tuple(filtered_subprofiles)
+    if filtered_subprofiles:
+        subprofiles_combobox.event_generate("<Down>")
+
 
 ####################################################################################################################
 def on_enter(e):
@@ -1558,12 +1633,13 @@ profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
+profiles_combobox.bind("<Tab>", filter_profiles)
 
 subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
 subprofiles_combobox.set("Select a subprofile")
 subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
 subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
-subprofiles_combobox.bind("<Tab>", filter_subprofile_combobox)
+subprofiles_combobox.bind("<Tab>", filter_subprofiles)
 
 save_profile = ttk.Button(frame_profile, 
                           text="Save Profile", 

@@ -28,9 +28,29 @@
                 "ip_range": "16-18",
                 "username": "Administrator",
                 "password": "1",
-                "local_dir": "C:/localpath/example3.xml",
-                "remote_dir": "\\Config",
+                "local_dir": "C:/localpath/boot",
+                "remote_dir": "\\TwinCAT\\Boot",
                 "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_TC2_boot",
+                "base_ip": "172.20.2.50",
+                "ip_range": "30-42",
+                "local_dir": "C:/Repos/super-ads-client/dist/boot",
+                "remote_dir": "/Hard Disk/Backup/",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB25_TC2_config",
+                "base_ip": "172.20.2.50",
+                "ip_range": "1-15",
+                "local_dir": "C:/localpath/example5.xml",
+                "remote_dir": "/Hard Disk/Backup/",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
             }
         ]
     },
@@ -44,7 +64,7 @@
                 "username": "Administrator",
                 "password": "E80Lgv!",
                 "local_dir": "C:/localpath/Boot",
-                "remote_dir": "\\Config",
+                "remote_dir": "\\TwinCAT\\Boot",
                 "transfer_type": "SFTP"
             },
             {
@@ -55,6 +75,26 @@
                 "password": "E80Lgv!",
                 "local_dir": "C:/localpath/Boot3",
                 "remote_dir": "\\Config",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB30_quote",
+                "base_ip": "7.34.130.9",
+                "ip_range": "1-15",
+                "local_dir": "C:/localpath/Quote.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "E80Lgv!",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach_boot",
+                "base_ip": "7.34.130.9",
+                "ip_range": "31-35",
+                "local_dir": "C:/localpath/Boot",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "E80Lgv!",
                 "transfer_type": "SFTP"
             }
         ]
