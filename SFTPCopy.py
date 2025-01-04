@@ -1065,8 +1065,9 @@ def combined_combobox_selected(event):
     on_combobox_change(event)
     # validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
     # validate_entry(range_entry, 'Range.TEntry', validate_range)
+    # set_paths()
     load_profile_by_name(event)
-    set_paths()
+    
 
 # ############################################### Validate inputs ################################################
 good_input_bg = 'white'
@@ -1181,7 +1182,7 @@ def set_default_login():
 default_paths = []
 custom_paths = []
 
-def set_paths():
+def set_paths(*args):
     global default_paths, custom_paths
     default_paths_sftp = (r"\Config", r"\TwinCAT\Boot", r"\Layout")
     default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/TwinCAT/Boot", "/Hard Disk/Backup/export_to_agv")
@@ -1453,15 +1454,24 @@ def load_profile_by_name(event=None):
 
     if selected_profile_name == "Default":
         set_profile(default_profile)
+        subprofiles_combobox['values'] = []  # Clear subprofiles_combobox
+        subprofiles_combobox.set("")  # Clear the selection
         return
     
     for profile in profiles:
         if profile["profile_name"] == selected_profile_name:
-            # Find the selected sub-profile within the profile
-            for subprofile in profile.get("sub_profiles", []):
-                if subprofile["sub_name"] == selected_subprofile_name:
-                    set_profile(subprofile)
-                    return
+            # If a sub-profile is selected, find and set it
+            if selected_profile_name:
+                for subprofile in profile.get("sub_profiles", []):
+                    if subprofile["sub_name"] == selected_subprofile_name:
+                        set_profile(subprofile)
+                        return
+                # If no sub-profile is selected, show an error
+                messagebox.showerror("Error", "Please select a valid sub-profile.")
+                return
+            
+            # If no sub-profile is selected but profile exists, do nothing
+            return
                 
     # If no match is found, show an error
     messagebox.showerror(
@@ -1800,6 +1810,7 @@ remote_dir_entry = ttk.Combobox(frame_remote,
 # if default_paths:
 #     remote_dir_entry.insert(0, default_paths[0])
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
+remote_dir_entry.bind("<ButtonPress>", set_paths)
 
 # Add a button to save a custom path
 save_path = ttk.Button(frame_remote, text="Save Path",

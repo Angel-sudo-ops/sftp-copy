@@ -37,7 +37,7 @@
                 "base_ip": "172.20.2.50",
                 "ip_range": "30-42",
                 "local_dir": "C:/Repos/super-ads-client/dist/boot",
-                "remote_dir": "/Hard Disk/Backup/",
+                "remote_dir": "/Hard Disk/TwinCAT/Boot",
                 "username": "anonymous",
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP"
