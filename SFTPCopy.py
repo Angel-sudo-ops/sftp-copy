@@ -1362,8 +1362,8 @@ def save_custom_profile():
         messagebox.showerror("Error", "Please enter a profile name")
         return
     
-    if not subprofile_name or profile_name.lower() == "select a profile":
-        messagebox.showerror("Error", "Please enter a valid sub-profile name.")
+    if not subprofile_name or subprofile_name.lower() == "select a subprofile":
+        messagebox.showerror("Error", "Please enter a valid subprofile name.")
         return
     
     if not validate_base_ip():
@@ -1496,8 +1496,7 @@ def load_profile_names(event=None):
 
 
 def delete_profile_or_subprofile():
-    """Delete the selected profile or sub-profile.
-        Delete Sub-Profile:
+    """Delete Sub-Profile:
         If a sub-profile is selected in the subprofiles_combobox, delete that sub-profile from its parent profile.
         Delete Profile:
         If no sub-profile is selected (or the sub-profile field is empty), delete the entire profile."""
@@ -1524,6 +1523,11 @@ def delete_profile_or_subprofile():
                 else:
                     messagebox.showerror("Error", f"Sub-profile '{subprofile_name}' not found.")
                     return
+                
+                # Update subprofiles_combobox after deletion
+                subprofile_names = [sub["sub_name"] for sub in subprofiles]
+                subprofiles_combobox['values'] = tuple(subprofile_names)
+                subprofiles_combobox.set("")
 
                 # If no sub-profiles are left, ask if the user wants to delete the entire profile
                 if not subprofiles:
@@ -1534,6 +1538,7 @@ def delete_profile_or_subprofile():
                     if confirm:
                         custom_profiles.remove(profile)
                         messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                        profiles_combobox.set("") # Clear profile selection
                 break
             else:
                 # Delete the profile
@@ -1544,6 +1549,7 @@ def delete_profile_or_subprofile():
                 if confirm:
                     custom_profiles.remove(profile)
                     messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                    profiles_combobox.set("") # Clear profile selection
             break
     else:
         messagebox.showerror("Error", f"Profile '{profile_name}' not found.")
@@ -1554,7 +1560,7 @@ def delete_profile_or_subprofile():
 
     # Update combobox values
     load_profile_names()
-    subprofiles_combobox.set("")
+    subprofiles_combobox.set("") # Clear sub-profile selection
 
 
 
