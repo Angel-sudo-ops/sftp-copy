@@ -1,47 +1,62 @@
 [
     {
-        "name": "CC1527_GP_Portland_TC2",
-        "base_ip": "172.20.2.50",
-        "ip_range": "1-15,30-42",
-        "username": "anonymous",
-        "password": "anonymous@example.com",
-        "remote_dir": "/Hard Disk/Backup/",
-        "transfer_type": "FTP"
+        "profile_name": "CC1527_GP_Portland",
+        "sub_profiles": [
+            {
+                "sub_name": "CB16_TC2",
+                "base_ip": "172.20.2.50",
+                "ip_range": "30-42",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "local_dir": "C:/localpath/example.xml",
+                "remote_dir": "/Hard Disk/Backup/",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB25_TC2",
+                "base_ip": "172.20.2.50",
+                "ip_range": "1-15",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "local_dir": "C:/localpath/example5.xml",
+                "remote_dir": "/Hard Disk/Backup/",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB25_TC3",
+                "base_ip": "172.20.2.50",
+                "ip_range": "16-18",
+                "username": "Administrator",
+                "password": "1",
+                "local_dir": "C:/localpath/example3.xml",
+                "remote_dir": "\\Config",
+                "transfer_type": "SFTP"
+            }
+        ]
     },
     {
-        "name": "CC1527_GP_Portland_TC3_CB25",
-        "base_ip": "172.20.2.50",
-        "ip_range": "16-18",
-        "username": "Administrator",
-        "password": "1",
-        "remote_dir": "\\Config",
-        "transfer_type": "SFTP"
-    },
-    {
-        "name": "CC1527_GP_Portland_TC2_CB16",
-        "base_ip": "172.20.2.50",
-        "ip_range": "30-42",
-        "remote_dir": "/Hard Disk/Backup/",
-        "username": "anonymous",
-        "password": "anonymous@example.com",
-        "transfer_type": "FTP"
-    },
-    {
-        "name": "CC1527_GP_Portland_TC2_CB25",
-        "base_ip": "172.20.2.50",
-        "ip_range": "1-15",
-        "remote_dir": "/Hard Disk/Backup/",
-        "username": "anonymous",
-        "password": "anonymous@example.com",
-        "transfer_type": "FTP"
-    },
-    {
-        "name": "CC2002_Pepsico_StoneMt",
-        "base_ip": "7.34.130.9",
-        "ip_range": "1-25",
-        "remote_dir": "\\Config",
-        "username": "Administrator",
-        "password": "E80Lgv!",
-        "transfer_type": "SFTP"
+        "profile_name": "CC2002_Pepsi_StoneMountain",
+        "sub_profiles": [
+            {
+                "sub_name": "CB30",
+                "base_ip": "7.34.130.9",
+                "ip_range": "1-15",
+                "username": "Administrator",
+                "password": "E80Lgv!",
+                "local_dir": "C:/localpath/Boot",
+                "remote_dir": "\\Config",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach",
+                "base_ip": "7.34.130.9",
+                "ip_range": "16-25",
+                "username": "Administrator",
+                "password": "E80Lgv!",
+                "local_dir": "C:/localpath/Boot3",
+                "remote_dir": "\\Config",
+                "transfer_type": "SFTP"
+            }
+        ]
     }
 ]

@@ -1419,7 +1419,7 @@ def load_profile_by_name(event=None):
         return
     
     for profile in profiles:
-        if profile["name"] == selected_profile_name:
+        if profile["profile_name"] == selected_profile_name:
             # Find the selected sub-profile within the profile
             for subprofile in profile.get("sub_profiles", []):
                 if subprofile["sub_name"] == selected_subprofile_name:
@@ -1433,10 +1433,29 @@ def load_profile_by_name(event=None):
     )
 
 def load_profile_names(event=None):
+    """Load profiles into the profiles_combobox and set up sub-profiles."""
     custom_profiles = load_custom_profiles()
-    profile_names = [profile["name"] for profile in custom_profiles]
+
+    profile_names = [profile["profile_name"] for profile in custom_profiles]
     profiles_combobox['values'] = tuple(profile_names) + ("Default",)
 
+    # Set a callback to update sub-profiles when a profile is selected
+    def update_subprofiles(event):
+        selected_profile_name = profiles_combobox.get()
+        subprofiles_combobox.set("")  # Clear current selection
+        
+        # Find the selected profile and populate subprofiles_combobox
+        for profile in custom_profiles:
+            if profile["profile_name"] == selected_profile_name:
+                subprofile_names = [sub["sub_name"] for sub in profile.get("sub_profiles", [])]
+                subprofiles_combobox['values'] = tuple(subprofile_names)
+                return
+
+        # If no sub-profiles exist, clear the combobox
+        subprofiles_combobox['values'] = []
+
+    # Bind the update_subprofiles function to the profiles_combobox selection event
+    profiles_combobox.bind("<<ComboboxSelected>>", update_subprofiles)
 
 def filter_subprofile_combobox():
     print("Filter_subprofile")
@@ -1543,6 +1562,7 @@ profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
 subprofiles_combobox.set("Select a subprofile")
 subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
 subprofiles_combobox.bind("<Tab>", filter_subprofile_combobox)
 
 save_profile = ttk.Button(frame_profile, 
