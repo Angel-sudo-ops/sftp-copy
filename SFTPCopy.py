@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.5'
+__version__ = '3.4.7.6'
 
 
 LGV_DATA = "lgv_address_list.xml"
@@ -1059,14 +1059,24 @@ def on_combobox_change(event):
         entry.config(style=entries[entry])
         # disable_placeholder(entry, entries[entry])
 
-def combined_combobox_selected(event):
+def combined_combobox_selected_profile(event):
     style.configure('RootIP.TEntry', foreground=good_input_fg)
     style.configure('Range.TEntry', foreground=good_input_fg) 
     on_combobox_change(event)
     # validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
     # validate_entry(range_entry, 'Range.TEntry', validate_range)
-    # set_paths()
     load_profile_by_name(event)
+    # set_paths()
+    clear_entries(event)
+
+def combined_combobox_selected_subprofile(event):
+    style.configure('RootIP.TEntry', foreground=good_input_fg)
+    style.configure('Range.TEntry', foreground=good_input_fg) 
+    on_combobox_change(event)
+    # validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
+    # validate_entry(range_entry, 'Range.TEntry', validate_range)
+    load_profile_by_name(event)
+    set_paths()
     
 
 # ############################################### Validate inputs ################################################
@@ -1177,12 +1187,22 @@ def set_default_login():
     password_entry.delete(0, tk.END)
     password_entry.insert(0, "1")
 
+
+def clear_entries(event=None):
+    ip_entry.delete(0, tk.END)
+    range_entry.delete(0, tk.END)
+    username_entry.delete(0, tk.END)
+    password_entry.delete(0, tk. END)
+    remote_dir_entry.delete(0, tk.END)
+    file_path_entry.delete(0, tk.END)
+
+
 ###################################################### Custom paths ##########################################################
 # Global variable to store default paths
 default_paths = []
 custom_paths = []
 
-def set_paths(*args):
+def set_paths():
     global default_paths, custom_paths
     default_paths_sftp = (r"\Config", r"\TwinCAT\Boot", r"\Layout")
     default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/TwinCAT/Boot", "/Hard Disk/Backup/export_to_agv")
@@ -1209,10 +1229,14 @@ def set_paths(*args):
     remote_dir_entry['values'] = default_paths + tuple(custom_paths)
     
     # Optionally, reset the displayed value to the first default path
-    if default_paths:
+    if default_paths and not remote_dir_entry.get():
         remote_dir_entry.set(default_paths[0])
 
     print(f"Default paths set to: {default_paths}")
+
+def set_path_on_selection():
+    remote_dir_entry.delete(0, tk.END)
+    set_paths()
 
 
 def select_mode():
@@ -1486,7 +1510,6 @@ def load_profile_by_name(event=None):
                 key=str.lower
             )
             subprofiles_combobox['values'] = tuple(subprofile_names)
-            # subprofiles_combobox.set("")  # Clear subprofile selection
 
             # If a sub-profile is selected, set its data
             if selected_subprofile_name:
@@ -1579,7 +1602,6 @@ def delete_profile_or_subprofile():
 
     # Update combobox values
     load_profile_names()
-    subprofiles_combobox.set("") # Clear sub-profile selection
 
 
 
@@ -1726,14 +1748,15 @@ profiles_combobox = ttk.Combobox(frame_profile, width=40)
 profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
-profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
+profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_profile)
 profiles_combobox.bind("<Tab>", filter_profiles)
 
 subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
 subprofiles_combobox.set("Select a subprofile")
 subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
-subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
+subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_subprofile)
 subprofiles_combobox.bind("<Tab>", filter_subprofiles)
+# subprofiles_combobox.bind()
 
 save_profile = ttk.Button(frame_profile, 
                           text="Save Profile", 
@@ -1757,11 +1780,11 @@ transfer_type_sel = tk.StringVar(value='SFTP')
 frame_transfer = tk.Frame(root, bd=1, relief='groove')
 frame_transfer.grid(row=0, column=0, padx=0, pady=5, sticky='e')
 # Radio buttons for selecting file or folder
-sftp_option = ttk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths, style="Custom.TRadiobutton")
+sftp_option = ttk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_path_on_selection, style="Custom.TRadiobutton")
 sftp_option.grid(row=0, column=0, padx=0, pady=0, sticky='w')
-ftp_option = ttk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_paths, style="Custom.TRadiobutton")
+ftp_option = ttk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_path_on_selection, style="Custom.TRadiobutton")
 ftp_option.grid(row=0, column=1, padx=0, pady=0, sticky='w')
-net_option = ttk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_paths, style="Custom.TRadiobutton")
+net_option = ttk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_path_on_selection, style="Custom.TRadiobutton")
 net_option.grid(row=0, column=2, padx=0, pady=0, sticky='w')
 
 # Bind the radio buttons to the function that removes focus
@@ -1812,7 +1835,7 @@ remote_dir_entry = ttk.Combobox(frame_remote,
 # if default_paths:
 #     remote_dir_entry.insert(0, default_paths[0])
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
-remote_dir_entry.bind("<ButtonPress>", set_paths)
+# remote_dir_entry.bind("<ButtonPress>", set_paths)
 
 # Add a button to save a custom path
 save_path = ttk.Button(frame_remote, text="Save Path",
