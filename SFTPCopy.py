@@ -1298,23 +1298,33 @@ default_profile = {
     "profile_name": "CCXXXX_PlantName",
     "sub_profiles": [
         {
-            "sub_name"      : "Default_Type1",
+            "sub_name"      : "Default_Type1_TC2",
             "base_ip"       : "192.168.80.10", 
             "ip_range"      : "1-15",
             "username"      : "Administrator",
-            "password"      : "***********",
-            "local_dir"     : " ",
-            "remote_dir"    : "\\Config",
-            "transfer_type" : "SFTP"
+            "password"      : "*",
+            "local_dir"     : "C:/Backup",
+            "remote_dir"    : "/Hard Disk/Backup/",
+            "transfer_type" : "FTP"
         },
         {
-            "sub_name"      : "Default_Type2",
+            "sub_name"      : "Default_Type2_TC3_config",
             "base_ip"       : "192.168.80.10", 
             "ip_range"      : "21-29",
             "username"      : "Administrator",
             "password"      : "***********",
-            "local_dir"     : " ",
+            "local_dir"     : "C:/Backup",
             "remote_dir"    : "\\Config",
+            "transfer_type" : "SFTP"
+        },
+        {
+            "sub_name"      : "Default_Type2_TC3_boot",
+            "base_ip"       : "192.168.80.10", 
+            "ip_range"      : "21-29",
+            "username"      : "Administrator",
+            "password"      : "***********",
+            "local_dir"     : "C:/Boot",
+            "remote_dir"    : "\\TwinCAT\\Boot",
             "transfer_type" : "SFTP"
         }
     ]
@@ -1374,8 +1384,8 @@ def save_custom_profile():
     password = password_entry.get().strip()
     transfer_mode = transfer_type_sel.get()
 
-    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == "default":
-        messagebox.showerror("Error", "Please enter a profile name")
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Please enter a valid profile name")
         return
     
     if not subprofile_name or subprofile_name.lower() == "select a subprofile":
@@ -1462,77 +1472,47 @@ def save_custom_profile():
 
 def load_profile_by_name(event=None):
     """Load the selected profile and sub-profile."""
-    selected_profile_name = profiles_combobox.get()
-    selected_subprofile_name = subprofiles_combobox.get()
+    selected_profile_name = profiles_combobox.get().strip()
+    selected_subprofile_name = subprofiles_combobox.get().strip()
 
-    profiles = load_custom_profiles()
-
-    # Handle Default profile
-    if selected_profile_name == default_profile["profile_name"]:
-        set_profile(default_profile)
-        subprofiles_combobox['values'] = tuple(
-            [sub["sub_name"] for sub in default_profile["sub_profiles"]]
-        )  # Populate with default sub-profiles
-        subprofiles_combobox.set("")  # Clear the selection
-        return
+    profiles = load_custom_profiles() + [default_profile]
     
+    # Find the selected profile
     for profile in profiles:
         if profile["profile_name"] == selected_profile_name:
-            # If a sub-profile is selected, find and set it
-            if selected_profile_name:
+            # Populate the subprofiles_combobox with the sub-profiles of the selected profile
+            subprofile_names = sorted(
+                [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
+                key=str.lower
+            )
+            subprofiles_combobox['values'] = tuple(subprofile_names)
+            # subprofiles_combobox.set("")  # Clear subprofile selection
+
+            # If a sub-profile is selected, set its data
+            if selected_subprofile_name:
                 for subprofile in profile.get("sub_profiles", []):
                     if subprofile["sub_name"] == selected_subprofile_name:
                         set_profile(subprofile)
                         return
-                # If no sub-profile is selected, show an error
-                messagebox.showerror("Error", "Please select a valid sub-profile.")
-                return
-            
-            # If no sub-profile is selected but profile exists, do nothing
+
+            # If no sub-profile is selected, do nothing further
             return
-                
-    # If no match is found, show an error
-    messagebox.showerror(
-        "Error", 
-        f"Sub-profile '{selected_subprofile_name}' not found in profile '{selected_profile_name}'"
-    )
+
+    # If no matching profile is found, show an error
+    messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
 
 def load_profile_names(event=None):
-    """Load profiles into the profiles_combobox and set up sub-profiles."""
+    """Load profiles into the profiles_combobox."""
     custom_profiles = load_custom_profiles()
 
-    # Populate the profiles_combobox woth sorted profile names
+    # Populate the profiles_combobox with sorted profile names
     profile_names = sorted(
         [profile["profile_name"] for profile in custom_profiles],
         key=str.lower
     )
+    # Combine custom profiles with the default one
     profiles_combobox['values'] = tuple(profile_names) + (default_profile["profile_name"],)
-
-    # Set a callback to update sub-profiles when a profile is selected
-    def update_subprofiles(event):
-        selected_profile_name = profiles_combobox.get()
-        # subprofiles_combobox.set("")  # Clear current selection
-
-        if selected_profile_name == default_profile["profile_name"]:
-            # Load sub-profiles from the default profile
-            subprofile_names = sorted([sub["sub_name"] for sub in default_profile["sub_profiles"]], key=str.lower)
-        else:
-            # Find the selected profile and populate subprofiles_combobox
-            for profile in custom_profiles:
-                if profile["profile_name"] == selected_profile_name:
-                    subprofile_names = sorted(
-                        [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
-                        key=str.lower
-                    )
-                    subprofiles_combobox['values'] = tuple(subprofile_names)
-                    break
-
-        # If no sub-profiles exist, clear the combobox
-    subprofiles_combobox['values'] = []
-
-    # Bind the update_subprofiles function to the profiles_combobox selection event
-    profiles_combobox.bind("<<ComboboxSelected>>", update_subprofiles)
-
+    subprofiles_combobox.set("")
 
 def delete_profile_or_subprofile():
     """Delete Sub-Profile:
@@ -1543,7 +1523,7 @@ def delete_profile_or_subprofile():
     profile_name = profiles_combobox.get().strip()
     subprofile_name = subprofiles_combobox.get().strip()
 
-    if not profile_name or profile_name.lower() == "default":
+    if not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower():
         messagebox.showerror("Error", "Cannot delete the default profile.")
         return
 
