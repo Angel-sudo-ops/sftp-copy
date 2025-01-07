@@ -1290,19 +1290,34 @@ def on_add_path():
         remote_dir_entry.delete(0, tk.END)  # Clear the entry widget
         remote_dir_entry.insert(0, new_path)
 
-#############################################################################################################
+################################################################################################################################
 ####################################################### Profiles ###############################################################
-#############################################################################################################
+################################################################################################################################
 
 default_profile = {
-    "name"          : "Default",
-    "base_ip"       : "192.168.80.10", 
-    "ip_range"      : "1-15,20-35",
-    "username"      : "Administrator",
-    "password"      : "***********",
-    "local_dir"     : " ",
-    "remote_dir"    : "\\Config",
-    "transfer_type" : "SFTP"
+    "profile_name": "CCXXXX_PlantName",
+    "sub_profiles": [
+        {
+            "sub_name"      : "Default_Type1",
+            "base_ip"       : "192.168.80.10", 
+            "ip_range"      : "1-15",
+            "username"      : "Administrator",
+            "password"      : "***********",
+            "local_dir"     : " ",
+            "remote_dir"    : "\\Config",
+            "transfer_type" : "SFTP"
+        },
+        {
+            "sub_name"      : "Default_Type2",
+            "base_ip"       : "192.168.80.10", 
+            "ip_range"      : "21-29",
+            "username"      : "Administrator",
+            "password"      : "***********",
+            "local_dir"     : " ",
+            "remote_dir"    : "\\Config",
+            "transfer_type" : "SFTP"
+        }
+    ]
 }
 
 def set_profile(subprofile):
@@ -1452,9 +1467,12 @@ def load_profile_by_name(event=None):
 
     profiles = load_custom_profiles()
 
-    if selected_profile_name == "Default":
+    # Handle Default profile
+    if selected_profile_name == default_profile["profile_name"]:
         set_profile(default_profile)
-        subprofiles_combobox['values'] = []  # Clear subprofiles_combobox
+        subprofiles_combobox['values'] = tuple(
+            [sub["sub_name"] for sub in default_profile["sub_profiles"]]
+        )  # Populate with default sub-profiles
         subprofiles_combobox.set("")  # Clear the selection
         return
     
@@ -1488,25 +1506,29 @@ def load_profile_names(event=None):
         [profile["profile_name"] for profile in custom_profiles],
         key=str.lower
     )
-    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
+    profiles_combobox['values'] = tuple(profile_names) + (default_profile["profile_name"],)
 
     # Set a callback to update sub-profiles when a profile is selected
     def update_subprofiles(event):
         selected_profile_name = profiles_combobox.get()
-        subprofiles_combobox.set("")  # Clear current selection
-        
-        # Find the selected profile and populate subprofiles_combobox
-        for profile in custom_profiles:
-            if profile["profile_name"] == selected_profile_name:
-                subprofile_names = sorted(
-                    [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
-                    key=str.lower
-                )
-                subprofiles_combobox['values'] = tuple(subprofile_names)
-                return
+        # subprofiles_combobox.set("")  # Clear current selection
+
+        if selected_profile_name == default_profile["profile_name"]:
+            # Load sub-profiles from the default profile
+            subprofile_names = sorted([sub["sub_name"] for sub in default_profile["sub_profiles"]], key=str.lower)
+        else:
+            # Find the selected profile and populate subprofiles_combobox
+            for profile in custom_profiles:
+                if profile["profile_name"] == selected_profile_name:
+                    subprofile_names = sorted(
+                        [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
+                        key=str.lower
+                    )
+                    subprofiles_combobox['values'] = tuple(subprofile_names)
+                    break
 
         # If no sub-profiles exist, clear the combobox
-        subprofiles_combobox['values'] = []
+    subprofiles_combobox['values'] = []
 
     # Bind the update_subprofiles function to the profiles_combobox selection event
     profiles_combobox.bind("<<ComboboxSelected>>", update_subprofiles)
