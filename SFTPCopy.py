@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.8'
+__version__ = '3.4.8.1'
 
 
 LGV_DATA = "lgv_address_list.xml"
@@ -1067,6 +1067,7 @@ def combined_combobox_selected_profile(event):
     # validate_entry(range_entry, 'Range.TEntry', validate_range)
     # set_paths()
     clear_entries(event)
+    update_rename_button_state(event)
 
 def combined_combobox_selected_subprofile(event):
     style.configure('RootIP.TEntry', foreground=good_input_fg)
@@ -1697,41 +1698,60 @@ def filter_subprofiles(event):
     if filtered_subprofiles:
         subprofiles_combobox.event_generate("<Down>")
 
+def update_rename_button_state(event=None):
+    """Enable or disable the Rename button based on selection."""
+    profile_name = profiles_combobox.get().strip()
+
+    if not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower() or profile_name.lower()=="select a profile":
+        rename_prof.config(state="disabled")
+    else:
+        rename_prof.config(state="normal")
+
 rename_popup = None
 
 def open_rename_popup_cond():
     global rename_popup
-    profile_name = profiles_combobox.get()
-    subprofile_name = subprofiles_combobox.get()
+
     if rename_popup is not None and rename_popup.winfo_exists():
         rename_popup.lift()
         rename_popup.focus_force()
-    elif not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower() or profile_name.lower()=="select a profile":
-        messagebox.showwarning("Attention", "Select a valid profile name first!")
-    elif not subprofile_name or subprofile_name.lower()=="select a profile":
-        messagebox.showwarning("Attention", "Select a valid suhbprofile name first!")
     else:
         open_rename_popup()
 
 def open_rename_popup():
-    """Open a popup window for renaming profiles or sub-profiles."""
+    """Open a popup window for renaming profiles or sub-profiles dynamically based on selection."""
+    selected_profile_name = profiles_combobox.get().strip()
+    selected_subprofile_name = subprofiles_combobox.get().strip()
+
+    if not selected_profile_name:
+        messagebox.showerror("Error", "Please select a profile to rename.")
+        return
+
+    # Popup window
     global rename_popup
 
     rename_popup = tk.Toplevel(root)
     rename_popup.title("Rename ")
     rename_popup.geometry("250x200")
 
-    # Radio buttons to select Profile or Sub-Profile
-    rename_option = tk.StringVar(value="profile")  # Default selection is 'profile'
+    # Determine what is being renamed
+    if selected_subprofile_name:
+        rename_target = "subprofile"
+        target_name = selected_subprofile_name
+        instruction_text = f"Renaming sub-profile under \n'{selected_profile_name}'"
+    else:
+        rename_target = "profile"
+        target_name = selected_profile_name
+        instruction_text = f"Renaming profile \n'{selected_profile_name}'"
 
-    # ttk.Label(rename_popup, text="Rename:").pack(pady=5)
-    ttk.Radiobutton(rename_popup, text="Profile", variable=rename_option, value="profile").pack(anchor="w", padx=10, pady=(10,0))
-    ttk.Radiobutton(rename_popup, text="Sub-Profile", variable=rename_option, value="subprofile").pack(anchor="w", padx=10)
+    # Instruction Label
+    tk.Label(rename_popup, text=instruction_text, wraplength=280, justify="center").pack(pady=10)
 
     # Entry field for the new name
     ttk.Label(rename_popup, text="New Name:").pack(pady=5)
     new_name_entry = ttk.Entry(rename_popup, width=30)
     new_name_entry.pack(pady=5)
+    new_name_entry.insert(0, target_name)  # Pre-fill with the current name
 
     # Confirm button
     def confirm_rename():
@@ -1740,9 +1760,9 @@ def open_rename_popup():
             messagebox.showerror("Error", "The new name cannot be empty.")
             return
 
-        if rename_option.get() == "profile":
+        if rename_target == "profile":
             rename_profile(new_name)
-        elif rename_option.get() == "subprofile":
+        elif rename_target == "subprofile":
             rename_subprofile(new_name)
 
         rename_popup.destroy()  # Close the rename_popup after renaming
@@ -2156,6 +2176,9 @@ set_paths()
 
 # Enable menu for Show LGV Table if table is updated
 update_menu()
+
+
+update_rename_button_state()
 
 # Disable focus for all widgets
 # disable_focus(root)
