@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.6'
+__version__ = '3.4.7.7'
 
 
 LGV_DATA = "lgv_address_list.xml"
@@ -1065,7 +1065,6 @@ def combined_combobox_selected_profile(event):
     on_combobox_change(event)
     # validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
     # validate_entry(range_entry, 'Range.TEntry', validate_range)
-    load_profile_by_name(event)
     # set_paths()
     clear_entries(event)
 
@@ -1073,9 +1072,7 @@ def combined_combobox_selected_subprofile(event):
     style.configure('RootIP.TEntry', foreground=good_input_fg)
     style.configure('Range.TEntry', foreground=good_input_fg) 
     on_combobox_change(event)
-    # validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
-    # validate_entry(range_entry, 'Range.TEntry', validate_range)
-    load_profile_by_name(event)
+    load_data_from_selection(event)
     set_paths()
     
 
@@ -1494,7 +1491,7 @@ def save_custom_profile():
         subprofiles_combobox['values'] = tuple(subprofile_names)
 
 
-def load_profile_by_name(event=None):
+def load_data_from_selection(event=None):
     """Load the selected profile and sub-profile."""
     selected_profile_name = profiles_combobox.get().strip()
     selected_subprofile_name = subprofiles_combobox.get().strip()
@@ -1504,13 +1501,6 @@ def load_profile_by_name(event=None):
     # Find the selected profile
     for profile in profiles:
         if profile["profile_name"] == selected_profile_name:
-            # Populate the subprofiles_combobox with the sub-profiles of the selected profile
-            subprofile_names = sorted(
-                [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
-                key=str.lower
-            )
-            subprofiles_combobox['values'] = tuple(subprofile_names)
-
             # If a sub-profile is selected, set its data
             if selected_subprofile_name:
                 for subprofile in profile.get("sub_profiles", []):
@@ -1518,11 +1508,35 @@ def load_profile_by_name(event=None):
                         set_profile(subprofile)
                         return
 
-            # If no sub-profile is selected, do nothing further
+            # If no sub-profile is selected, show an error
+            messagebox.showerror("Error", "Please select a valid sub-profile.")
             return
 
     # If no matching profile is found, show an error
     messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
+
+def load_subprofile_names(event=None):
+    """Load sub-profiles into the subprofiles_combobox based on the selected profile."""
+    selected_profile_name = profiles_combobox.get().strip()
+
+    # Combine the default profile with custom profiles
+    profiles = [default_profile] + load_custom_profiles()
+
+    # Find the selected profile
+    for profile in profiles:
+        if profile["profile_name"] == selected_profile_name:
+            # Populate subprofiles_combobox with sorted subprofile names
+            subprofile_names = sorted(
+                [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
+                key=str.lower
+            )
+            subprofiles_combobox['values'] = tuple(subprofile_names)
+            subprofiles_combobox.set("")  # Clear the current selection
+            return
+
+    # If no matching profile is found, clear the subprofiles_combobox
+    subprofiles_combobox['values'] = []
+    subprofiles_combobox.set("")
 
 def load_profile_names(event=None):
     """Load profiles into the profiles_combobox."""
@@ -1754,6 +1768,7 @@ profiles_combobox.bind("<Tab>", filter_profiles)
 subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
 subprofiles_combobox.set("Select a subprofile")
 subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+subprofiles_combobox.bind("<ButtonPress>", load_subprofile_names)
 subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_subprofile)
 subprofiles_combobox.bind("<Tab>", filter_subprofiles)
 # subprofiles_combobox.bind()
