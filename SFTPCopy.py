@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.7'
+__version__ = '3.4.7.8'
 
 
 LGV_DATA = "lgv_address_list.xml"
@@ -1399,10 +1399,10 @@ def save_custom_profile():
 
     base_ip = ip_entry.get().strip()
     range_input = range_entry.get().strip()
-    local_dir = file_path_entry.get().strip()
-    remote_dir = remote_dir_entry.get().strip()
+    local_dir = file_path_entry.get() # Be careful with this as it might have spaces at the end but also in the middle of the path
+    remote_dir = remote_dir_entry.get() # Same as previous
     username = username_entry.get().strip()
-    password = password_entry.get().strip()
+    password = password_entry.get() # what if password has a space
     transfer_mode = transfer_type_sel.get()
 
     if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
@@ -1481,14 +1481,14 @@ def save_custom_profile():
     
     save_custom_profiles(custom_profiles)
 
-    # Update combobox values
-    profile_names = [profile["profile_name"] for profile in custom_profiles]
-    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
+    # # Update combobox values
+    # profile_names = [profile["profile_name"] for profile in custom_profiles]
+    # profiles_combobox['values'] = tuple(profile_names) + ("Default",)
 
-    # Update sub-profiles for the current profile
-    if profile_name == profiles_combobox.get():
-        subprofile_names = [sub["sub_name"] for sub in custom_profiles[-1]["sub_profiles"]]
-        subprofiles_combobox['values'] = tuple(subprofile_names)
+    # # Update sub-profiles for the current profile
+    # if profile_name == profiles_combobox.get():
+    #     subprofile_names = [sub["sub_name"] for sub in custom_profiles[-1]["sub_profiles"]]
+    #     subprofiles_combobox['values'] = tuple(subprofile_names)
 
 
 def load_data_from_selection(event=None):
@@ -1531,7 +1531,6 @@ def load_subprofile_names(event=None):
                 key=str.lower
             )
             subprofiles_combobox['values'] = tuple(subprofile_names)
-            subprofiles_combobox.set("")  # Clear the current selection
             return
 
     # If no matching profile is found, clear the subprofiles_combobox
@@ -1613,10 +1612,6 @@ def delete_profile_or_subprofile():
 
     # Save updated profiles to file
     save_custom_profiles(custom_profiles)
-
-    # Update combobox values
-    load_profile_names()
-
 
 
 # Filter profiles on Tab key
