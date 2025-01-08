@@ -1697,6 +1697,124 @@ def filter_subprofiles(event):
     if filtered_subprofiles:
         subprofiles_combobox.event_generate("<Down>")
 
+rename_popup = None
+
+def open_rename_popup_cond():
+    global rename_popup
+    profile_name = profiles_combobox.get()
+    subprofile_name = subprofiles_combobox.get()
+    if rename_popup is not None and rename_popup.winfo_exists():
+        rename_popup.lift()
+        rename_popup.focus_force()
+    elif not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower() or profile_name.lower()=="select a profile":
+        messagebox.showwarning("Attention", "Select a valid profile name first!")
+    elif not subprofile_name or subprofile_name.lower()=="select a profile":
+        messagebox.showwarning("Attention", "Select a valid suhbprofile name first!")
+    else:
+        open_rename_popup()
+
+def open_rename_popup():
+    """Open a popup window for renaming profiles or sub-profiles."""
+    global rename_popup
+
+    rename_popup = tk.Toplevel(root)
+    rename_popup.title("Rename ")
+    rename_popup.geometry("250x200")
+
+    # Radio buttons to select Profile or Sub-Profile
+    rename_option = tk.StringVar(value="profile")  # Default selection is 'profile'
+
+    # ttk.Label(rename_popup, text="Rename:").pack(pady=5)
+    ttk.Radiobutton(rename_popup, text="Profile", variable=rename_option, value="profile").pack(anchor="w", padx=10, pady=(10,0))
+    ttk.Radiobutton(rename_popup, text="Sub-Profile", variable=rename_option, value="subprofile").pack(anchor="w", padx=10)
+
+    # Entry field for the new name
+    ttk.Label(rename_popup, text="New Name:").pack(pady=5)
+    new_name_entry = ttk.Entry(rename_popup, width=30)
+    new_name_entry.pack(pady=5)
+
+    # Confirm button
+    def confirm_rename():
+        new_name = new_name_entry.get().strip()
+        if not new_name:
+            messagebox.showerror("Error", "The new name cannot be empty.")
+            return
+
+        if rename_option.get() == "profile":
+            rename_profile(new_name)
+        elif rename_option.get() == "subprofile":
+            rename_subprofile(new_name)
+
+        rename_popup.destroy()  # Close the rename_popup after renaming
+
+    ttk.Button(rename_popup, text="Rename", command=confirm_rename).pack(pady=10)
+
+    # Close button
+    ttk.Button(rename_popup, text="Cancel", command=rename_popup.destroy).pack(pady=5)
+
+
+def rename_profile(new_name):
+    """Rename the selected profile."""
+    selected_profile_name = profiles_combobox.get().strip()
+
+    if not selected_profile_name:
+        messagebox.showerror("Error", "Please select a profile to rename.")
+        return
+
+    # Load profiles
+    profiles = load_custom_profiles()
+
+    # Rename logic (same as shared earlier)
+    for profile in profiles:
+        if profile["profile_name"] == selected_profile_name:
+            if any(p["profile_name"] == new_name.strip() for p in profiles):
+                messagebox.showerror("Error", f"A profile with the name '{new_name.strip()}' already exists.")
+                return
+
+            profile["profile_name"] = new_name.strip()
+            save_custom_profiles(profiles)
+            load_profile_names()
+            profiles_combobox.set(new_name.strip())
+            messagebox.showinfo("Success", f"Profile renamed to '{new_name.strip()}'.")
+            return
+
+    messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
+
+def rename_subprofile(new_name):
+    """Rename the selected sub-profile."""
+    selected_profile_name = profiles_combobox.get().strip()
+    selected_subprofile_name = subprofiles_combobox.get().strip()
+
+    if not selected_profile_name:
+        messagebox.showerror("Error", "Please select a profile first.")
+        return
+
+    if not selected_subprofile_name:
+        messagebox.showerror("Error", "Please select a sub-profile to rename.")
+        return
+
+    # Load profiles
+    profiles = load_custom_profiles()
+
+    # Rename logic (same as shared earlier)
+    for profile in profiles:
+        if profile["profile_name"] == selected_profile_name:
+            for subprofile in profile.get("sub_profiles", []):
+                if subprofile["sub_name"] == selected_subprofile_name:
+                    if any(sp["sub_name"] == new_name.strip() for sp in profile["sub_profiles"]):
+                        messagebox.showerror("Error", f"A sub-profile with the name '{new_name.strip()}' already exists.")
+                        return
+
+                    subprofile["sub_name"] = new_name.strip()
+                    save_custom_profiles(profiles)
+                    load_subprofile_names()
+                    subprofiles_combobox.set(new_name.strip())
+                    messagebox.showinfo("Success", f"Sub-profile renamed to '{new_name.strip()}'.")
+                    return
+
+    messagebox.showerror("Error", f"Sub-profile '{selected_subprofile_name}' not found.")
+
+
 
 ####################################################################################################################
 def on_enter(e):
@@ -1817,6 +1935,10 @@ delete_profile = ttk.Button(frame_profile,
                           command=delete_profile_or_subprofile)
 delete_profile.grid(row=1, column=1, padx=5, pady=5)
 
+rename_prof = ttk.Button(frame_profile, 
+                          text=" Rename ", 
+                          command=open_rename_popup_cond)
+rename_prof.grid(row=2, column=1, padx=5, pady=5)
 
 # Customize the focus ring (or border) of the Radiobutton
 style.configure("Custom.TRadiobutton", focuscolor="lightblue", highlightthickness=2)
