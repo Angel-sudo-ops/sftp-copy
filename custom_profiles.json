@@ -1,53 +1,42 @@
 [
     {
-        "profile_name": "CC1527",
+        "profile_name": "CC1527_GP_Portland",
         "sub_profiles": [
             {
-                "sub_name": "CC1527_GP_Portland_TC2",
+                "sub_name": "CB16_TC2",
                 "base_ip": "172.20.2.50",
-                "ip_range": "1-15,30-42",
+                "ip_range": "30-42",
                 "username": "anonymous",
                 "password": "anonymous@example.com",
+                "local_dir": "C:/localpath/example.xml",
                 "remote_dir": "/Hard Disk/Backup/",
                 "transfer_type": "FTP"
-            }
-        ]
-    },
-    {
-        "profile_name": "CC1527",
-        "sub_profiles": [
+            },
             {
-                "sub_name": "CC1527_GP_Portland_TC3_CB25",
+                "sub_name": "CB25_TC3",
                 "base_ip": "172.20.2.50",
                 "ip_range": "16-18",
                 "username": "Administrator",
                 "password": "1",
-                "remote_dir": "\\Config",
+                "local_dir": "C:/localpath/boot",
+                "remote_dir": "\\TwinCAT\\Boot",
                 "transfer_type": "SFTP"
-            }
-        ]
-    },
-    {
-        "profile_name": "CC1527",
-        "sub_profiles": [
+            },
             {
-                "sub_name": "CC1527_GP_Portland_TC2_CB16",
+                "sub_name": "CB16_TC2_boot",
                 "base_ip": "172.20.2.50",
                 "ip_range": "30-42",
-                "remote_dir": "/Hard Disk/Backup/",
+                "local_dir": "C:/Repos/super-ads-client/dist/boot",
+                "remote_dir": "/Hard Disk/TwinCAT/Boot",
                 "username": "anonymous",
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP"
-            }
-        ]
-    },
-    {
-        "profile_name": "CC1527",
-        "sub_profiles": [
+            },
             {
-                "sub_name": "CC1527_GP_Portland_TC2_CB25",
+                "sub_name": "CB25_TC2_config",
                 "base_ip": "172.20.2.50",
                 "ip_range": "1-15",
+                "local_dir": "C:/localpath/example5.xml",
                 "remote_dir": "/Hard Disk/Backup/",
                 "username": "anonymous",
                 "password": "anonymous@example.com",
@@ -56,26 +45,43 @@
         ]
     },
     {
-        "profile_name": "CC200",
+        "profile_name": "CC2002_Pepsi_StoneMountain",
         "sub_profiles": [
             {
-                "sub_name": "CC200_Hilmar_Dodge",
-                "base_ip": "10.40.10.69",
-                "ip_range": "1-10",
+                "sub_name": "CB30_quote",
+                "base_ip": "7.34.130.9",
+                "ip_range": "1-15",
+                "local_dir": "C:/localpath/Quote.xml",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
-                "password": "1",
+                "password": "E80Lgv!",
                 "transfer_type": "SFTP"
-            }
-        ]
-    },
-    {
-        "profile_name": "CC2002",
-        "sub_profiles": [
+            },
             {
-                "sub_name": "CC2002_Pepsico_StoneMt",
+                "sub_name": "Reach_quote",
                 "base_ip": "7.34.130.9",
-                "ip_range": "1-25",
+                "ip_range": "16-25",
+                "local_dir": "C:/ConfigFiles",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "E80Lgv!",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB30_boot",
+                "base_ip": "7.34.130.9",
+                "ip_range": "1-15",
+                "local_dir": "C:/localpath/Boot",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "E80Lgv!",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach_boot",
+                "base_ip": "7.34.130.9",
+                "ip_range": "16-25",
+                "local_dir": "C:/Boot",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "E80Lgv!",

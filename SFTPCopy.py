@@ -1386,18 +1386,30 @@ def load_custom_profiles():
             elif isinstance(data, list) and all("name" in profile for profile in data):
                 print("Old structure detected. Converting to new structure...")
 
-                # Convert the old structure to the new structure
-                converted_data = []
+                # Group old profiles by base name
+                grouped_profiles = {}
                 for old_profile in data:
-                    profile_name = old_profile.pop("name")
+                    # Extract the base profile name (everything before the first "_")
+                    full_name = old_profile.pop("name")
+                    base_name = "_".join(full_name.split("_")[:2])  # E.g., "CC1527_GP_Portland"
+
+                    # Create the sub-profile structure
                     sub_profile = {
-                        "sub_name": profile_name,  # Use the old profile name as the sub-profile name
-                        **old_profile  # Include the rest of the keys as they are
+                        "sub_name": full_name,  # Use the old profile name as sub_name
+                        **old_profile,  # Include all other keys
+                        "local_dir": old_profile.get("local_dir", "C:/default_path/")  # Add default local_dir
                     }
-                    converted_data.append({
-                        "profile_name": profile_name.split("_")[0],  # Use a portion of the name as the profile_name
-                        "sub_profiles": [sub_profile]
-                    })
+
+                    # Add the sub-profile to the grouped profile
+                    if base_name not in grouped_profiles:
+                        grouped_profiles[base_name] = {"profile_name": base_name, "sub_profiles": []}
+
+                    # Avoid duplicates
+                    if sub_profile not in grouped_profiles[base_name]["sub_profiles"]:
+                        grouped_profiles[base_name]["sub_profiles"].append(sub_profile)
+
+                # Convert grouped profiles to a list
+                converted_data = list(grouped_profiles.values())
 
                 # Save the converted data back to the file
                 with open("custom_profiles.json", "w") as outfile:
