@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.8'
+__version__ = '3.4.8'
 
 
 LGV_DATA = "lgv_address_list.xml"
@@ -1377,15 +1377,41 @@ def load_custom_profiles():
     try:
         with open("custom_profiles.json", "r") as file:
             data = json.load(file)
-             # Check if the loaded data is a dict with "profiles" key or a list
-            if isinstance(data, dict) and "profiles" in data:
-                return data["profiles"]
-            elif isinstance(data, list):
+
+            # Detect and handle the new structure
+            if isinstance(data, list) and all("profile_name" in profile for profile in data):
                 return data
+
+            # Detect and convert the old structure
+            elif isinstance(data, list) and all("name" in profile for profile in data):
+                print("Old structure detected. Converting to new structure...")
+
+                # Convert the old structure to the new structure
+                converted_data = []
+                for old_profile in data:
+                    profile_name = old_profile.pop("name")
+                    sub_profile = {
+                        "sub_name": profile_name,  # Use the old profile name as the sub-profile name
+                        **old_profile  # Include the rest of the keys as they are
+                    }
+                    converted_data.append({
+                        "profile_name": profile_name.split("_")[0],  # Use a portion of the name as the profile_name
+                        "sub_profiles": [sub_profile]
+                    })
+
+                # Save the converted data back to the file
+                with open("custom_profiles.json", "w") as outfile:
+                    json.dump(converted_data, outfile, indent=4)
+
+                return converted_data
+
             else:
                 raise ValueError("Unexpected JSON structure")
+
     except (FileNotFoundError, json.JSONDecodeError):
+        # Return an empty list if the file doesn't exist or is invalid
         return []
+
 
 def save_custom_profiles(profile):
     with open("custom_profiles.json", "w") as file:
