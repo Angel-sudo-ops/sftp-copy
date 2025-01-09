@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.8.1'
+__version__ = '3.4.8.2'
 
 
 LGV_DATA = "lgv_address_list.xml"
@@ -794,7 +794,6 @@ def start_transfer(status_widget):
     print (f"Selected port is {port}")
     print(f"Login is {username}")
     print(f"Password is {password}")
-    print(f"{anonymous_check.get()}")
     print(local_paths)
 
     if not local_paths:
@@ -933,7 +932,6 @@ def start_download(status_widget):
     print (f"Selected port is {port}")
     print(f"Login is {username}")
     print(f"Password is {password}")
-    print(f"{anonymous_check.get()}")
 
 
     # if not base_ip or base_ip == placeholders[ip_entry]:
@@ -1164,24 +1162,14 @@ def validate_ip_format(event):
 def set_anonymous_login():
     username_entry.delete(0, tk.END)
     username_entry.insert(0, "anonymous")
-    username_entry.config(state='disabled')
     
     password_entry.delete(0, tk.END)
     password_entry.insert(0, "anonymous@example.com")
-    password_entry.config(state='disabled')
-
-def on_anonymous_check(*args):
-    if anonymous_check.get():
-        set_anonymous_login()
-    else:
-        set_default_login()
 
 def set_default_login():
-    username_entry.config(state='normal')
     username_entry.delete(0, tk.END)
     username_entry.insert(0, "Administrator")
 
-    password_entry.config(state='normal')
     password_entry.delete(0, tk.END)
     password_entry.insert(0, "1")
 
@@ -1212,16 +1200,15 @@ def set_paths():
 
     if transfer_type == 'SFTP':
         default_paths = default_paths_sftp
-        anonymous_check.set(0)
-        anonymous.config(state='disabled')
-        # set_default_login()
+        set_default_login()
 
     elif transfer_type == 'FTP':
         default_paths = default_paths_ftp
-        anonymous.config(state='normal')
+        set_anonymous_login()
     
     elif transfer_type == 'NET':
         default_paths = default_paths_net
+        set_default_login()
 
     # Update the Combobox values
     remote_dir_entry['values'] = default_paths + tuple(custom_paths)
@@ -2086,10 +2073,6 @@ password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 password_entry = ttk.Entry(frame_password, show="*")
 password_entry.grid(row=0, column=1, padx=5, pady=5)
-
-anonymous_check = tk.IntVar()
-anonymous = ttk.Checkbutton(frame_login, text="Anonymous", variable=anonymous_check, command=on_anonymous_check)
-anonymous.grid(row=0, rowspan=2, column=1, padx=5, pady=5)
 
 
 frame_mode = tk.Frame(root)
