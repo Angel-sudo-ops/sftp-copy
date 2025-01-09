@@ -1317,7 +1317,7 @@ def on_add_path():
 ################################################################################################################################
 
 default_profile = {
-    "profile_name": "CCXXXX_PlantName",
+    "profile_name": "CCXXXX_PlantName_Example",
     "sub_profiles": [
         {
             "sub_name"      : "Default_Type1_TC2",
