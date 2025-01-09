@@ -18,9 +18,11 @@ from datetime import datetime
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
+import configparser
 
 __version__ = '3.4.8.3'
 
+CONFIG_FILE = "config.ini"
 
 LGV_DATA_FILE = "lgv_address_list.xml"
 ############################################## Load/Save LGV Data #############################################
@@ -1217,15 +1219,12 @@ def set_paths():
 
     if transfer_type == 'SFTP':
         default_paths = default_paths_sftp
-        set_default_login()
 
     elif transfer_type == 'FTP':
         default_paths = default_paths_ftp
-        set_anonymous_login()
     
     elif transfer_type == 'NET':
         default_paths = default_paths_net
-        set_default_login()
 
     # Update the Combobox values
     remote_dir_entry['values'] = default_paths + tuple(custom_paths)
@@ -1235,10 +1234,17 @@ def set_paths():
         remote_dir_entry.set(default_paths[0])
 
     print(f"Default paths set to: {default_paths}")
+    
 
 def set_path_on_selection():
+    transfer_type = transfer_type_sel.get()
     remote_dir_entry.delete(0, tk.END)
+    if transfer_type == 'SFTP' or transfer_type == 'NET':
+        set_default_login()
+    elif transfer_type == 'FTP':
+        set_anonymous_login()
     set_paths()
+    print(f"Password: {password_entry.get()}")
 
 
 def select_mode():
@@ -1549,14 +1555,15 @@ def load_data_from_selection(event=None):
                 for subprofile in profile.get("sub_profiles", []):
                     if subprofile["sub_name"] == selected_subprofile_name:
                         set_profile(subprofile)
+                        print(f"Password: {subprofile["password"]}")
                         return
 
             # If no sub-profile is selected, show an error
-            messagebox.showerror("Error", "Please select a valid sub-profile.")
+            # messagebox.showerror("Error", "Please select a valid sub-profile.")
             return
 
     # If no matching profile is found, show an error
-    messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
+    # messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
 
 def load_subprofile_names(event=None):
     """Load sub-profiles into the subprofiles_combobox based on the selected profile."""
@@ -1838,7 +1845,46 @@ def rename_subprofile(new_name):
 
     messagebox.showerror("Error", f"Sub-profile '{selected_subprofile_name}' not found.")
 
+####################################################################################################################
+############################################## Save Last Session ###################################################
+####################################################################################################################
 
+def save_last_session_to_config():
+    """Save the last selected profile and subprofile to a config file."""
+    config = configparser.ConfigParser()
+
+    # Add the last session data
+    config["LastSession"] = {
+        "profile": profiles_combobox.get().strip(),
+        "subprofile": subprofiles_combobox.get().strip()
+    }
+
+    # Write to the config file
+    with open(CONFIG_FILE, "w") as file:
+        config.write(file)
+
+
+def load_last_session_from_config():
+    """Load the last selected profile and subprofile from the config file."""
+    config = configparser.ConfigParser()
+
+    try:
+        config.read(CONFIG_FILE)
+
+        if "LastSession" in config:
+            profile = config["LastSession"].get("profile", "")
+            subprofile = config["LastSession"].get("subprofile", "")
+
+            if profile:
+                profiles_combobox.set(profile)
+                load_profile_names()  # Load the profile data into fields
+
+                if subprofile:
+                    subprofiles_combobox.set(subprofile)
+                    load_subprofile_names()  # Load the subprofile data into fields
+    except Exception as e:
+        print(f"Error reading config file: {e}")
+        # Handle missing or corrupt config file gracefully
 
 ####################################################################################################################
 def on_enter(e):
@@ -1855,10 +1901,10 @@ def button_design(entry):
     entry.bind("<Button-1>", on_enter)
 
 ############################Closing window ##################################
-def on_closing():
-    if messagebox.askokcancel("Quit", "Do you want to quit?"):
-
-        root.destroy()
+def on_close():
+    """Save the last session and close the app."""
+    save_last_session_to_config()
+    root.destroy()
 
 ############################ Remove focus ############################
 def remove_focus(event):
@@ -2181,10 +2227,14 @@ update_menu_state()
 
 update_rename_button_state()
 
+# Load last session
+load_last_session_from_config()
+load_data_from_selection()
+
 # Disable focus for all widgets
 # disable_focus(root)
 
-# root.protocol("WM_DELETE_WINDOW", on_closing)
+root.protocol("WM_DELETE_WINDOW", on_close)
 root.mainloop()
 
 ## not showing connection timeout fix that
