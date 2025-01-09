@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.7.5'
+__version__ = '3.4.8.1'
 
 
 LGV_DATA = "lgv_address_list.xml"
@@ -422,6 +422,11 @@ def open_lgv_table_window():
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     load_table_data_from_xml(treeview)
+
+#############################################################################################################
+########################################### File transfer methods ###########################################
+#############################################################################################################
+
 ############################################### SFTP Transfer ###############################################
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget, result_queue):
@@ -743,6 +748,10 @@ def ftp_download(host, username, password, remote_path, local_path, status_widge
         status_widget.yview(tk.END)
         result_queue.put((host, result))
 
+#############################################################################################################
+#############################################################################################################
+#############################################################################################################
+
 ####################################################### Get IPs #############################################################
 
 def parse_ip_ranges(base_ip, range_input):
@@ -1050,14 +1059,23 @@ def on_combobox_change(event):
         entry.config(style=entries[entry])
         # disable_placeholder(entry, entries[entry])
 
-def combined_combobox_selected(event):
+def combined_combobox_selected_profile(event):
     style.configure('RootIP.TEntry', foreground=good_input_fg)
     style.configure('Range.TEntry', foreground=good_input_fg) 
     on_combobox_change(event)
     # validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip)
     # validate_entry(range_entry, 'Range.TEntry', validate_range)
-    load_profile_by_name(event)
+    # set_paths()
+    clear_entries(event)
+    update_rename_button_state(event)
+
+def combined_combobox_selected_subprofile(event):
+    style.configure('RootIP.TEntry', foreground=good_input_fg)
+    style.configure('Range.TEntry', foreground=good_input_fg) 
+    on_combobox_change(event)
+    load_data_from_selection(event)
     set_paths()
+    
 
 # ############################################### Validate inputs ################################################
 good_input_bg = 'white'
@@ -1167,6 +1185,16 @@ def set_default_login():
     password_entry.delete(0, tk.END)
     password_entry.insert(0, "1")
 
+
+def clear_entries(event=None):
+    ip_entry.delete(0, tk.END)
+    range_entry.delete(0, tk.END)
+    username_entry.delete(0, tk.END)
+    password_entry.delete(0, tk. END)
+    remote_dir_entry.delete(0, tk.END)
+    file_path_entry.delete(0, tk.END)
+
+
 ###################################################### Custom paths ##########################################################
 # Global variable to store default paths
 default_paths = []
@@ -1199,10 +1227,14 @@ def set_paths():
     remote_dir_entry['values'] = default_paths + tuple(custom_paths)
     
     # Optionally, reset the displayed value to the first default path
-    if default_paths:
+    if default_paths and not remote_dir_entry.get():
         remote_dir_entry.set(default_paths[0])
 
     print(f"Default paths set to: {default_paths}")
+
+def set_path_on_selection():
+    remote_dir_entry.delete(0, tk.END)
+    set_paths()
 
 
 def select_mode():
@@ -1280,49 +1312,119 @@ def on_add_path():
         remote_dir_entry.delete(0, tk.END)  # Clear the entry widget
         remote_dir_entry.insert(0, new_path)
 
+################################################################################################################################
 ####################################################### Profiles ###############################################################
+################################################################################################################################
 
 default_profile = {
-    "name":         "Default",
-    "base_ip":      "192.168.80.10", 
-    "ip_range":     "1-15,20-35",
-    "username":     "Administrator",
-    "password":     "***********",
-    "remote_dir":   "\\Config",
-    "transfer_type":"SFTP"
+    "profile_name": "CCXXXX_PlantName_Example",
+    "sub_profiles": [
+        {
+            "sub_name"      : "Default_Type1_TC2",
+            "base_ip"       : "192.168.80.10", 
+            "ip_range"      : "1-15",
+            "username"      : "Administrator",
+            "password"      : "*",
+            "local_dir"     : "C:/Backup",
+            "remote_dir"    : "/Hard Disk/Backup/",
+            "transfer_type" : "FTP"
+        },
+        {
+            "sub_name"      : "Default_Type2_TC3_config",
+            "base_ip"       : "192.168.80.10", 
+            "ip_range"      : "21-29",
+            "username"      : "Administrator",
+            "password"      : "***********",
+            "local_dir"     : "C:/Backup",
+            "remote_dir"    : "\\Config",
+            "transfer_type" : "SFTP"
+        },
+        {
+            "sub_name"      : "Default_Type2_TC3_boot",
+            "base_ip"       : "192.168.80.10", 
+            "ip_range"      : "21-29",
+            "username"      : "Administrator",
+            "password"      : "***********",
+            "local_dir"     : "C:/Boot",
+            "remote_dir"    : "\\TwinCAT\\Boot",
+            "transfer_type" : "SFTP"
+        }
+    ]
 }
 
-def set_profile(profile):
+def set_profile(subprofile):
+    """Set the entries based on the selected sub-profile."""
     ip_entry.delete(0, tk.END)
-    ip_entry.insert(0, profile["base_ip"])
+    ip_entry.insert(0, subprofile["base_ip"])
 
     range_entry.delete(0, tk.END)
-    range_entry.insert(0, profile["ip_range"])
+    range_entry.insert(0, subprofile["ip_range"])
+
+    file_path_entry.delete(0, tk.END)
+    file_path_entry.insert(0, subprofile["local_dir"])
 
     remote_dir_entry.delete(0, tk.END)
-    remote_dir_entry.insert(0, profile["remote_dir"])
+    remote_dir_entry.insert(0, subprofile["remote_dir"])
 
     username_entry.delete(0, tk.END)
-    username_entry.insert(0, profile["username"])
+    username_entry.insert(0, subprofile["username"])
 
     password_entry.delete(0, tk.END)
-    password_entry.insert(0, profile["password"])
+    password_entry.insert(0, subprofile["password"])
 
-    transfer_type_sel.set(profile["transfer_type"])
+    transfer_type_sel.set(subprofile["transfer_type"])
 
 def load_custom_profiles():
     try:
         with open("custom_profiles.json", "r") as file:
             data = json.load(file)
-             # Check if the loaded data is a dict with "profiles" key or a list
-            if isinstance(data, dict) and "profiles" in data:
-                return data["profiles"]
-            elif isinstance(data, list):
+
+            # Detect and handle the new structure
+            if isinstance(data, list) and all("profile_name" in profile for profile in data):
                 return data
+
+            # Detect and convert the old structure
+            elif isinstance(data, list) and all("name" in profile for profile in data):
+                print("Old structure detected. Converting to new structure...")
+
+                # Group old profiles by base name
+                grouped_profiles = {}
+                for old_profile in data:
+                    # Extract the base profile name (everything before the first "_")
+                    full_name = old_profile.pop("name")
+                    base_name = "_".join(full_name.split("_")[:2])  # E.g., "CC1527_GP_Portland"
+
+                    # Create the sub-profile structure
+                    sub_profile = {
+                        "sub_name": full_name,  # Use the old profile name as sub_name
+                        **old_profile,  # Include all other keys
+                        "local_dir": old_profile.get("local_dir", "C:/default_path/")  # Add default local_dir
+                    }
+
+                    # Add the sub-profile to the grouped profile
+                    if base_name not in grouped_profiles:
+                        grouped_profiles[base_name] = {"profile_name": base_name, "sub_profiles": []}
+
+                    # Avoid duplicates
+                    if sub_profile not in grouped_profiles[base_name]["sub_profiles"]:
+                        grouped_profiles[base_name]["sub_profiles"].append(sub_profile)
+
+                # Convert grouped profiles to a list
+                converted_data = list(grouped_profiles.values())
+
+                # Save the converted data back to the file
+                with open("custom_profiles.json", "w") as outfile:
+                    json.dump(converted_data, outfile, indent=4)
+
+                return converted_data
+
             else:
                 raise ValueError("Unexpected JSON structure")
+
     except (FileNotFoundError, json.JSONDecodeError):
+        # Return an empty list if the file doesn't exist or is invalid
         return []
+
 
 def save_custom_profiles(profile):
     with open("custom_profiles.json", "w") as file:
@@ -1330,83 +1432,409 @@ def save_custom_profiles(profile):
 
 
 def save_custom_profile():
-    custom_profile_name = profiles_combobox.get()
-    base_ip = ip_entry.get()
-    range_input = range_entry.get()
-    dir_entry = remote_dir_entry.get()
-    username = username_entry.get()
-    password = password_entry.get()
+    """Save a custom profile and its sub-profile."""
+    profile_name = profiles_combobox.get().strip()
+    subprofile_name = subprofiles_combobox.get().strip()
+
+    base_ip = ip_entry.get().strip()
+    range_input = range_entry.get().strip()
+    local_dir = file_path_entry.get() # Be careful with this as it might have spaces at the end but also in the middle of the path
+    remote_dir = remote_dir_entry.get() # Same as previous
+    username = username_entry.get().strip()
+    password = password_entry.get() # what if password has a space
     transfer_mode = transfer_type_sel.get()
 
-    if not custom_profile_name or custom_profile_name.lower() == "select a profile" or custom_profile_name.lower() == "default":
-        messagebox.showerror("Error", "Please enter a profile name")
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Please enter a valid profile name")
         return
-    # if not base_ip or base_ip == placeholders[ip_entry] or not validate_ip_format("<KeyRelease>"):
+    
+    if not subprofile_name or subprofile_name.lower() == "select a subprofile":
+        messagebox.showerror("Error", "Please enter a valid subprofile name.")
+        return
+    
     if not validate_base_ip():
         messagebox.showerror("Input Error", "Please enter valid base IP.")
         return
-    # if not range_input or range_input == placeholders[range_entry]:
+    
     if not validate_range():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
-    if not dir_entry:
+    
+    if not local_dir:
+        messagebox.showerror("Input Error", "Please enter a local directory.")
+        return
+    
+    if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
         return
+    
     if not username:
         messagebox.showerror("Input Error", "Please enter the username.")
         return
+    
     if not password:
         messagebox.showerror("Input Error", "Please enter the password.")
         return
+    
     # if not transfer_mode:
     #     messagebox.showerror("Input Error", "Please enter the transfer type.")
     #     return
     
-    custom_profile = {
-        "name":             custom_profile_name,
+    subprofile = {
+        "sub_name":         subprofile_name,
         "base_ip":          base_ip,
         "ip_range":         range_input,
-        "remote_dir":       dir_entry,
+        "local_dir":        local_dir,
+        "remote_dir":       remote_dir,
         "username":         username,
         "password":         password,
         "transfer_type":    transfer_mode
     }
 
     custom_profiles = load_custom_profiles()
-    profile_names = [profile['name'] for profile in custom_profiles]
+
+    # profile_names = [profile['name'] for profile in custom_profiles]
 
     # Check for duplicate profile names and update if found
-    for existing_profile in custom_profiles:
-        if (existing_profile['name'] == custom_profile_name):
-            existing_profile.update(custom_profile)
-            messagebox.showinfo("Success", "Existing profile updated.")
-            break
-        # fix default profile is updated with same name, not save that profile, that is just an example!!!
+    for profile in custom_profiles:
+        if profile['profile_name'] == profile_name:
+            # Check if the sub-profile exists
+            for existing_subprofile in profile.get("sub_profiles", []):
+                if existing_subprofile["sub_name"] == subprofile_name:
+                    # Update the existing sub-profile
+                    existing_subprofile.update(subprofile)
+                    messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' updated successfully.")
+                    break
+            else:
+                # Add a new sub-profile to the profile
+                profile.setdefault("sub_profiles", []).append(subprofile)
+                messagebox.showinfo("Success", f"New sub-profile '{subprofile_name}' added to profile '{profile_name}'.")
+            break 
     else:
-        custom_profiles.append(custom_profile)
-        messagebox.showinfo("Success", "New profile saved successfully")
+        # Add a new profile with the sub-profile
+        custom_profiles.append({
+            "profile_name": profile_name,
+            "sub_profiles": [subprofile]
+        })
+        messagebox.showinfo("Success", f"New profile '{profile_name}' created with sub-profile '{subprofile_name}'.")
     
     save_custom_profiles(custom_profiles)
-    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
-    # messagebox.showinfo("Success", "Profile saved successfully")
 
-def load_profile_by_name(event=None):
-    selected_profile_name = profiles_combobox.get()
-    # save_custom_profiles([default_profile]) #option to save default profile on file at first cycle
-    profiles = load_custom_profiles()
+    # # Update combobox values
+    # profile_names = [profile["profile_name"] for profile in custom_profiles]
+    # profiles_combobox['values'] = tuple(profile_names) + ("Default",)
 
-    if selected_profile_name == "Default":
-        set_profile(default_profile)
-    else:
-        for profile in profiles:
-            if profile["name"] == selected_profile_name:
-                set_profile(profile)
-                break
+    # # Update sub-profiles for the current profile
+    # if profile_name == profiles_combobox.get():
+    #     subprofile_names = [sub["sub_name"] for sub in custom_profiles[-1]["sub_profiles"]]
+    #     subprofiles_combobox['values'] = tuple(subprofile_names)
+
+
+def load_data_from_selection(event=None):
+    """Load the selected profile and sub-profile."""
+    selected_profile_name = profiles_combobox.get().strip()
+    selected_subprofile_name = subprofiles_combobox.get().strip()
+
+    profiles = load_custom_profiles() + [default_profile]
+    
+    # Find the selected profile
+    for profile in profiles:
+        if profile["profile_name"] == selected_profile_name:
+            # If a sub-profile is selected, set its data
+            if selected_subprofile_name:
+                for subprofile in profile.get("sub_profiles", []):
+                    if subprofile["sub_name"] == selected_subprofile_name:
+                        set_profile(subprofile)
+                        return
+
+            # If no sub-profile is selected, show an error
+            messagebox.showerror("Error", "Please select a valid sub-profile.")
+            return
+
+    # If no matching profile is found, show an error
+    messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
+
+def load_subprofile_names(event=None):
+    """Load sub-profiles into the subprofiles_combobox based on the selected profile."""
+    selected_profile_name = profiles_combobox.get().strip()
+
+    # Combine the default profile with custom profiles
+    profiles = [default_profile] + load_custom_profiles()
+
+    # Find the selected profile
+    for profile in profiles:
+        if profile["profile_name"] == selected_profile_name:
+            # Populate subprofiles_combobox with sorted subprofile names
+            subprofile_names = sorted(
+                [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
+                key=str.lower
+            )
+            subprofiles_combobox['values'] = tuple(subprofile_names)
+            return
+
+    # If no matching profile is found, clear the subprofiles_combobox
+    subprofiles_combobox['values'] = []
+    subprofiles_combobox.set("")
 
 def load_profile_names(event=None):
+    """Load profiles into the profiles_combobox."""
     custom_profiles = load_custom_profiles()
-    profile_names = [profile["name"] for profile in custom_profiles]
-    profiles_combobox['values'] = tuple(profile_names) + ("Default",)
+
+    # Populate the profiles_combobox with sorted profile names
+    profile_names = sorted(
+        [profile["profile_name"] for profile in custom_profiles],
+        key=str.lower
+    )
+    # Combine custom profiles with the default one
+    profiles_combobox['values'] = tuple(profile_names) + (default_profile["profile_name"],)
+    subprofiles_combobox.set("")
+
+def delete_profile_or_subprofile():
+    """Delete Sub-Profile:
+        If a sub-profile is selected in the subprofiles_combobox, delete that sub-profile from its parent profile.
+        Delete Profile:
+        If no sub-profile is selected (or the sub-profile field is empty), delete the entire profile."""
+    
+    profile_name = profiles_combobox.get().strip()
+    subprofile_name = subprofiles_combobox.get().strip()
+
+    if not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Cannot delete the default profile.")
+        return
+
+    custom_profiles = load_custom_profiles()
+
+    for profile in custom_profiles:
+        if profile["profile_name"] == profile_name:
+            if subprofile_name:
+                # Delete the sub-profile
+                subprofiles = profile.get("sub_profiles", [])
+                for subprofile in subprofiles:
+                    if subprofile["sub_name"] == subprofile_name:
+                        subprofiles.remove(subprofile)
+                        messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' deleted successfully.")
+                        break
+                else:
+                    messagebox.showerror("Error", f"Sub-profile '{subprofile_name}' not found.")
+                    return
+                
+                # Update subprofiles_combobox after deletion
+                subprofile_names = [sub["sub_name"] for sub in subprofiles]
+                subprofiles_combobox['values'] = tuple(subprofile_names)
+                subprofiles_combobox.set("")
+
+                # If no sub-profiles are left, ask if the user wants to delete the entire profile
+                if not subprofiles:
+                    confirm = messagebox.askyesno(
+                        "Confirmation", 
+                        f"Profile '{profile_name}' has no sub-profiles left. Do you want to delete it?"
+                    )
+                    if confirm:
+                        custom_profiles.remove(profile)
+                        messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                        profiles_combobox.set("") # Clear profile selection
+                break
+            else:
+                # Delete the profile
+                confirm = messagebox.askyesno(
+                    "Confirmation", 
+                    f"Are you sure you want to delete the profile '{profile_name}' and all its sub-profiles?"
+                )
+                if confirm:
+                    custom_profiles.remove(profile)
+                    messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                    profiles_combobox.set("") # Clear profile selection
+            break
+    else:
+        messagebox.showerror("Error", f"Profile '{profile_name}' not found.")
+        return
+
+    # Save updated profiles to file
+    save_custom_profiles(custom_profiles)
+
+
+# Filter profiles on Tab key
+def filter_profiles(event):
+    """Filter profiles in the profiles_combobox based on user input."""
+    typed_text = profiles_combobox.get().strip()
+    custom_profiles = load_custom_profiles()
+
+    # Get matching profile names and sort them
+    profile_names = sorted(
+        [profile["profile_name"] for profile in custom_profiles],
+        key=str.lower
+    )
+    filtered_profiles = [name for name in profile_names if typed_text.lower() in name.lower()]
+
+    # Update the combobox with filtered profiles
+    profiles_combobox['values'] = tuple(filtered_profiles) + ("Default",)
+    if filtered_profiles:
+        profiles_combobox.event_generate("<Down>")
+
+# Filter sub-profiles on Tab key
+def filter_subprofiles(event):
+    """Filter sub-profiles in the subprofiles_combobox based on user input."""
+    typed_text = subprofiles_combobox.get().strip()
+    selected_profile_name = profiles_combobox.get().strip()
+
+    custom_profiles = load_custom_profiles()
+
+    # Find the selected profile and its sub-profiles
+    for profile in custom_profiles:
+        if profile["profile_name"] == selected_profile_name:
+            subprofile_names = sorted(
+                [sub["sub_name"] for sub in profile.get("sub_profiles", [])],
+                key=str.lower
+            )
+            break
+    else:
+        subprofile_names = []
+
+    # Get matching sub-profile names and sort them
+    filtered_subprofiles = [name for name in subprofile_names if typed_text.lower() in name.lower()]
+
+    # Update the combobox with filtered sub-profiles
+    subprofiles_combobox['values'] = tuple(filtered_subprofiles)
+    if filtered_subprofiles:
+        subprofiles_combobox.event_generate("<Down>")
+
+def update_rename_button_state(event=None):
+    """Enable or disable the Rename button based on selection."""
+    profile_name = profiles_combobox.get().strip()
+
+    if not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower() or profile_name.lower()=="select a profile":
+        rename_prof.config(state="disabled")
+    else:
+        rename_prof.config(state="normal")
+
+rename_popup = None
+
+def open_rename_popup_cond():
+    global rename_popup
+
+    if rename_popup is not None and rename_popup.winfo_exists():
+        rename_popup.lift()
+        rename_popup.focus_force()
+    else:
+        open_rename_popup()
+
+def open_rename_popup():
+    """Open a popup window for renaming profiles or sub-profiles dynamically based on selection."""
+    selected_profile_name = profiles_combobox.get().strip()
+    selected_subprofile_name = subprofiles_combobox.get().strip()
+
+    if not selected_profile_name:
+        messagebox.showerror("Error", "Please select a profile to rename.")
+        return
+
+    # Popup window
+    global rename_popup
+
+    rename_popup = tk.Toplevel(root)
+    rename_popup.title("Rename ")
+    rename_popup.geometry("250x200")
+
+    # Determine what is being renamed
+    if selected_subprofile_name:
+        rename_target = "subprofile"
+        target_name = selected_subprofile_name
+        instruction_text = f"Renaming sub-profile under \n'{selected_profile_name}'"
+    else:
+        rename_target = "profile"
+        target_name = selected_profile_name
+        instruction_text = f"Renaming profile \n'{selected_profile_name}'"
+
+    # Instruction Label
+    tk.Label(rename_popup, text=instruction_text, wraplength=280, justify="center").pack(pady=10)
+
+    # Entry field for the new name
+    ttk.Label(rename_popup, text="New Name:").pack(pady=5)
+    new_name_entry = ttk.Entry(rename_popup, width=30)
+    new_name_entry.pack(pady=5)
+    new_name_entry.insert(0, target_name)  # Pre-fill with the current name
+
+    # Confirm button
+    def confirm_rename():
+        new_name = new_name_entry.get().strip()
+        if not new_name:
+            messagebox.showerror("Error", "The new name cannot be empty.")
+            return
+
+        if rename_target == "profile":
+            rename_profile(new_name)
+        elif rename_target == "subprofile":
+            rename_subprofile(new_name)
+
+        rename_popup.destroy()  # Close the rename_popup after renaming
+
+    ttk.Button(rename_popup, text="Rename", command=confirm_rename).pack(pady=10)
+
+    # Close button
+    ttk.Button(rename_popup, text="Cancel", command=rename_popup.destroy).pack(pady=5)
+
+
+def rename_profile(new_name):
+    """Rename the selected profile."""
+    selected_profile_name = profiles_combobox.get().strip()
+
+    if not selected_profile_name:
+        messagebox.showerror("Error", "Please select a profile to rename.")
+        return
+
+    # Load profiles
+    profiles = load_custom_profiles()
+
+    # Rename logic (same as shared earlier)
+    for profile in profiles:
+        if profile["profile_name"] == selected_profile_name:
+            if any(p["profile_name"] == new_name.strip() for p in profiles):
+                messagebox.showerror("Error", f"A profile with the name '{new_name.strip()}' already exists.")
+                return
+
+            profile["profile_name"] = new_name.strip()
+            save_custom_profiles(profiles)
+            load_profile_names()
+            profiles_combobox.set(new_name.strip())
+            messagebox.showinfo("Success", f"Profile renamed to '{new_name.strip()}'.")
+            return
+
+    messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
+
+def rename_subprofile(new_name):
+    """Rename the selected sub-profile."""
+    selected_profile_name = profiles_combobox.get().strip()
+    selected_subprofile_name = subprofiles_combobox.get().strip()
+
+    if not selected_profile_name:
+        messagebox.showerror("Error", "Please select a profile first.")
+        return
+
+    if not selected_subprofile_name:
+        messagebox.showerror("Error", "Please select a sub-profile to rename.")
+        return
+
+    # Load profiles
+    profiles = load_custom_profiles()
+
+    # Rename logic (same as shared earlier)
+    for profile in profiles:
+        if profile["profile_name"] == selected_profile_name:
+            for subprofile in profile.get("sub_profiles", []):
+                if subprofile["sub_name"] == selected_subprofile_name:
+                    if any(sp["sub_name"] == new_name.strip() for sp in profile["sub_profiles"]):
+                        messagebox.showerror("Error", f"A sub-profile with the name '{new_name.strip()}' already exists.")
+                        return
+
+                    subprofile["sub_name"] = new_name.strip()
+                    save_custom_profiles(profiles)
+                    load_subprofile_names()
+                    subprofiles_combobox.set(new_name.strip())
+                    messagebox.showinfo("Success", f"Sub-profile renamed to '{new_name.strip()}'.")
+                    return
+
+    messagebox.showerror("Error", f"Sub-profile '{selected_subprofile_name}' not found.")
+
+
 
 ####################################################################################################################
 def on_enter(e):
@@ -1505,15 +1933,32 @@ profiles_combobox = ttk.Combobox(frame_profile, width=40)
 profiles_combobox.set("Select a profile")
 profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
-profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected)
+profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_profile)
+profiles_combobox.bind("<Tab>", filter_profiles)
+
+subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
+subprofiles_combobox.set("Select a subprofile")
+subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+subprofiles_combobox.bind("<ButtonPress>", load_subprofile_names)
+subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_subprofile)
+subprofiles_combobox.bind("<Tab>", filter_subprofiles)
+# subprofiles_combobox.bind()
 
 save_profile = ttk.Button(frame_profile, 
                           text="Save Profile", 
-                        #   bg='ghost white', 
                           command=save_custom_profile)
 save_profile.grid(row=0, column=1, padx=5, pady=5)
 # button_design(save_profile)
 
+delete_profile = ttk.Button(frame_profile, 
+                          text=" Delete ", 
+                          command=delete_profile_or_subprofile)
+delete_profile.grid(row=1, column=1, padx=5, pady=5)
+
+rename_prof = ttk.Button(frame_profile, 
+                          text=" Rename ", 
+                          command=open_rename_popup_cond)
+rename_prof.grid(row=2, column=1, padx=5, pady=5)
 
 # Customize the focus ring (or border) of the Radiobutton
 style.configure("Custom.TRadiobutton", focuscolor="lightblue", highlightthickness=2)
@@ -1525,11 +1970,11 @@ transfer_type_sel = tk.StringVar(value='SFTP')
 frame_transfer = tk.Frame(root, bd=1, relief='groove')
 frame_transfer.grid(row=0, column=0, padx=0, pady=5, sticky='e')
 # Radio buttons for selecting file or folder
-sftp_option = ttk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_paths, style="Custom.TRadiobutton")
+sftp_option = ttk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_path_on_selection, style="Custom.TRadiobutton")
 sftp_option.grid(row=0, column=0, padx=0, pady=0, sticky='w')
-ftp_option = ttk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_paths, style="Custom.TRadiobutton")
+ftp_option = ttk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_path_on_selection, style="Custom.TRadiobutton")
 ftp_option.grid(row=0, column=1, padx=0, pady=0, sticky='w')
-net_option = ttk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_paths, style="Custom.TRadiobutton")
+net_option = ttk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_path_on_selection, style="Custom.TRadiobutton")
 net_option.grid(row=0, column=2, padx=0, pady=0, sticky='w')
 
 # Bind the radio buttons to the function that removes focus
@@ -1580,6 +2025,7 @@ remote_dir_entry = ttk.Combobox(frame_remote,
 # if default_paths:
 #     remote_dir_entry.insert(0, default_paths[0])
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
+# remote_dir_entry.bind("<ButtonPress>", set_paths)
 
 # Add a button to save a custom path
 save_path = ttk.Button(frame_remote, text="Save Path",
@@ -1730,6 +2176,9 @@ set_paths()
 
 # Enable menu for Show LGV Table if table is updated
 update_menu()
+
+
+update_rename_button_state()
 
 # Disable focus for all widgets
 # disable_focus(root)
