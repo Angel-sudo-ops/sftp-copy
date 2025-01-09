@@ -19,10 +19,10 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 
-__version__ = '3.4.8.2'
+__version__ = '3.4.8.3'
 
 
-LGV_DATA = "lgv_address_list.xml"
+LGV_DATA_FILE = "lgv_address_list.xml"
 ############################################## Load/Save LGV Data #############################################
 def extract_lgv_name(input_name):
     # Regex pattern to capture 'LGV' followed by numbers
@@ -121,7 +121,7 @@ def populate_table_from_xml(path=None):
     save_table_data_to_xml(treeview)
 
     # Enable menu for Show LGV Table if table is updated
-    update_menu()
+    update_menu_state()
 
 
 def read_db3_file(db3_file_path, table_name):
@@ -221,11 +221,11 @@ def populate_table_from_db3():
     save_table_data_to_xml(treeview)
 
     # Enable menu for Show LGV Table if table is updated
-    update_menu()
+    update_menu_state()
 
 
 # Save data to XML
-def save_table_data_to_xml(tree, filename=LGV_DATA):
+def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
 
     # Check if there is any data in the Treeview
     if not tree.get_children():
@@ -289,7 +289,7 @@ def save_table_data_to_xml(tree, filename=LGV_DATA):
     messagebox.showinfo("Attention", f"LGV data successfully saved to {filename}.")
 
 # Load data from XML
-def load_table_data_from_xml(tree, filename=LGV_DATA):
+def load_table_data_from_xml(tree, filename=LGV_DATA_FILE):
     if os.path.exists(filename):       
         tree_xml = ET.parse(filename)
         lgv_list = tree_xml.getroot()
@@ -317,11 +317,28 @@ def load_table_data_from_xml(tree, filename=LGV_DATA):
         # else:
         #     messagebox.showerror("Attention", "Default StaticRoutes.xml file not found")
 
-def update_menu():
-    if os.path.exists(LGV_DATA):
+
+def delete_lgv_data_file():
+    """Delete the LGV data XML file after confirmation."""
+    if os.path.exists(LGV_DATA_FILE):
+        # Confirm deletion
+        confirm = messagebox.askyesno("Confirm Deletion", f"Are you sure you want to delete '{LGV_DATA_FILE}'?")
+        if confirm:
+            try:
+                os.remove(LGV_DATA_FILE)
+                messagebox.showinfo("Success", f"'{LGV_DATA_FILE}' has been deleted.")
+            except Exception as e:
+                messagebox.showerror("Error", f"An error occurred while deleting the file: {e}")
+    # Update the menu state regardless of success or failure
+    update_menu_state()
+
+def update_menu_state():
+    if os.path.exists(LGV_DATA_FILE):
         options_menu.entryconfig("Show LGV Table", state="normal")  # Enable if file exists
+        options_menu.entryconfig("Remove LGV Table", state="normal")
     else:
         options_menu.entryconfig("Show LGV Table", state="disabled")  # Disable if file doesn't exist
+        options_menu.entryconfig("Remove LGV Table", state="disabled")
 
 ############################################## Open LGV Table Window ####################################
 lgv_table_window = None
@@ -1904,6 +1921,7 @@ menu_bar.add_cascade(label="  File ", menu=file_menu)
 
 options_menu = tk.Menu(menu_bar, tearoff=0)
 options_menu.add_command(label="Show LGV Table", command=open_lgv_table_window_cond)
+options_menu.add_command(label="Remove LGV Table", command=delete_lgv_data_file)
 menu_bar.add_cascade(label=" Options ", menu=options_menu) 
 
 # about_menu = tk.Menu(menu_bar, tearoff=0)
@@ -2158,7 +2176,7 @@ status_widget.bind("<Key>", lambda e: "break")
 set_paths()
 
 # Enable menu for Show LGV Table if table is updated
-update_menu()
+update_menu_state()
 
 
 update_rename_button_state()
