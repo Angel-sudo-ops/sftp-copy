@@ -1,7 +1,8 @@
 {
     "SFTP": [
         "\\Config\\ini",
-        "\\Config\\Laserview"
+        "\\Config\\Laserview",
+        "\\Layout\\Background"
     ],
     "NET": [
         "\\Backup\\Laserview\\ini"
