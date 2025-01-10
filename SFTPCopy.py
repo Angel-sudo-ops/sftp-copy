@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.8.3'
+__version__ = '3.4.8.4'
 
 CONFIG_FILE = "config.ini"
 
@@ -1039,7 +1039,10 @@ def check_source_path_for_keywords(file_or_folder):
     else:
         remote_dir_entry.set(default_paths[0])  # Or set to a default path if needed
 
+######################################################################################################################################
 ################################################## Placeholder #######################################################################
+######################################################################################################################################
+
 # Dictionary to store entry widgets and their placeholder texts
 placeholders = {}
 entries = {}
@@ -1085,6 +1088,7 @@ def combined_combobox_selected_profile(event):
     # set_paths()
     clear_entries(event)
     update_rename_button_state(event)
+    subprofiles_combobox.set("")
 
 def combined_combobox_selected_subprofile(event):
     style.configure('RootIP.TEntry', foreground=good_input_fg)
@@ -1364,11 +1368,22 @@ default_profile = {
 
 def set_profile(subprofile):
     """Set the entries based on the selected sub-profile."""
-    ip_entry.delete(0, tk.END)
-    ip_entry.insert(0, subprofile["base_ip"])
 
+    # Handle IP Entry
+    ip_entry.delete(0, tk.END)
+    if "e.g." in subprofile.get("base_ip", ""):
+        create_placeholder(ip_entry, "e.g., 7.204.194.10", "RootIP.TEntry", "Placeholder.TEntry")
+    else:
+        ip_entry.insert(0, subprofile.get("base_ip", ""))
+        ip_entry.config(style="RootIP.TEntry")
+
+    # Handle Range Entry
     range_entry.delete(0, tk.END)
-    range_entry.insert(0, subprofile["ip_range"])
+    if "e.g." in subprofile.get("ip_range", ""):
+        create_placeholder(range_entry, "e.g., 1-9,27,29,31-40", "Range.TEntry", "Placeholder.TEntry")
+    else:
+        range_entry.insert(0, subprofile.get("ip_range", ""))
+        range_entry.config(style="Range.TEntry")
 
     file_path_entry.delete(0, tk.END)
     file_path_entry.insert(0, subprofile["local_dir"])
@@ -1546,6 +1561,17 @@ def load_data_from_selection(event=None):
     selected_subprofile_name = subprofiles_combobox.get().strip()
 
     profiles = load_custom_profiles() + [default_profile]
+
+    # Define the fallback structure for placeholders
+    fallback_data = {
+        "base_ip": "e.g., 1-9,27,29,31-40",
+        "ip_range": "e.g., 1-9,27,29,31-40",
+        "username": "Administrator",
+        "password": "",
+        "local_dir": "",
+        "remote_dir": "",
+        "transfer_type": "SFTP"
+    }
     
     # Find the selected profile
     for profile in profiles:
@@ -1558,12 +1584,13 @@ def load_data_from_selection(event=None):
                         print(f"Password: {subprofile["password"]}")
                         return
 
-            # If no sub-profile is selected, show an error
-            # messagebox.showerror("Error", "Please select a valid sub-profile.")
+            # If no sub-profile is selected, apply fallback data
+            set_profile(fallback_data)
             return
 
-    # If no matching profile is found, show an error
-    # messagebox.showerror("Error", f"Profile '{selected_profile_name}' not found.")
+    # If no matching profile is found, apply fallback data
+    set_profile(fallback_data)
+
 
 def load_subprofile_names(event=None):
     """Load sub-profiles into the subprofiles_combobox based on the selected profile."""
@@ -1585,7 +1612,7 @@ def load_subprofile_names(event=None):
 
     # If no matching profile is found, clear the subprofiles_combobox
     subprofiles_combobox['values'] = []
-    subprofiles_combobox.set("")
+    # subprofiles_combobox.set("")
 
 def load_profile_names(event=None):
     """Load profiles into the profiles_combobox."""
@@ -1598,7 +1625,7 @@ def load_profile_names(event=None):
     )
     # Combine custom profiles with the default one
     profiles_combobox['values'] = tuple(profile_names) + (default_profile["profile_name"],)
-    subprofiles_combobox.set("")
+    # subprofiles_combobox.set("")
 
 def delete_profile_or_subprofile():
     """Delete Sub-Profile:
@@ -1668,7 +1695,8 @@ def delete_profile_or_subprofile():
 def filter_profiles(event):
     """Filter profiles in the profiles_combobox based on user input."""
     typed_text = profiles_combobox.get().strip()
-    custom_profiles = load_custom_profiles()
+
+    custom_profiles = load_custom_profiles() + [default_profile]
 
     # Get matching profile names and sort them
     profile_names = sorted(
@@ -1678,7 +1706,7 @@ def filter_profiles(event):
     filtered_profiles = [name for name in profile_names if typed_text.lower() in name.lower()]
 
     # Update the combobox with filtered profiles
-    profiles_combobox['values'] = tuple(filtered_profiles) + ("Default",)
+    profiles_combobox['values'] = tuple(filtered_profiles)
     if filtered_profiles:
         profiles_combobox.event_generate("<Down>")
 
@@ -1688,7 +1716,7 @@ def filter_subprofiles(event):
     typed_text = subprofiles_combobox.get().strip()
     selected_profile_name = profiles_combobox.get().strip()
 
-    custom_profiles = load_custom_profiles()
+    custom_profiles = load_custom_profiles() + [default_profile]
 
     # Find the selected profile and its sub-profiles
     for profile in custom_profiles:
@@ -1996,7 +2024,7 @@ subprofiles_combobox.bind("<Tab>", filter_subprofiles)
 # subprofiles_combobox.bind()
 
 save_profile = ttk.Button(frame_profile, 
-                          text="Save Profile", 
+                          text="Save/Update", 
                           command=save_custom_profile)
 save_profile.grid(row=0, column=1, padx=5, pady=5)
 # button_design(save_profile)
