@@ -1917,25 +1917,29 @@ def load_last_session_from_config():
 ####################################################################################################################
 
 # Filter profiles on Tab key
-def filter_remote_dir(event):
+def filter_remote_dir(event=None):
     """Filter remote paths in the combobox based on user input."""
     typed_text = remote_dir_entry.get().strip()
 
+    # Always reload the full dataset
     transfer_type = transfer_type_sel.get()
-
-    # Load custom paths based on the transfer type
     combined_paths = tuple(load_custom_paths(transfer_type)) + default_paths
 
-    # Filter paths that match the typed text
-    filtered_paths = [
-        path for path in combined_paths if typed_text.lower() in path.lower()
-    ] if typed_text else combined_paths
+    # If Tab key pressed or filtering triggered by input
+    if typed_text:
+        # Filter paths that match the typed text
+        filtered_paths = [
+            path for path in combined_paths if typed_text.lower() in path.lower()
+        ]
+    else:
+        # If no input, show all paths
+        filtered_paths = combined_paths
 
-    # Update the combobox with the filtered list
+    # Update the combobox with filtered paths
     remote_dir_entry['values'] = tuple(sorted(filtered_paths, key=str.lower))
 
     # Show the dropdown if matches exist
-    if remote_dir_entry['values']:
+    if filtered_paths:
         remote_dir_entry.event_generate("<Down>")
 
 ####################################################################################################################
@@ -2132,6 +2136,7 @@ remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
 
 remote_dir_entry.bind("<Tab>", filter_remote_dir)
 remote_dir_entry.bind("<ButtonPress>", filter_remote_dir)
+# remote_dir_entry.bind("<ButtonPress>", filter_remote_dir)
 
 # Add a button to save a custom path
 save_path = ttk.Button(frame_remote, text="Save Path",
