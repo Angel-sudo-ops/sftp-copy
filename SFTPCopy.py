@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.8.4'
+__version__ = '3.4.8.5'
 
 CONFIG_FILE = "config.ini"
 
@@ -1213,9 +1213,9 @@ custom_paths = []
 
 def set_paths():
     global default_paths, custom_paths
-    default_paths_sftp = (r"\Config", r"\TwinCAT\Boot", r"\Layout")
-    default_paths_ftp = ("/Hard Disk/Backup/", "/Hard Disk/TwinCAT/Boot", "/Hard Disk/Backup/export_to_agv")
-    default_paths_net = (r"\Backup", r"\TwinCAT\Boot", r"\Backup\export_to_agv") #examples for now, get real ones later
+    default_paths_sftp = [r"\Config", r"\TwinCAT\Boot", r"\Layout"]
+    default_paths_ftp = ["/Hard Disk/Backup/", "/Hard Disk/TwinCAT/Boot", "/Hard Disk/Backup/export_to_agv"]
+    default_paths_net = [r"\Backup", r"\TwinCAT\Boot", r"\Backup\export_to_agv"] #examples for now, get real ones later
     transfer_type = transfer_type_sel.get()
 
     # Load custom paths based on the transfer type
@@ -1231,7 +1231,7 @@ def set_paths():
         default_paths = default_paths_net
 
     # Update the Combobox values
-    remote_dir_entry['values'] = default_paths + tuple(custom_paths)
+    remote_dir_entry['values'] = default_paths + custom_paths
     
     # Optionally, reset the displayed value to the first default path
     if default_paths and not remote_dir_entry.get():
@@ -1923,24 +1923,30 @@ def filter_remote_dir(event=None):
 
     # Always reload the full dataset
     transfer_type = transfer_type_sel.get()
-    combined_paths = tuple(load_custom_paths(transfer_type)) + default_paths
 
-    # If Tab key pressed or filtering triggered by input
-    if typed_text:
-        # Filter paths that match the typed text
-        filtered_paths = [
-            path for path in combined_paths if typed_text.lower() in path.lower()
-        ]
-    else:
-        # If no input, show all paths
-        filtered_paths = combined_paths
+    combined_paths = load_custom_paths(transfer_type) + default_paths
+
+     # Get matching path names and sort them
+    sorted_paths = sorted(
+        [path for path in combined_paths],
+        key=str.lower
+    )
+    filtered_paths = [path for path in sorted_paths if typed_text.lower() in path.lower()]
 
     # Update the combobox with filtered paths
-    remote_dir_entry['values'] = tuple(sorted(filtered_paths, key=str.lower))
+    remote_dir_entry['values'] = tuple(filtered_paths)
 
     # Show the dropdown if matches exist
     if filtered_paths:
         remote_dir_entry.event_generate("<Down>")
+
+def load_remote_paths(event=None):
+    """Load all remote paths into the remote_dir_entry combobox."""
+    transfer_type = transfer_type_sel.get()
+    combined_paths = load_custom_paths(transfer_type) + default_paths
+
+    # Populate the combobox with sorted paths
+    remote_dir_entry['values'] = tuple(sorted(combined_paths, key=str.lower))
 
 ####################################################################################################################
 def on_enter(e):
@@ -2135,8 +2141,7 @@ remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
 # remote_dir_entry.bind("<ButtonPress>", set_paths)
 
 remote_dir_entry.bind("<Tab>", filter_remote_dir)
-remote_dir_entry.bind("<ButtonPress>", filter_remote_dir)
-# remote_dir_entry.bind("<ButtonPress>", filter_remote_dir)
+remote_dir_entry.bind("<ButtonPress>", load_remote_paths)
 
 # Add a button to save a custom path
 save_path = ttk.Button(frame_remote, text="Save Path",
