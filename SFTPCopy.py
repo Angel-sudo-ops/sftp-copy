@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.8.5'
+__version__ = '3.4.8.6'
 
 CONFIG_FILE = "config.ini"
 
@@ -885,25 +885,36 @@ def start_transfer(status_widget):
     elif transfer_type_sel.get() == 'FTP':
         port = FTP_PORT
 
-    local_paths = local_path_string.split(',')
-    local_paths = [path.strip() for path in local_paths]
 
-    print (f"Selected port is {port}")
-    print(f"Login is {username}")
-    print(f"Password is {password}")
-    print(local_paths)
-
+    # Parse local paths
+    local_paths = [path.strip() for path in local_path_string.split(',')]
     if not local_paths:
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
         return
-    # if not base_ip or base_ip == placeholders[ip_entry]:
-    if not validate_base_ip():
-        messagebox.showerror("Input Error", "Please enter the base IP.")
-        return
-    # if not range_input or range_input == placeholders[range_entry]:
+
     if not validate_range():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
+    
+    # Check LGV data availability
+    lgv_data_exists = os.path.exists(LGV_DATA_FILE)
+
+    # Validate IP source
+    if lgv_data_exists:
+        ip_list = validate_and_link_lgv()
+        if not ip_list:
+            messagebox.showerror("Input Error", "Invalid LGV range or no matching data in the LGV table.")
+            return
+    else:
+        base_ip = ip_entry.get()
+        if not validate_base_ip():
+            messagebox.showerror("Input Error", "Please enter the base IP.")
+            return
+        ip_list = parse_ip_ranges(base_ip, range_input)
+        if not ip_list:
+            messagebox.showerror("Input Error", "Please provide a valid IP range.")
+            return
+
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
         return
@@ -913,27 +924,24 @@ def start_transfer(status_widget):
     if not password:
         messagebox.showerror("Input Error", "Please enter the password.")
         return
+    
+    print (f"Selected port is {port}")
+    print(f"Login is {username}")
+    print(f"Password is {password}")
+    print(local_paths)
 
-    status_widget.delete(1.0, tk.END)  # Clear previous status messages
-    ip_list = parse_ip_ranges(base_ip, range_input)
-
-    ip_list_2 = validate_and_link_lgv()
-    print(f"{ip_list_2}")
-
-    if ip_list is None:
-        messagebox.showerror("Input Error", "Please provide a valid IP range.")
-        return
+    clear_status()  # Clear previous status messages
 
     result_queue = queue.Queue()
     threads = []
 
-    for host in ip_list:
+    for item in ip_list:
+        host = item["ip_address"] if lgv_data_exists else item
         for local_path in local_paths:
             if transfer_type_sel.get() == 'SFTP': 
                 t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget, result_queue))
             elif transfer_type_sel.get() == 'FTP':
                 t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget, result_queue))
-                # threading.Thread(target=ftp_transfer_anonymous, args=(host, username, password, local_path, remote_dir, status_widget)).start()
             
             threads.append(t)
             t.start()
