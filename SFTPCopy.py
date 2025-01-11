@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.8.6'
+__version__ = '3.4.8.7'
 
 CONFIG_FILE = "config.ini"
 
@@ -456,27 +456,32 @@ def open_lgv_table_window():
 
 ############################################### SFTP Transfer ###############################################
 
-def sftp_transfer(host, port, username, password, local_path, remote_path, status_widget, result_queue):
+def sftp_transfer(host, port, username, password, local_path, remote_path, result_queue, lgv_name=""):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     local_file_name = os.path.basename(local_path)
     success = True  # Track overall success for the entire transfer process
 
     try:
-        status_widget.insert(tk.END, f"Transferring {local_file_name} to {host}...\n")
-        status_widget.yview(tk.END)
+        # Update table with "In Progress" status
+        for child in status_table.get_children():
+            row_values = status_table.item(child, "values")
+            if row_values[1] == host: # Match by IP address
+                status_table.item(child, values=(lgv_name, host, "In Progress", f"Transferring {local_file_name}"))
+                break
+        
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
             try:
                 sftp.put(local_path, os.path.join(remote_path, local_file_name))
-                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file_name} to\n\\{host}{remote_path}\n")
+                description = f"\nSuccessfully transferred {local_file_name} to\\{host}{remote_path}"
+                status = "Completed"
             except Exception as e:
-                status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to\n\\{host}{remote_path}. Error: {e}\n")
+                description = f"\nFailed to transfer {local_file_name} to\\{host}{remote_path}. Error: {e}"
+                status = "Failed"
                 success = False
-            finally:
-                status_widget.yview(tk.END)
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -488,35 +493,52 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, statu
                     except IOError:  # Directory does not exist, so we create it
                         try:
                             sftp.mkdir(remote_dir)
-                            status_widget.insert(tk.END, f"Created directory {remote_dir} on {host}\n")
+                            description = f"Created directory {remote_dir} on {host}"
                         except Exception as e:
-                            status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}: {e}\n")
+                            description = f"\nFailed to create directory {remote_dir} on {host}: {e}"
                             continue  # Continue with other directories/files even if one fails
                         finally:
-                            status_widget.yview(tk.END)
+                            # Update description in the table
+                            for child in status_table.get_children():
+                                row_values = status_table.item(child, "values")
+                                if row_values[1] == host:
+                                    status_table.item(child, values=(lgv_name, host, "In Progress", description))
+                                    break
 
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     try:
                         sftp.put(local_file, remote_file)
-                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+                        description = f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}"
+                        status = "Completed"
                     except Exception as e:
-                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}: {e}\n")
+                        description = f"\nFailed to transfer {local_file} to {remote_file} on {host}: {e}"
+                        status = "Failed"
                         success = False
                     finally:
-                        status_widget.yview(tk.END)
+                        # Update description in the table
+                        for child in status_table.get_children():
+                            row_values = status_table.item(child, "values")
+                            if row_values[1] == host:
+                                status_table.item(child, values=(lgv_name, host, status, description))
+                                break
 
         sftp.close()
         ssh.close()
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\{host}. \nError: {e}\n")
+        description = f"Connection to \\{host} failed. Error: {e}"
+        status = "Failed"
         success = False
     finally:
-        result = "Success" if success else "Failed"
+        # Update the table with the result and description
+        for child in status_table.get_children():
+            row_values = status_table.item(child, "values")
+            if row_values[1] == host:
+                status_table.item(child, values=(lgv_name, host, status, description))
+                break
         # Put the result in the queue with associated host information
-        result_queue.put((host, result))
-        status_widget.yview(tk.END)
+        result_queue.put((host, "Success" if success else "Failed"))
 
 ############################################### SFTP Download ###############################################
 
@@ -823,7 +845,7 @@ def validate_and_link_lgv():
         # Check if the LGV range entry is empty
         if range_entry.get().strip() == '':
             print("LGV range is empty!")
-            log_message("LGV range is empty!")
+            # log_message("LGV range is empty!")
             return None
 
         # Parse the LGV range input into a set of numbers
@@ -858,20 +880,16 @@ def validate_and_link_lgv():
 
     except ValueError as e:
         print(f"Invalid input. Error: {e}")
-        log_message(f"Invalid input. Error: {e}")
+        # log_message(f"Invalid input. Error: {e}")
         return None
 
-def log_message(message):
-        """Insert log messages into the status widget in a thread-safe way."""
-        root.after(0, lambda: status_widget.insert(tk.END, message + "\n"))
-        root.after(0, status_widget.see, tk.END)  # Scroll to the bottom
-
-def clear_status():
-    """Clear the content of the status widget."""
-    status_widget.delete(1.0, tk.END)  # Clear all content
 
 ############################################# Transfer files to remote server ################################################
-def start_transfer(status_widget):
+def start_transfer():
+    # Reset labels at the start of a new transfer
+    summary_label.config(text="In Progress", fg="blue")
+    timestamp_label.config(text="")
+
     local_path_string = file_path.get()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
@@ -930,24 +948,30 @@ def start_transfer(status_widget):
     print(f"Password is {password}")
     print(local_paths)
 
-    clear_status()  # Clear previous status messages
+    # Clear and populate the status table
+    status_table.delete(*status_table.get_children())
+    for item in ip_list:
+        lgv_name = item["number"] if lgv_data_exists else ""
+        ip_address = item["ip_address"] if lgv_data_exists else item
+        status_table.insert("", "end", values=(lgv_name, ip_address, "Queued", ""))
 
     result_queue = queue.Queue()
     threads = []
 
     for item in ip_list:
+        lgv_name = item.get("number", "") if lgv_data_exists else ""
         host = item["ip_address"] if lgv_data_exists else item
         for local_path in local_paths:
             if transfer_type_sel.get() == 'SFTP': 
-                t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, status_widget, result_queue))
+                t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, result_queue, lgv_name))
             elif transfer_type_sel.get() == 'FTP':
-                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, status_widget, result_queue))
+                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue))
             
             threads.append(t)
             t.start()
 
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads_transfer, args=(threads, result_queue, status_widget)).start()
+    threading.Thread(target=monitor_threads_transfer, args=(threads, result_queue)).start()
 
 ################################ Monitor threads ############################################
 def monitor_threads(threads, result_queue, status_widget):
@@ -983,7 +1007,7 @@ def monitor_threads(threads, result_queue, status_widget):
     status_widget.yview(tk.END)
 
 
-def monitor_threads_transfer(threads, result_queue, status_widget):
+def monitor_threads_transfer(threads, result_queue):
     # Wait for all threads to complete
     for t in threads:
         t.join()
@@ -998,30 +1022,38 @@ def monitor_threads_transfer(threads, result_queue, status_widget):
         if result == "Failed":
             results_by_host[host]["failed"] += 1
 
-    # Now summarize the results
-    failed_hosts = []
-    total_hosts = 0
+    # Update the table with final statuses
     failed_hosts_count = 0
+    total_hosts = len(results_by_host)
 
-    for host, counts in results_by_host.items():
-        total_hosts += 1
-        if counts["failed"] > 0:
-            failed_hosts.append(host)
-            failed_hosts_count += 1
+    for child in status_table.get_children():
+        row_values = status_table.item(child, "values")
+        host = row_values[1]
+        if host in results_by_host:
+            failed = results_by_host[host]["failed"]
+            total = results_by_host[host]["total"]
+            status = "Failed" if failed > 0 else "Completed"
+            description = f"{failed}/{total} transfers failed" if failed > 0 else "All transfers completed successfully"
+            status_table.item(child, values=(row_values[0], host, status, description))
+            if failed > 0:
+                failed_hosts_count += 1
 
-    if failed_hosts:
-        status_widget.insert(tk.END, f"\n\n*****Connection failed for {failed_hosts_count} out of {total_hosts} hosts*****\n")
-        for host in failed_hosts:
-            status_widget.insert(tk.END, f"{host}\n")
+    # Update the summary label
+    if failed_hosts_count > 0:
+        summary_label.config(
+            text=f"Transfers completed with issues: {failed_hosts_count} out of {total_hosts} hosts failed.",
+            foreground="red"
+        )
     else:
-        status_widget.insert(tk.END, "\n\n*****All transfers successful*****\n")
+        summary_label.config(
+            text="All transfers completed successfully!",
+            foreground="green"
+        )
 
+    # Update the timestamp label
     current_time = datetime.now()
     formatted_time = current_time.strftime("%H:%M:%S")
-    print(f"At {formatted_time}")
-    status_widget.insert(tk.END, f"\nOperation performed at {formatted_time}")
-
-    status_widget.yview(tk.END)
+    timestamp_label.config(text=f"Last operation: {formatted_time}")
 ############################################# Download files from remote server ################################################
 
 def start_download(status_widget):
@@ -2076,6 +2108,42 @@ def set_icon():
     else:
         print("Icon file not found.")
 
+################################################# Setup Status table ##############################################
+# Dictionary to maintain custom headings
+
+headings = {
+    'LGV'        : 'LGV',
+    'IP'         : 'IP',
+    'Status'     : 'Status',
+    'Description': 'Description'
+}
+
+def setup_treeview(treeview):
+    for col in treeview['columns']:
+        treeview.heading(col, text=headings[col], command=lambda _col=col: treeview_sort_column(treeview, _col, False), anchor='w')
+
+def treeview_sort_column(tv, col, reverse):
+    # Retrieve all data from the treeview
+    l = [(tv.set(k, col), k) for k in tv.get_children('')]
+    
+    # Sort the data
+    l.sort(reverse=reverse, key=lambda t: natural_keys(t[0]))
+
+    # Rearrange items in sorted positions
+    for index, (val, k) in enumerate(l):
+        tv.move(k, '', index)
+
+    # Change the heading to show the sort direction
+    for column in tv['columns']:
+        heading_text = headings[column] + (' ↓' if reverse and column == col else ' ↑' if not reverse and column == col else '')
+        tv.heading(column, text=heading_text, command=lambda _col=column: treeview_sort_column(tv, _col, not reverse))
+
+def natural_keys(text):
+    """
+    Alphanumeric (natural) sort to handle numbers within strings correctly
+    """
+    return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
 
 ######################################################## Create UI ##################################################
 
@@ -2090,7 +2158,7 @@ else:
 # root.iconbitmap(icon_path)
 
 window_width = 600
-window_lenght = 670
+window_lenght = 750 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
 
@@ -2313,21 +2381,16 @@ radio_transfer.grid(row=0, column=0, padx=0, pady=0, sticky='e')
 
 style.configure('TD.TButton', font=('Lucida Sans', 12))
 transfer = ttk.Button(frame_transfer, 
-                      text="Transfer", 
-                    #  borderwidth=0,
-                    #  highlightthickness=0,
-                    #  background='white',
-                    #  bg='ghost white',
-                      style="TD.TButton",
-                      command=lambda: start_transfer(status_widget)
+                    text="Transfer", 
+                    style="TD.TButton",
+                    command=start_transfer
                     )
 transfer.grid(row=0, 
               column=1, 
               pady=0,
               padx=0, 
               sticky='w')
-# transfer.configure(font=('Lucida Sans', 12))
-# button_design(transfer)
+
 print(f"Transfer button state: {transfer['state']}")
 
 frame_download = tk.Frame(frame_mode)
@@ -2342,14 +2405,11 @@ radio_download = ttk.Radiobutton(frame_download,
                                 )
 radio_download.grid(row=0, column=2, padx=0, pady=0, sticky='w')
 
-download = ttk.Button(frame_download, text="Download", 
-                    #  borderwidth=0,
-                    #  highlightthickness=0,
-                    #  background='white',
-                    #  bg='ghost white',
-                     style="TD.TButton",
-                     command=lambda: start_download(status_widget)
-                     )
+download = ttk.Button(frame_download,
+                    text="Download", 
+                    style="TD.TButton",
+                    command=lambda: start_download(status_table)
+                    )
 download.grid(row=0, 
               column=0,  
               pady=0,
@@ -2362,16 +2422,57 @@ print(f"Download button state: {download['state']}")
 # Avoid color change when hovering when button is disabled
 
 # status_widget = tk.Text(root, height=10, width=80)
-status_widget = scrolledtext.ScrolledText(root, 
-                                          undo=True,
-                                          wrap = tk.WORD,
-                                          height=17,
-                                          width=70
-                                          )
-status_font = font.Font(family="Consolas", size=11)
-status_widget.configure(font=status_font)
-status_widget.grid(row=5, column=0, columnspan=2, padx=15, pady=15)
-status_widget.bind("<Key>", lambda e: "break")
+# status_widget = scrolledtext.ScrolledText(root, 
+#                                           undo=True,
+#                                           wrap = tk.WORD,
+#                                           height=17,
+#                                           width=70
+#                                           )
+# status_font = font.Font(family="Consolas", size=11)
+# status_widget.configure(font=status_font)
+# status_widget.grid(row=5, column=0, columnspan=2, padx=15, pady=15)
+# status_widget.bind("<Key>", lambda e: "break")
+
+# Create the Treeview (table)
+table_frame = tk.Frame(root)
+table_frame.grid(row=5, column=0, columnspan=2, padx=10, pady=10, sticky='nsew')
+
+treeview_style = ttk.Style()
+treeview_style.configure("Treeview", rowheight=23)  # Increase row height for more space between items
+treeview_style.configure("Treeview", font=("Segoe UI", 10))  # Adjust font size if necessary
+treeview_style.configure("Treeview", padding=(5, 5))  # Add padding to rows (optional)
+
+columns = ("LGV", "IP", "Status", "Description")
+status_table = ttk.Treeview(table_frame, columns=columns, show="headings")
+
+# Define column properties
+status_table.column("LGV", width=50, anchor='w')
+status_table.column("IP", width=80, anchor='w')
+status_table.column("Status", width=80, anchor='w')
+status_table.column('Description', width=200, anchor='w')
+
+setup_treeview(status_table)
+
+status_table.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+# Add a scrollbar
+scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=status_table.yview)
+status_table.configure(yscroll=scrollbar.set)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+# Create the Description frame
+description_frame = tk.Frame(root)
+description_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=10, sticky='nsew')
+
+# Create the status summary label
+summary_label = tk.Label(description_frame, text="Ready", font=("Arial", 11), fg="blue", anchor="w")
+summary_label.grid(row=0, column=0, sticky='w', padx=10, pady=5)
+
+# Create the timestamp label
+timestamp_label = tk.Label(description_frame, text="Last operation: ", font=("Arial", 11), fg="grey", anchor="e")
+timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=5)
+
+
 
 set_paths()
 
