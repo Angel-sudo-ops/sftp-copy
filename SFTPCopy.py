@@ -291,33 +291,41 @@ def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
     messagebox.showinfo("Attention", f"LGV data successfully saved to {filename}.")
 
 # Load data from XML
-def load_table_data_from_xml(tree, filename=LGV_DATA_FILE):
-    if os.path.exists(filename):       
+def load_table_data_from_xml(tree=None, filename=LGV_DATA_FILE, return_data=False):
+    """Load LGV data from XML. Populate Treeview or return structured data."""
+    if not os.path.exists(filename):
+        print(f"File '{filename}' not found.")
+        return [] if return_data else None
+
+    try:
         tree_xml = ET.parse(filename)
         lgv_list = tree_xml.getroot()
 
         # Check if there are any <LGV> elements
         if not lgv_list.findall("LGV"):
-            # print("The XML file has no LGV data, loading default table.")
-            # # messagebox.showwarning("Warning", "The XML file contains no LGV data. Loading default table.")
-            # messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
-            # populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
-            return
+            print("The XML file has no LGV data.")
+            return [] if return_data else None
 
+        # Prepare data for return
+        data = []
         for lgv in lgv_list.findall("LGV"):
             lgv_name = lgv.find("Name").text
             ip_address = lgv.find("IPAddress").text
-            # ams_net_id = lgv.find("AMSNetId").text
             tc_type = lgv.find("Type").text
-            tree.insert("", "end", values=(lgv_name, ip_address, tc_type))
-    # else:
-        # print("No saved XML data found, loading default table.")
-        # if os.path.exists("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml"):
-        #     # Populate table the first time with current StaticRoutes.xml file
-        #     populate_table_from_xml("C:\\TwinCAT\\3.1\\Target\\StaticRoutes.xml")
-        #     messagebox.showinfo("Attention", "Default StaticRoutes.xml file loaded")
-        # else:
-        #     messagebox.showerror("Attention", "Default StaticRoutes.xml file not found")
+
+            # Collect data for returning
+            lgv_entry = {"name": lgv_name, "ip_address": ip_address, "type": tc_type}
+            data.append(lgv_entry)
+
+            # Populate a treeview if provided
+            if tree is not None:
+                tree.insert("", "end", values=(lgv_name, ip_address, tc_type))
+        
+        return data if return_data else None
+    
+    except ET.ParseError:
+        print(f"Error parsing the file '{filename}.")
+        return [] if return_data else None
 
 
 def delete_lgv_data_file():
@@ -791,6 +799,20 @@ def parse_ip_ranges(base_ip, range_input):
                 ip_list.append(f"{base_ip_root}.{int(r.strip()) + base_ip_last_digit}")
     # print(ip_list)
     return ip_list
+
+####################################################### Get LGV Numbers ########################################################
+
+def parse_lgv_range(range_str):
+    """Parse LGV range input into a list of LGV numbers."""
+    lgv_numbers = set()
+    parts = range_str.split(",")
+    for part in parts:
+        if "-" in part:
+            start, end = map(int, part.split("-"))
+            lgv_numbers.update(range(start, end + 1))
+        else:
+            lgv_numbers.add(int(part))
+    return lgv_numbers
 
 ############################################# Transfer files to remote server ################################################
 def start_transfer(status_widget):
