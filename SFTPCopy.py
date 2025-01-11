@@ -814,6 +814,62 @@ def parse_lgv_range(range_str):
             lgv_numbers.add(int(part))
     return lgv_numbers
 
+
+def validate_and_link_lgv():
+    """
+    Validate the LGV range and link IP addresses from the LGV data table.
+    """
+    try:
+        # Check if the LGV range entry is empty
+        if range_entry.get().strip() == '':
+            print("LGV range is empty!")
+            log_message("LGV range is empty!")
+            return None
+
+        # Parse the LGV range input into a set of numbers
+        lgv_numbers = parse_lgv_range(range_entry.get())
+        found_entries = []
+
+        # Load data from the LGV XML table
+        lgv_data = load_table_data_from_xml(return_data=True)
+        available_lgvs = {int(lgv["name"].replace("LGV", "")): lgv for lgv in lgv_data}  # Extract LGV numbers
+
+        # Match entered LGVs with the XML data
+        for lgv in lgv_numbers:
+            if lgv in available_lgvs:
+                found_entries.append({
+                    "number": lgv,
+                    "ip_address": available_lgvs[lgv]["ip_address"],  # Using ip_address
+                    "type": available_lgvs[lgv]["type"],  # Keep type for future use
+                })
+            else:
+                print(f"LGV {lgv} not found in the table.")
+
+        # Check if all LGVs in the range were found
+        if len(found_entries) == len(lgv_numbers) and found_entries:
+            print("All LGVs found!")
+            return found_entries
+        else:
+            overflow = len(lgv_numbers) - len(found_entries)
+            if overflow > 0:
+                raise ValueError(f"Range contains {overflow} extra elements not in the table.")
+            else:
+                raise ValueError("Some LGVs were not found; check the range.")
+
+    except ValueError as e:
+        print(f"Invalid input. Error: {e}")
+        log_message(f"Invalid input. Error: {e}")
+        return None
+
+def log_message(message):
+        """Insert log messages into the status widget in a thread-safe way."""
+        root.after(0, lambda: status_widget.insert(tk.END, message + "\n"))
+        root.after(0, status_widget.see, tk.END)  # Scroll to the bottom
+
+def clear_status():
+    """Clear the content of the status widget."""
+    status_widget.delete(1.0, tk.END)  # Clear all content
+
 ############################################# Transfer files to remote server ################################################
 def start_transfer(status_widget):
     local_path_string = file_path.get()
@@ -860,6 +916,9 @@ def start_transfer(status_widget):
 
     status_widget.delete(1.0, tk.END)  # Clear previous status messages
     ip_list = parse_ip_ranges(base_ip, range_input)
+
+    ip_list_2 = validate_and_link_lgv()
+    print(f"{ip_list_2}")
 
     if ip_list is None:
         messagebox.showerror("Input Error", "Please provide a valid IP range.")
