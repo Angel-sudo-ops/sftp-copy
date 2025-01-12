@@ -463,25 +463,16 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
     success = True  # Track overall success for the entire transfer process
 
     try:
-        # Update table with "In Progress" status
-        for child in status_table.get_children():
-            row_values = status_table.item(child, "values")
-            if row_values[1] == host: # Match by IP address
-                status_table.item(child, values=(lgv_name, host, "In Progress", f"Transferring {local_file_name}"))
-                break
-        
+               
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
             try:
                 sftp.put(local_path, os.path.join(remote_path, local_file_name))
-                description = f"\nSuccessfully transferred {local_file_name} to\\{host}{remote_path}"
-                status = "Completed"
             except Exception as e:
-                description = f"\nFailed to transfer {local_file_name} to\\{host}{remote_path}. Error: {e}"
-                status = "Failed"
                 success = False
+                
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -510,24 +501,17 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     try:
                         sftp.put(local_file, remote_file)
-                        description = f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}"
-                        status = "Completed"
                     except Exception as e:
-                        description = f"\nFailed to transfer {local_file} to {remote_file} on {host}: {e}"
-                        status = "Failed"
                         success = False
-                    finally:
-                        # Update description in the table
-                        for child in status_table.get_children():
-                            row_values = status_table.item(child, "values")
-                            if row_values[1] == host:
-                                status_table.item(child, values=(lgv_name, host, status, description))
-                                break
 
         sftp.close()
         ssh.close()
+
+        # After completing all transfers, update the table
+        description = "All files transferred successfully!" if success else "Some transfers failed."
+        status = "Completed" if success else "Failed"
     except Exception as e:
-        description = f"Connection to \\{host} failed. Error: {e}"
+        description = f"Connection failed: {e}"
         status = "Failed"
         success = False
     finally:
@@ -537,6 +521,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
             if row_values[1] == host:
                 status_table.item(child, values=(lgv_name, host, status, description))
                 break
+
         # Put the result in the queue with associated host information
         result_queue.put((host, "Success" if success else "Failed"))
 
@@ -887,7 +872,7 @@ def validate_and_link_lgv():
 ############################################# Transfer files to remote server ################################################
 def start_transfer():
     # Reset labels at the start of a new transfer
-    summary_label.config(text="In Progress", fg="blue")
+    summary_label.config(text="")
     timestamp_label.config(text="")
 
     local_path_string = file_path.get()
@@ -899,7 +884,6 @@ def start_transfer():
     
     if transfer_type_sel.get() == 'SFTP':
         port = 20022
-        # 20022 
     elif transfer_type_sel.get() == 'FTP':
         port = FTP_PORT
 
@@ -961,11 +945,21 @@ def start_transfer():
     for item in ip_list:
         lgv_name = item.get("number", "") if lgv_data_exists else ""
         host = item["ip_address"] if lgv_data_exists else item
+        file_count = len(local_paths)
+
+        # Update the table with a summary of the transfer
+        for child in status_table.get_children():
+            row_values = status_table.item(child, "values")
+            if row_values[1] == host:
+                description = f"Transferring {file_count} files..." if file_count > 1 else f"Transferring {os.path.basename(local_paths[0])}..."
+                status_table.item(child, values=(lgv_name, host, "In Progress", description))
+                break
+
         for local_path in local_paths:
             if transfer_type_sel.get() == 'SFTP': 
                 t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, result_queue, lgv_name))
             elif transfer_type_sel.get() == 'FTP':
-                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue))
+                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
             
             threads.append(t)
             t.start()
@@ -1022,26 +1016,19 @@ def monitor_threads_transfer(threads, result_queue):
         if result == "Failed":
             results_by_host[host]["failed"] += 1
 
-    # Update the table with final statuses
+    # Calculate summary
     failed_hosts_count = 0
     total_hosts = len(results_by_host)
 
-    for child in status_table.get_children():
-        row_values = status_table.item(child, "values")
-        host = row_values[1]
-        if host in results_by_host:
-            failed = results_by_host[host]["failed"]
-            total = results_by_host[host]["total"]
-            status = "Failed" if failed > 0 else "Completed"
-            description = f"{failed}/{total} transfers failed" if failed > 0 else "All transfers completed successfully"
-            status_table.item(child, values=(row_values[0], host, status, description))
-            if failed > 0:
-                failed_hosts_count += 1
+    for host, counts in results_by_host.items():
+        if counts["failed"] > 0:
+            failed_hosts_count += 1
+
 
     # Update the summary label
     if failed_hosts_count > 0:
         summary_label.config(
-            text=f"Transfers completed with issues: {failed_hosts_count} out of {total_hosts} hosts failed.",
+            text=f"Transfers completed with issues: {failed_hosts_count} / {total_hosts} hosts failed.",
             foreground="red"
         )
     else:
@@ -2112,8 +2099,8 @@ def set_icon():
 # Dictionary to maintain custom headings
 
 headings = {
-    'LGV'        : 'LGV',
-    'IP'         : 'IP',
+    'Name'       : 'Name',
+    'IPAddress'  : 'IPAddress',
     'Status'     : 'Status',
     'Description': 'Description'
 }
@@ -2158,7 +2145,7 @@ else:
 # root.iconbitmap(icon_path)
 
 window_width = 600
-window_lenght = 750 # 670
+window_lenght = 700 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
 
@@ -2435,20 +2422,20 @@ print(f"Download button state: {download['state']}")
 
 # Create the Treeview (table)
 table_frame = tk.Frame(root)
-table_frame.grid(row=5, column=0, columnspan=2, padx=10, pady=10, sticky='nsew')
+table_frame.grid(row=5, column=0, columnspan=2, padx=10, pady=(10,0), sticky='nsew')
 
 treeview_style = ttk.Style()
 treeview_style.configure("Treeview", rowheight=23)  # Increase row height for more space between items
 treeview_style.configure("Treeview", font=("Segoe UI", 10))  # Adjust font size if necessary
 treeview_style.configure("Treeview", padding=(5, 5))  # Add padding to rows (optional)
 
-columns = ("LGV", "IP", "Status", "Description")
+columns = ("Name", "IPAddress", "Status", "Description")
 status_table = ttk.Treeview(table_frame, columns=columns, show="headings")
 
 # Define column properties
-status_table.column("LGV", width=50, anchor='w')
-status_table.column("IP", width=80, anchor='w')
-status_table.column("Status", width=80, anchor='w')
+status_table.column("Name", width=10, anchor='w')
+status_table.column("IPAddress", width=80, anchor='w')
+status_table.column("Status", width=30, anchor='w')
 status_table.column('Description', width=200, anchor='w')
 
 setup_treeview(status_table)
@@ -2462,14 +2449,14 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
 # Create the Description frame
 description_frame = tk.Frame(root)
-description_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=10, sticky='nsew')
+description_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky='nsew')
 
 # Create the status summary label
-summary_label = tk.Label(description_frame, text="Ready", font=("Arial", 11), fg="blue", anchor="w")
+summary_label = tk.Label(description_frame, font=("Arial", 10), anchor="w")
 summary_label.grid(row=0, column=0, sticky='w', padx=10, pady=5)
 
 # Create the timestamp label
-timestamp_label = tk.Label(description_frame, text="Last operation: ", font=("Arial", 11), fg="grey", anchor="e")
+timestamp_label = tk.Label(description_frame, font=("Arial", 10), anchor="e")
 timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=5)
 
 

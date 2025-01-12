@@ -80,7 +80,7 @@
                 "username": "Administrator",
                 "password": "E80Lgv!",
                 "transfer_type": "SFTP",
-                "local_dir": "C:/default_path/"
+                "local_dir": "C:/default_path/config.xml"
             },
             {
                 "sub_name": "CB30_Boot",
@@ -88,6 +88,16 @@
                 "ip_range": "1-25",
                 "local_dir": "C:/default_path/Boot",
                 "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "E80Lgv!",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB30_config_custom",
+                "base_ip": "7.34.130.9",
+                "ip_range": "1-18",
+                "local_dir": "\"C:/default_path/config1.xml\",\"C:/default_path/config2.xml\"",
+                "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "E80Lgv!",
                 "transfer_type": "SFTP"
