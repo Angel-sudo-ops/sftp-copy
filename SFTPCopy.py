@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.8.7'
+__version__ = '3.4.8.8'
 
 CONFIG_FILE = "config.ini"
 
@@ -935,7 +935,7 @@ def start_transfer():
     # Clear and populate the status table
     status_table.delete(*status_table.get_children())
     for item in ip_list:
-        lgv_name = item["number"] if lgv_data_exists else ""
+        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
         ip_address = item["ip_address"] if lgv_data_exists else item
         status_table.insert("", "end", values=(lgv_name, ip_address, "Queued", ""))
 
@@ -943,7 +943,7 @@ def start_transfer():
     threads = []
 
     for item in ip_list:
-        lgv_name = item.get("number", "") if lgv_data_exists else ""
+        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
         host = item["ip_address"] if lgv_data_exists else item
         file_count = len(local_paths)
 
@@ -2434,7 +2434,7 @@ status_table = ttk.Treeview(table_frame, columns=columns, show="headings")
 
 # Define column properties
 status_table.column("Name", width=10, anchor='w')
-status_table.column("IPAddress", width=80, anchor='w')
+status_table.column("IPAddress", width=60, anchor='w')
 status_table.column("Status", width=30, anchor='w')
 status_table.column('Description', width=200, anchor='w')
 
