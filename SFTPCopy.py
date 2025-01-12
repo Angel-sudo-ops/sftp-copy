@@ -462,8 +462,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
     local_file_name = os.path.basename(local_path)
     success = True  # Track overall success for the entire transfer process
 
-    try:
-               
+    try:   
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
 
@@ -872,8 +871,8 @@ def validate_and_link_lgv():
 ############################################# Transfer files to remote server ################################################
 def start_transfer():
     # Reset labels at the start of a new transfer
-    summary_label.config(text="")
-    timestamp_label.config(text="")
+    summary_label.config(text="Status result", fg="black")
+    timestamp_label.config(text="Last operation: 00:00:00")
 
     local_path_string = file_path.get()
     base_ip = ip_entry.get()
@@ -1757,8 +1756,14 @@ def delete_profile_or_subprofile():
                 subprofiles = profile.get("sub_profiles", [])
                 for subprofile in subprofiles:
                     if subprofile["sub_name"] == subprofile_name:
-                        subprofiles.remove(subprofile)
-                        messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' deleted successfully.")
+                        confirm = messagebox.askyesno(
+                        "Confirmation", 
+                        f"Are you sure you want to delete sub-profile '{subprofile_name}'?"
+                        )
+                        if confirm:
+                            subprofiles.remove(subprofile)
+                            subprofiles_combobox.set("")
+                            messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' deleted successfully.")
                         break
                 else:
                     messagebox.showerror("Error", f"Sub-profile '{subprofile_name}' not found.")
@@ -1767,7 +1772,6 @@ def delete_profile_or_subprofile():
                 # Update subprofiles_combobox after deletion
                 subprofile_names = [sub["sub_name"] for sub in subprofiles]
                 subprofiles_combobox['values'] = tuple(subprofile_names)
-                subprofiles_combobox.set("")
 
                 # If no sub-profiles are left, ask if the user wants to delete the entire profile
                 if not subprofiles:
@@ -2145,7 +2149,7 @@ else:
 # root.iconbitmap(icon_path)
 
 window_width = 600
-window_lenght = 700 # 670
+window_lenght = 670 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
 
@@ -2303,7 +2307,7 @@ frame_lgvs = tk.Frame(frame_lgv_login)
 frame_lgvs.grid(row=0, column=0, columnspan=1, padx=5, pady=5, sticky='e')
 
 frame_ip = tk.Frame(frame_lgvs)
-frame_ip.grid(row=0, column=0, padx=5, pady=5)
+frame_ip.grid(row=0, column=0, padx=0, pady=0)
 
 ip_label = ttk.Label(frame_ip, text="Root IP:")
 ip_label.grid(row=0, column=0, padx=5, pady=5)
@@ -2314,7 +2318,7 @@ create_placeholder(ip_entry, "e.g., 7.204.194.10", "RootIP.TEntry", "Placeholder
 ip_entry.bind("<KeyRelease>", validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip))
 
 frame_range = tk.Frame(frame_lgvs)
-frame_range.grid(row=1, column=0, padx=5, pady=10)
+frame_range.grid(row=1, column=0, padx=0, pady=0)
 
 range_label = ttk.Label(frame_range, text="Range:")
 range_label.grid(row=0, column=0, padx=5, pady=5)
@@ -2329,7 +2333,7 @@ frame_login = tk.Frame(frame_lgv_login)
 frame_login.grid(row=0, column=1, columnspan=1, padx=5, pady=5)
 
 frame_user = tk.Frame(frame_login)
-frame_user.grid(row=0, column=0, padx=5, pady=5)
+frame_user.grid(row=0, column=0, padx=0, pady=0)
 
 username_label = ttk.Label(frame_user, text="Username:")
 username_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
@@ -2339,7 +2343,7 @@ username_entry.insert(0, "Administrator")
 username_entry.grid(row=0, column=1, padx=5, pady=5)
 
 frame_password = tk.Frame(frame_login)
-frame_password.grid(row=1, column=0, padx=5, pady=10)
+frame_password.grid(row=1, column=0, padx=0, pady=0)
 
 password_label = ttk.Label(frame_password, text="Password:")
 password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
@@ -2447,16 +2451,21 @@ scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=status_table.y
 status_table.configure(yscroll=scrollbar.set)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+
 # Create the Description frame
 description_frame = tk.Frame(root)
 description_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky='nsew')
 
+# Configure column weights to control alignment
+description_frame.columnconfigure(0, weight=1)  # Left column (summary label)
+description_frame.columnconfigure(1, weight=0)  # Right column (timestamp label)
+
 # Create the status summary label
-summary_label = tk.Label(description_frame, font=("Arial", 10), anchor="w")
+summary_label = tk.Label(description_frame, text="Status result", font=("Arial", 10), anchor="w")
 summary_label.grid(row=0, column=0, sticky='w', padx=10, pady=5)
 
 # Create the timestamp label
-timestamp_label = tk.Label(description_frame, font=("Arial", 10), anchor="e")
+timestamp_label = tk.Label(description_frame, text="Last operation: 00:00:00", font=("Arial", 10), anchor="e")
 timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=5)
 
 
