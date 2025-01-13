@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.8.8'
+__version__ = '3.4.8.9'
 
 CONFIG_FILE = "config.ini"
 
@@ -488,12 +488,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
                             description = f"\nFailed to create directory {remote_dir} on {host}: {e}"
                             continue  # Continue with other directories/files even if one fails
                         finally:
-                            # Update description in the table
-                            for child in status_table.get_children():
-                                row_values = status_table.item(child, "values")
-                                if row_values[1] == host:
-                                    status_table.item(child, values=(lgv_name, host, "In Progress", description))
-                                    break
+                            update_status_table(host, lgv_name, "In Progress", description)
 
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
@@ -505,12 +500,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
                         description = f"\nFailed to transfer {local_file}"
                         success = False
                     finally:
-                        # Update the table with the result and description
-                        for child in status_table.get_children():
-                            row_values = status_table.item(child, "values")
-                            if row_values[1] == host:
-                                status_table.item(child, values=(lgv_name, host, "In Progress", description))
-                                break
+                        update_status_table(host, lgv_name, "In Progress", description)
 
         sftp.close()
         ssh.close()
@@ -523,14 +513,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
         status = "Failed"
         success = False
     finally:
-        # Update the table with the result and description
-        for child in status_table.get_children():
-            row_values = status_table.item(child, "values")
-            if row_values[1] == host:
-                status_table.item(child, values=(lgv_name, host, status, description))
-                break
-
-        # Put the result in the queue with associated host information
+        update_status_table(host, lgv_name, status, description)
         result_queue.put((host, "Success" if success else "Failed"))
 
 ############################################### SFTP Download ###############################################
@@ -597,7 +580,7 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
 
 ################################################ FTP transfer ###############################################################
 
-def ftp_transfer(host, username, password, local_path, remote_path, status_widget, result_queue, lgv_name=""):
+def ftp_transfer(host, username, password, local_path, remote_path, result_queue, lgv_name=""):
     success = True  # Track overall success for the entire transfer process
     local_file_name = os.path.basename(local_path)
     try:        
@@ -629,12 +612,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                             description = f"\nFailed to create directory {remote_dir} on {host}: {e}"
                             continue  # Continue with other directories/files even if one fails
                         finally:
-                            # Update description in the table
-                            for child in status_table.get_children():
-                                row_values = status_table.item(child, "values")
-                                if row_values[1] == host:
-                                    status_table.item(child, values=(lgv_name, host, "In Progress", description))
-                                    break
+                            update_status_table(host, lgv_name, "In Progress", description)
 
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
@@ -647,12 +625,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                         description = f"\nFailed to transfer {local_file}"
                         success = False
                     finally:
-                        # Update description in the table
-                            for child in status_table.get_children():
-                                row_values = status_table.item(child, "values")
-                                if row_values[1] == host:
-                                    status_table.item(child, values=(lgv_name, host, "In Progress", description))
-                                    break
+                        update_status_table(host, lgv_name, "In Progress", description)
         
         # Close the FTP connection
         ftp.quit()
@@ -665,13 +638,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
         status = "Failed"
         success = False
     finally:
-        # Update the table with the result and description
-        for child in status_table.get_children():
-            row_values = status_table.item(child, "values")
-            if row_values[1] == host:
-                status_table.item(child, values=(lgv_name, host, status, description))
-                break
-
+        update_status_table(host, lgv_name, status, description)
         result_queue.put((host, "Success" if success else "Failed"))
 
 def ftp_transfer_anonymous(host, username, password, local_path, remote_path, status_widget):
@@ -971,12 +938,12 @@ def start_transfer():
         file_count = len(local_paths)
 
         # Update the table with a summary of the transfer
-        for child in status_table.get_children():
-            row_values = status_table.item(child, "values")
-            if row_values[1] == host:
-                description = f"Transferring {file_count} files..." if file_count > 1 else f"Transferring {os.path.basename(local_paths[0])}..."
-                status_table.item(child, values=(lgv_name, host, "In Progress", description))
-                break
+        description = (
+            f"Transferring {file_count} files..." 
+            if file_count > 1 
+            else f"Transferring {os.path.basename(local_paths[0])}..."
+        )
+        update_status_table(host, lgv_name, "In Progress", description)
 
         for local_path in local_paths:
             if transfer_type_sel.get() == 'SFTP': 
@@ -2158,6 +2125,25 @@ def natural_keys(text):
     Alphanumeric (natural) sort to handle numbers within strings correctly
     """
     return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
+###################################################### Update Status Table ################################################
+
+def update_status_table(host, lgv_name, status, description):
+    """
+    Update the status table with the given host, LGV name, status, and description.
+
+    Args:
+        host (str): IP address or host identifier.
+        lgv_name (str): LGV number or identifier.
+        status (str): Current status (e.g., "In Progress", "Completed", "Failed").
+        description (str): Additional description or details.
+        status_table (ttk.Treeview): The Treeview table to update.
+    """
+    for child in status_table.get_children():
+        row_values = status_table.item(child, "values")
+        if row_values[1] == host:
+            status_table.item(child, values=(lgv_name, host, status, description))
+            break
 
 
 ######################################################## Create UI ##################################################
