@@ -94,8 +94,8 @@
             },
             {
                 "sub_name": "CB30_config_custom",
-                "base_ip": "7.34.130.9",
-                "ip_range": "1-18",
+                "base_ip": "111.102.103.200",
+                "ip_range": "1-5",
                 "local_dir": "\"C:/default_path/config1.xml\",\"C:/default_path/config2.xml\"",
                 "remote_dir": "\\Config",
                 "username": "Administrator",

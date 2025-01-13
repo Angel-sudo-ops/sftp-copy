@@ -500,8 +500,17 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     try:
                         sftp.put(local_file, remote_file)
+                        description = f"\nSuccessfully transferred {local_file}"
                     except Exception as e:
+                        description = f"\nFailed to transfer {local_file}"
                         success = False
+                    finally:
+                        # Update the table with the result and description
+                        for child in status_table.get_children():
+                            row_values = status_table.item(child, "values")
+                            if row_values[1] == host:
+                                status_table.item(child, values=(lgv_name, host, "In Progress", description))
+                                break
 
         sftp.close()
         ssh.close()
@@ -588,13 +597,10 @@ def sftp_download(host, port, username, password, remote_path, local_path, statu
 
 ################################################ FTP transfer ###############################################################
 
-def ftp_transfer(host, username, password, local_path, remote_path, status_widget, result_queue):
+def ftp_transfer(host, username, password, local_path, remote_path, status_widget, result_queue, lgv_name=""):
     success = True  # Track overall success for the entire transfer process
     local_file_name = os.path.basename(local_path)
-    try:
-        status_widget.insert(tk.END, f"Transferring {local_file_name} to {host}...\n")
-        status_widget.yview(tk.END)
-        
+    try:        
         # Connect to the FTP server
         ftp = FTP(host, timeout=15)
         ftp.login(user=username, passwd=password)
@@ -603,12 +609,9 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
             try:
                 with open(local_path, 'rb') as file:
                     ftp.storbinary(f"STOR {os.path.join(remote_path, local_file_name).replace('\\', '/')}", file)
-                status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file_name} to\n\\{host}{remote_path}\n")
             except Exception as e:
-                status_widget.insert(tk.END, f"\nFailed to transfer {local_file_name} to\n\\{host}{remote_path}. Error: {e}\n")
                 success = False
-            finally:
-                status_widget.yview(tk.END)
+
         else:
             for root_dir, dirs, files in os.walk(local_path):
                 for dir_name in dirs:
@@ -621,34 +624,55 @@ def ftp_transfer(host, username, password, local_path, remote_path, status_widge
                         # If the directory does not exist, create it
                         try:
                             ftp.mkd(remote_dir)
-                            status_widget.insert(tk.END, f"Created directory {remote_dir} on {host}\n")
+                            description = f"Created directory {remote_dir} on {host}"
                         except Exception as e:
-                            status_widget.insert(tk.END, f"\nFailed to create directory {remote_dir} on {host}. Error: {e}\n")
+                            description = f"\nFailed to create directory {remote_dir} on {host}: {e}"
                             continue  # Continue with other directories/files even if one fails
                         finally:
-                            status_widget.yview(tk.END)
+                            # Update description in the table
+                            for child in status_table.get_children():
+                                row_values = status_table.item(child, "values")
+                                if row_values[1] == host:
+                                    status_table.item(child, values=(lgv_name, host, "In Progress", description))
+                                    break
+
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path)).replace("\\", "/")
                     try:
                         with open(local_file, 'rb') as file:
                             ftp.storbinary(f"STOR {remote_file}", file)
-                        status_widget.insert(tk.END, f"\nSuccessfully transferred {local_file} to\n\\{host}{remote_file}\n")
+                        description = f"\nSuccessfully transferred {local_file}"
                     except Exception as e:
-                        status_widget.insert(tk.END, f"\nFailed to transfer {local_file} to {remote_file} on {host}. Error: {e}\n")
+                        description = f"\nFailed to transfer {local_file}"
                         success = False
                     finally:
-                        status_widget.yview(tk.END)
+                        # Update description in the table
+                            for child in status_table.get_children():
+                                row_values = status_table.item(child, "values")
+                                if row_values[1] == host:
+                                    status_table.item(child, values=(lgv_name, host, "In Progress", description))
+                                    break
         
         # Close the FTP connection
         ftp.quit()
+
+        # After completing all transfers, update the table
+        description = "All files transferred successfully!" if success else "Some transfers failed."
+        status = "Completed" if success else "Failed"
     except Exception as e:
-        status_widget.insert(tk.END, f"\nFailed to initiate transfer to \\{host}. \nError: {e}\n")
+        description = f"Connection failed: {e}"
+        status = "Failed"
         success = False
     finally:
-        result = "Success" if success else "Failed"
-        status_widget.yview(tk.END)
-        result_queue.put((host, result))
+        # Update the table with the result and description
+        for child in status_table.get_children():
+            row_values = status_table.item(child, "values")
+            if row_values[1] == host:
+                status_table.item(child, values=(lgv_name, host, status, description))
+                break
+
+        result_queue.put((host, "Success" if success else "Failed"))
 
 def ftp_transfer_anonymous(host, username, password, local_path, remote_path, status_widget):
     try:
