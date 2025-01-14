@@ -805,7 +805,9 @@ def start_download():
     for item in ip_list:
         lgv_name = f"LGV{int(item['number']):02}" if lgv_data_exists else ""
         host = item["ip_address"] if lgv_data_exists else item
-        local_path = os.path.join(download_folder, host)
+
+        folder_name = lgv_name if lgv_data_exists else host
+        local_path = os.path.join(download_folder, folder_name)
 
         # Update the table with a summary of the download
         description = f"Preparing to download {remote_dir}..."
