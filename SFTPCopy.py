@@ -2511,11 +2511,11 @@ set_paths()
 update_menu_state()
 
 
-update_rename_button_state()
-
 # Load last session
 load_last_session_from_config()
 load_data_from_selection()
+
+update_rename_button_state()
 
 # Disable focus for all widgets
 # disable_focus(root)
