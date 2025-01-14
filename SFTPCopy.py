@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.1'
+__version__ = '3.4.9.2'
 
 CONFIG_FILE = "config.ini"
 
@@ -450,9 +450,111 @@ def open_lgv_table_window():
 
     load_table_data_from_xml(treeview)
 
-#############################################################################################################
-########################################### File transfer methods ###########################################
-#############################################################################################################
+
+#######################################################################################################################
+############################################### Transfer to remote server #############################################
+#######################################################################################################################
+
+def start_transfer():
+    # Reset labels at the start of a new transfer
+    summary_label.config(text="Status result", fg="black")
+    timestamp_label.config(text="Last operation: 00:00:00")
+
+    local_path_string = file_path.get()
+    base_ip = ip_entry.get()
+    range_input = range_entry.get()
+    remote_dir = remote_dir_entry.get()
+    username = username_entry.get()
+    password = password_entry.get()
+    
+    if transfer_type_sel.get() == 'SFTP':
+        port = 20022
+    elif transfer_type_sel.get() == 'FTP':
+        port = FTP_PORT
+
+
+    # Parse local paths
+    local_paths = [path.strip() for path in local_path_string.split(',')]
+    if not local_paths:
+        messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
+        return
+
+    if not validate_range():
+        messagebox.showerror("Input Error", "Please enter the IP range.")
+        return
+    
+    # Check LGV data availability
+    lgv_data_exists = os.path.exists(LGV_DATA_FILE)
+
+    # Validate IP source
+    if lgv_data_exists:
+        ip_list = validate_and_link_lgv()
+        if not ip_list:
+            messagebox.showerror("Input Error", "Invalid LGV range or no matching data in the LGV table.")
+            return
+    else:
+        base_ip = ip_entry.get()
+        if not validate_base_ip():
+            messagebox.showerror("Input Error", "Please enter the base IP.")
+            return
+        if not validate_range():
+            messagebox.showerror("Input Error", "Please enter a valid range.")
+            return
+        ip_list = parse_ip_ranges(base_ip, range_input)
+        if not ip_list:
+            messagebox.showerror("Input Error", "Please provide a valid IP range.")
+            return
+
+    if not remote_dir:
+        messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    if not username:
+        messagebox.showerror("Input Error", "Please enter the username.")
+        return
+    if not password:
+        messagebox.showerror("Input Error", "Please enter the password.")
+        return
+    
+    print (f"Selected port is {port}")
+    print(f"Login is {username}")
+    print(f"Password is {password}")
+    print(local_paths)
+
+    # Clear and populate the status table
+    status_table.delete(*status_table.get_children())
+    for item in ip_list:
+        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
+        ip_address = item["ip_address"] if lgv_data_exists else item
+        status_table.insert("", "end", values=(lgv_name, ip_address, "Queued", ""))
+
+    result_queue = queue.Queue()
+    threads = []
+
+    for item in ip_list:
+        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
+        host = item["ip_address"] if lgv_data_exists else item
+        file_count = len(local_paths)
+
+        # Update the table with a summary of the transfer
+        description = (
+            f"Transferring {file_count} files..." 
+            if file_count > 1 
+            else f"Transferring {os.path.basename(local_paths[0])}..."
+        )
+        update_status_table(host, lgv_name, "In Progress", description)
+
+        for local_path in local_paths:
+            if transfer_type_sel.get() == 'SFTP': 
+                t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, result_queue, lgv_name))
+            elif transfer_type_sel.get() == 'FTP':
+                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
+            
+            threads.append(t)
+            t.start()
+
+    # Start a separate thread to monitor the worker threads
+    threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
+
 
 ############################################### SFTP Transfer ###############################################
 
@@ -516,68 +618,6 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
         update_status_table(host, lgv_name, status, description)
         result_queue.put((host, "Success" if success else "Failed"))
 
-############################################### SFTP Download ###############################################
-
-def sftp_download(host, port, username, password, remote_path, local_path, result_queue, lgv_name=""):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    success = True  # Track overall success for the entire download process
-    description = ""
-    status = "In Progress"  # Default status
-
-    try:
-        # Update table with "In Progress" status
-        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
-
-        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
-        sftp = ssh.open_sftp()
-        
-        def download_file(sftp, remote_file_path, local_file_path):
-            nonlocal success, description
-            try:
-                sftp.get(remote_file_path, local_file_path)
-                description = f"Successfully downloaded {remote_file_path}"
-            except Exception as e:
-                description = f"Failed to download {remote_file_path}: {e}"
-                success = False
-            finally:
-                update_status_table(host, lgv_name, status, description)
-
-        def download_folder(sftp, remote_folder_path, local_folder_path):
-            os.makedirs(local_folder_path, exist_ok=True)
-            for entry in sftp.listdir_attr(remote_folder_path):
-                remote_path = os.path.join(remote_folder_path, entry.filename).replace('\\', '/')
-                local_path = os.path.join(local_folder_path, entry.filename)
-                if stat.S_ISDIR(entry.st_mode):
-                    download_folder(sftp, remote_path, local_path)
-                else:
-                    download_file(sftp, remote_path, local_path)
-
-        def is_sftp_dir(sftp, path):
-            try:
-                return stat.S_ISDIR(sftp.stat(path).st_mode)
-            except IOError:
-                return False
-        
-        if is_sftp_dir(sftp, remote_path):
-            download_folder(sftp, remote_path, local_path)
-        else:
-            download_file(sftp, remote_path, local_path)
-
-        sftp.close()
-        ssh.close()
-
-        # Final status if all files are downloaded successfully
-        description = "Download completed successfully!" if success else "Download completed with errors."
-        status = "Completed" if success else "Failed"
-        
-    except Exception as e:
-        description = f"Failed to initiate download: {e}"
-        status="Failed"
-        success = False
-    finally:
-        update_status_table(host, lgv_name, status, description)
-        result_queue.put((host, "Success" if success else "Failed"))
 
 ################################################ FTP transfer ###############################################################
 
@@ -684,359 +724,9 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
     finally:
         status_widget.yview(tk.END)
 
-################################################ FTP download ###############################################################
-
-def ftp_download(host, username, password, remote_path, local_path, result_queue, lgv_name=""):
-    success = True  # Track overall success for the entire download process
-    description = ""
-    status = "In Progress"
-
-    try:
-        # Update table with "In Progress" status
-        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
-        
-        # Connect to the FTP server
-        ftp = FTP(host)
-        ftp.login(user=username, passwd=password)
-        
-        try:
-            ftp.cwd(remote_path)
-        except Exception as e:
-            description = f"Error navigating to {remote_path}: {e}"
-            ftp.quit()
-            success = False
-            return
-        finally:
-            update_status_table(host, lgv_name, status, description)
-
-        def download_file(ftp, remote_file_path, local_file_path):
-            nonlocal success, description
-            try:
-                with open(local_file_path, 'wb') as local_file:
-                    ftp.retrbinary(f'RETR {remote_file_path}', local_file.write)
-                description = f"Successfully downloaded {remote_file_path}"
-            except Exception as e:
-                description = f"Failed to download {remote_file_path}: {e}"
-                success = False
-            finally:
-                update_status_table(host, lgv_name, "In Progress", description)
-
-        def download_folder(ftp, remote_folder_path, local_folder_path):
-            os.makedirs(local_folder_path, exist_ok=True)
-            ftp.cwd(remote_folder_path)
-            
-            file_list = ftp.nlst()
-            
-            for file_name in file_list:
-                local_path = os.path.join(local_folder_path, file_name)
-                remote_path = os.path.join(remote_folder_path, file_name).replace('\\', '/')
-                
-                if is_ftp_dir(ftp, file_name):
-                    download_folder(ftp, remote_path, local_path)
-                else:
-                    download_file(ftp, remote_path, local_path)
-        
-        def download_files_only(ftp, remote_folder_path, local_folder_path):
-            os.makedirs(local_folder_path, exist_ok=True)
-            ftp.cwd(remote_folder_path)
-            
-            file_list = ftp.nlst()
-            
-            for file_name in file_list:
-                remote_item_path = os.path.join(remote_folder_path, file_name).replace('\\', '/')
-                local_item_path = os.path.join(local_folder_path, file_name)
-                
-                if not is_ftp_dir(ftp, file_name):
-                    download_file(ftp, remote_item_path, local_item_path)
-
-        def is_ftp_dir(ftp, name):
-            try:
-                ftp.cwd(name)
-                ftp.cwd('..')
-                return True
-            except Exception as e:
-                return False
-
-        download_files_only(ftp, remote_path, local_path)
-        
-        # Close the FTP connection
-        ftp.quit()
-
-        description = "Download completed successfully!" if success else "Download completed with errors."
-        status = "Completed" if success else "Failed"
-
-    except Exception as e:
-        description = f"Failed to initiate download: {e}"
-        status = "Failed"
-        success = False
-    finally:
-        update_status_table(host, lgv_name, status, description)
-        result_queue.put((host, "Success" if success else "Failed"))
-
-#############################################################################################################
-#############################################################################################################
-#############################################################################################################
-
-####################################################### Get IPs #############################################################
-
-def parse_ip_ranges(base_ip, range_input):
-    ip_list = []
-    base_ip_parts = base_ip.rsplit('.', 1)
-    base_ip_root = base_ip_parts[0]
-    base_ip_last_digit = int(base_ip_parts[1])
-
-    if not range_input:
-        return None
-    else:
-        ranges = range_input.split(',')
-        for r in ranges:
-            if '-' in r:
-                start, end = map(int, r.split('-'))
-                ip_list.extend([f"{base_ip_root}.{i + base_ip_last_digit}" for i in range(start, end + 1)])
-            else:
-                ip_list.append(f"{base_ip_root}.{int(r.strip()) + base_ip_last_digit}")
-    # print(ip_list)
-    return ip_list
-
-####################################################### Get LGV Numbers ########################################################
-
-def parse_lgv_range(range_str):
-    """Parse LGV range input into a list of LGV numbers."""
-    lgv_numbers = set()
-    parts = range_str.split(",")
-    for part in parts:
-        if "-" in part:
-            start, end = map(int, part.split("-"))
-            lgv_numbers.update(range(start, end + 1))
-        else:
-            lgv_numbers.add(int(part))
-    return lgv_numbers
-
-
-def validate_and_link_lgv():
-    """
-    Validate the LGV range and link IP addresses from the LGV data table.
-    """
-    try:
-        # Check if the LGV range entry is empty
-        if range_entry.get().strip() == '':
-            print("LGV range is empty!")
-            # log_message("LGV range is empty!")
-            return None
-
-        # Parse the LGV range input into a set of numbers
-        lgv_numbers = parse_lgv_range(range_entry.get())
-        found_entries = []
-
-        # Load data from the LGV XML table
-        lgv_data = load_table_data_from_xml(return_data=True)
-        available_lgvs = {int(lgv["name"].replace("LGV", "")): lgv for lgv in lgv_data}  # Extract LGV numbers
-
-        # Match entered LGVs with the XML data
-        for lgv in lgv_numbers:
-            if lgv in available_lgvs:
-                found_entries.append({
-                    "number": lgv,
-                    "ip_address": available_lgvs[lgv]["ip_address"],  # Using ip_address
-                    "type": available_lgvs[lgv]["type"],  # Keep type for future use
-                })
-            else:
-                print(f"LGV {lgv} not found in the table.")
-
-        # Check if all LGVs in the range were found
-        if len(found_entries) == len(lgv_numbers) and found_entries:
-            print("All LGVs found!")
-            return found_entries
-        else:
-            overflow = len(lgv_numbers) - len(found_entries)
-            if overflow > 0:
-                raise ValueError(f"Range contains {overflow} extra elements not in the table.")
-            else:
-                raise ValueError("Some LGVs were not found; check the range.")
-
-    except ValueError as e:
-        print(f"Invalid input. Error: {e}")
-        # log_message(f"Invalid input. Error: {e}")
-        return None
-
-
-############################################# Transfer files to remote server ################################################
-def start_transfer():
-    # Reset labels at the start of a new transfer
-    summary_label.config(text="Status result", fg="black")
-    timestamp_label.config(text="Last operation: 00:00:00")
-
-    local_path_string = file_path.get()
-    base_ip = ip_entry.get()
-    range_input = range_entry.get()
-    remote_dir = remote_dir_entry.get()
-    username = username_entry.get()
-    password = password_entry.get()
-    
-    if transfer_type_sel.get() == 'SFTP':
-        port = 20022
-    elif transfer_type_sel.get() == 'FTP':
-        port = FTP_PORT
-
-
-    # Parse local paths
-    local_paths = [path.strip() for path in local_path_string.split(',')]
-    if not local_paths:
-        messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
-        return
-
-    if not validate_range():
-        messagebox.showerror("Input Error", "Please enter the IP range.")
-        return
-    
-    # Check LGV data availability
-    lgv_data_exists = os.path.exists(LGV_DATA_FILE)
-
-    # Validate IP source
-    if lgv_data_exists:
-        ip_list = validate_and_link_lgv()
-        if not ip_list:
-            messagebox.showerror("Input Error", "Invalid LGV range or no matching data in the LGV table.")
-            return
-    else:
-        base_ip = ip_entry.get()
-        if not validate_base_ip():
-            messagebox.showerror("Input Error", "Please enter the base IP.")
-            return
-        if not validate_range():
-            messagebox.showerror("Input Error", "Please enter a valid range.")
-            return
-        ip_list = parse_ip_ranges(base_ip, range_input)
-        if not ip_list:
-            messagebox.showerror("Input Error", "Please provide a valid IP range.")
-            return
-
-    if not remote_dir:
-        messagebox.showerror("Input Error", "Please enter the remote directory.")
-        return
-    if not username:
-        messagebox.showerror("Input Error", "Please enter the username.")
-        return
-    if not password:
-        messagebox.showerror("Input Error", "Please enter the password.")
-        return
-    
-    print (f"Selected port is {port}")
-    print(f"Login is {username}")
-    print(f"Password is {password}")
-    print(local_paths)
-
-    # Clear and populate the status table
-    status_table.delete(*status_table.get_children())
-    for item in ip_list:
-        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
-        ip_address = item["ip_address"] if lgv_data_exists else item
-        status_table.insert("", "end", values=(lgv_name, ip_address, "Queued", ""))
-
-    result_queue = queue.Queue()
-    threads = []
-
-    for item in ip_list:
-        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
-        host = item["ip_address"] if lgv_data_exists else item
-        file_count = len(local_paths)
-
-        # Update the table with a summary of the transfer
-        description = (
-            f"Transferring {file_count} files..." 
-            if file_count > 1 
-            else f"Transferring {os.path.basename(local_paths[0])}..."
-        )
-        update_status_table(host, lgv_name, "In Progress", description)
-
-        for local_path in local_paths:
-            if transfer_type_sel.get() == 'SFTP': 
-                t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, result_queue, lgv_name))
-            elif transfer_type_sel.get() == 'FTP':
-                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
-            
-            threads.append(t)
-            t.start()
-
-    # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
-
-################################ Monitor threads ############################################
-def monitor_threads_deprecated(threads, result_queue, status_widget):
-    # Wait for all threads to complete
-    for t in threads:
-        t.join()
-    
-    # Check for any failed results
-    failed_hosts = []
-    failed = 0
-    total = 0
-
-    while not result_queue.empty():
-        host, result = result_queue.get()
-        if result == "Failed":
-            failed_hosts.append(host)
-            failed=failed+1
-        total=total+1
-
-    if failed_hosts:
-        status_widget.insert(tk.END, f"\n\n*****Connection failed for {failed} out of {total} hosts*****\n")
-        for host in failed_hosts:
-            status_widget.insert(tk.END, f"{host}\n")
-    else:
-        status_widget.insert(tk.END, "\n\n*****All transfers successfull*****\n")
-    
-    current_time = datetime.now()
-    formatted_time = current_time.strftime("%H:%M:%S")
-    print(f"At {formatted_time}")
-    status_widget.insert(tk.END, f"\nOperation performed at {formatted_time}")
-
-    # Ensure the status widget updates properly
-    status_widget.yview(tk.END)
-
-
-def monitor_threads(threads, result_queue):
-    # Wait for all threads to complete
-    for t in threads:
-        t.join()
-
-    # Check for any failed results grouped by host
-    results_by_host = {}
-    while not result_queue.empty():
-        host, result = result_queue.get()
-        if host not in results_by_host:
-            results_by_host[host] = {"total": 0, "failed": 0}
-        results_by_host[host]["total"] += 1
-        if result == "Failed":
-            results_by_host[host]["failed"] += 1
-
-    # Calculate summary
-    failed_hosts_count = 0
-    total_hosts = len(results_by_host)
-
-    for host, counts in results_by_host.items():
-        if counts["failed"] > 0:
-            failed_hosts_count += 1
-
-
-    # Update the summary label
-    if failed_hosts_count > 0:
-        summary_label.config(
-            text=f"Transfers completed with issues: {failed_hosts_count} / {total_hosts} hosts failed.",
-            foreground="red"
-        )
-    else:
-        summary_label.config(
-            text="All transfers completed successfully!",
-            foreground="green"
-        )
-
-    # Update the timestamp label
-    current_time = datetime.now()
-    formatted_time = current_time.strftime("%H:%M:%S")
-    timestamp_label.config(text=f"Last operation: {formatted_time}")
-
-############################################# Download files from remote server ################################################
+#######################################################################################################################
+############################################# Download from remote server #############################################
+#######################################################################################################################
 
 def start_download():
     # Reset labels at the start of a new download
@@ -1131,6 +821,319 @@ def start_download():
     
     # Start a separate thread to monitor the worker threads
     threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
+
+
+############################################### SFTP Download ###############################################
+
+def sftp_download(host, port, username, password, remote_path, local_path, result_queue, lgv_name=""):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    success = True  # Track overall success for the entire download process
+    description = ""
+    status = "In Progress"  # Default status
+
+    try:
+        # Update table with "In Progress" status
+        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
+
+        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
+        sftp = ssh.open_sftp()
+        
+        def download_file(sftp, remote_file_path, local_file_path):
+            nonlocal success, description
+            try:
+                sftp.get(remote_file_path, local_file_path)
+                description = f"Successfully downloaded {remote_file_path}"
+            except Exception as e:
+                description = f"Failed to download {remote_file_path}: {e}"
+                success = False
+            finally:
+                update_status_table(host, lgv_name, status, description)
+
+        def download_folder(sftp, remote_folder_path, local_folder_path):
+            os.makedirs(local_folder_path, exist_ok=True)
+            for entry in sftp.listdir_attr(remote_folder_path):
+                remote_path = os.path.join(remote_folder_path, entry.filename).replace('\\', '/')
+                local_path = os.path.join(local_folder_path, entry.filename)
+                if stat.S_ISDIR(entry.st_mode):
+                    download_folder(sftp, remote_path, local_path)
+                else:
+                    download_file(sftp, remote_path, local_path)
+
+        def is_sftp_dir(sftp, path):
+            try:
+                return stat.S_ISDIR(sftp.stat(path).st_mode)
+            except IOError:
+                return False
+        
+        if is_sftp_dir(sftp, remote_path):
+            download_folder(sftp, remote_path, local_path)
+        else:
+            download_file(sftp, remote_path, local_path)
+
+        sftp.close()
+        ssh.close()
+
+        # Final status if all files are downloaded successfully
+        description = "Download completed successfully!" if success else "Download completed with errors."
+        status = "Completed" if success else "Failed"
+        
+    except Exception as e:
+        description = f"Failed to initiate download: {e}"
+        status="Failed"
+        success = False
+    finally:
+        update_status_table(host, lgv_name, status, description)
+        result_queue.put((host, "Success" if success else "Failed"))
+
+################################################ FTP download ###############################################################
+
+def ftp_download(host, username, password, remote_path, local_path, result_queue, lgv_name=""):
+    success = True  # Track overall success for the entire download process
+    description = ""
+    status = "In Progress"
+
+    try:
+        # Update table with "In Progress" status
+        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
+        
+        # Connect to the FTP server
+        ftp = FTP(host)
+        ftp.login(user=username, passwd=password)
+        
+        try:
+            ftp.cwd(remote_path)
+        except Exception as e:
+            description = f"Error navigating to {remote_path}: {e}"
+            ftp.quit()
+            success = False
+            return
+        finally:
+            update_status_table(host, lgv_name, status, description)
+
+        def download_file(ftp, remote_file_path, local_file_path):
+            nonlocal success, description
+            try:
+                with open(local_file_path, 'wb') as local_file:
+                    ftp.retrbinary(f'RETR {remote_file_path}', local_file.write)
+                description = f"Successfully downloaded {remote_file_path}"
+            except Exception as e:
+                description = f"Failed to download {remote_file_path}: {e}"
+                success = False
+            finally:
+                update_status_table(host, lgv_name, "In Progress", description)
+
+        def download_folder(ftp, remote_folder_path, local_folder_path):
+            os.makedirs(local_folder_path, exist_ok=True)
+            ftp.cwd(remote_folder_path)
+            
+            file_list = ftp.nlst()
+            
+            for file_name in file_list:
+                local_path = os.path.join(local_folder_path, file_name)
+                remote_path = os.path.join(remote_folder_path, file_name).replace('\\', '/')
+                
+                if is_ftp_dir(ftp, file_name):
+                    download_folder(ftp, remote_path, local_path)
+                else:
+                    download_file(ftp, remote_path, local_path)
+        
+        def download_files_only(ftp, remote_folder_path, local_folder_path):
+            os.makedirs(local_folder_path, exist_ok=True)
+            ftp.cwd(remote_folder_path)
+            
+            file_list = ftp.nlst()
+            
+            for file_name in file_list:
+                remote_item_path = os.path.join(remote_folder_path, file_name).replace('\\', '/')
+                local_item_path = os.path.join(local_folder_path, file_name)
+                
+                if not is_ftp_dir(ftp, file_name):
+                    download_file(ftp, remote_item_path, local_item_path)
+
+        def is_ftp_dir(ftp, name):
+            try:
+                ftp.cwd(name)
+                ftp.cwd('..')
+                return True
+            except Exception as e:
+                return False
+
+        download_files_only(ftp, remote_path, local_path)
+        
+        # Close the FTP connection
+        ftp.quit()
+
+        description = "Download completed successfully!" if success else "Download completed with errors."
+        status = "Completed" if success else "Failed"
+
+    except Exception as e:
+        description = f"Failed to initiate download: {e}"
+        status = "Failed"
+        success = False
+    finally:
+        update_status_table(host, lgv_name, status, description)
+        result_queue.put((host, "Success" if success else "Failed"))
+
+
+############################################ Monitor threads ##################################################
+def monitor_threads_deprecated(threads, result_queue, status_widget):
+    # Wait for all threads to complete
+    for t in threads:
+        t.join()
+    
+    # Check for any failed results
+    failed_hosts = []
+    failed = 0
+    total = 0
+
+    while not result_queue.empty():
+        host, result = result_queue.get()
+        if result == "Failed":
+            failed_hosts.append(host)
+            failed=failed+1
+        total=total+1
+
+    if failed_hosts:
+        status_widget.insert(tk.END, f"\n\n*****Connection failed for {failed} out of {total} hosts*****\n")
+        for host in failed_hosts:
+            status_widget.insert(tk.END, f"{host}\n")
+    else:
+        status_widget.insert(tk.END, "\n\n*****All transfers successfull*****\n")
+    
+    current_time = datetime.now()
+    formatted_time = current_time.strftime("%H:%M:%S")
+    print(f"At {formatted_time}")
+    status_widget.insert(tk.END, f"\nOperation performed at {formatted_time}")
+
+    # Ensure the status widget updates properly
+    status_widget.yview(tk.END)
+
+
+def monitor_threads(threads, result_queue):
+    # Wait for all threads to complete
+    for t in threads:
+        t.join()
+
+    # Check for any failed results grouped by host
+    results_by_host = {}
+    while not result_queue.empty():
+        host, result = result_queue.get()
+        if host not in results_by_host:
+            results_by_host[host] = {"total": 0, "failed": 0}
+        results_by_host[host]["total"] += 1
+        if result == "Failed":
+            results_by_host[host]["failed"] += 1
+
+    # Calculate summary
+    failed_hosts_count = 0
+    total_hosts = len(results_by_host)
+
+    for host, counts in results_by_host.items():
+        if counts["failed"] > 0:
+            failed_hosts_count += 1
+
+
+    # Update the summary label
+    if failed_hosts_count > 0:
+        summary_label.config(
+            text=f"Transfers completed with issues: {failed_hosts_count} / {total_hosts} hosts failed.",
+            foreground="red"
+        )
+    else:
+        summary_label.config(
+            text="All transfers completed successfully!",
+            foreground="green"
+        )
+
+    # Update the timestamp label
+    current_time = datetime.now()
+    formatted_time = current_time.strftime("%H:%M:%S")
+    timestamp_label.config(text=f"Last operation: {formatted_time}")
+
+
+####################################################### Get IPs #############################################################
+
+def parse_ip_ranges(base_ip, range_input):
+    ip_list = []
+    base_ip_parts = base_ip.rsplit('.', 1)
+    base_ip_root = base_ip_parts[0]
+    base_ip_last_digit = int(base_ip_parts[1])
+
+    if not range_input:
+        return None
+    else:
+        ranges = range_input.split(',')
+        for r in ranges:
+            if '-' in r:
+                start, end = map(int, r.split('-'))
+                ip_list.extend([f"{base_ip_root}.{i + base_ip_last_digit}" for i in range(start, end + 1)])
+            else:
+                ip_list.append(f"{base_ip_root}.{int(r.strip()) + base_ip_last_digit}")
+    # print(ip_list)
+    return ip_list
+
+####################################################### Get LGV Numbers ########################################################
+
+def parse_lgv_range(range_str):
+    """Parse LGV range input into a list of LGV numbers."""
+    lgv_numbers = set()
+    parts = range_str.split(",")
+    for part in parts:
+        if "-" in part:
+            start, end = map(int, part.split("-"))
+            lgv_numbers.update(range(start, end + 1))
+        else:
+            lgv_numbers.add(int(part))
+    return lgv_numbers
+
+
+def validate_and_link_lgv():
+    """
+    Validate the LGV range and link IP addresses from the LGV data table.
+    """
+    try:
+        # Check if the LGV range entry is empty
+        if range_entry.get().strip() == '':
+            print("LGV range is empty!")
+            # log_message("LGV range is empty!")
+            return None
+
+        # Parse the LGV range input into a set of numbers
+        lgv_numbers = parse_lgv_range(range_entry.get())
+        found_entries = []
+
+        # Load data from the LGV XML table
+        lgv_data = load_table_data_from_xml(return_data=True)
+        available_lgvs = {int(lgv["name"].replace("LGV", "")): lgv for lgv in lgv_data}  # Extract LGV numbers
+
+        # Match entered LGVs with the XML data
+        for lgv in lgv_numbers:
+            if lgv in available_lgvs:
+                found_entries.append({
+                    "number": lgv,
+                    "ip_address": available_lgvs[lgv]["ip_address"],  # Using ip_address
+                    "type": available_lgvs[lgv]["type"],  # Keep type for future use
+                })
+            else:
+                print(f"LGV {lgv} not found in the table.")
+
+        # Check if all LGVs in the range were found
+        if len(found_entries) == len(lgv_numbers) and found_entries:
+            print("All LGVs found!")
+            return found_entries
+        else:
+            overflow = len(lgv_numbers) - len(found_entries)
+            if overflow > 0:
+                raise ValueError(f"Range contains {overflow} extra elements not in the table.")
+            else:
+                raise ValueError("Some LGVs were not found; check the range.")
+
+    except ValueError as e:
+        print(f"Invalid input. Error: {e}")
+        # log_message(f"Invalid input. Error: {e}")
+        return None
+
 
 ############################################################ Choose file to transfer ################################################
 def choose_file_or_folder():
