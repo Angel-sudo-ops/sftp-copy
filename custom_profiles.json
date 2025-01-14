@@ -10,7 +10,7 @@
                 "password": "1",
                 "remote_dir": "\\Config",
                 "transfer_type": "SFTP",
-                "local_dir": "C:/default_path/"
+                "local_dir": "C:/default_path/test.xml"
             },
             {
                 "sub_name": "CB16_TC2_config",
@@ -20,7 +20,7 @@
                 "username": "anonymous",
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP",
-                "local_dir": "C:/default_path/"
+                "local_dir": "C:/default_path/quotes.xml"
             },
             {
                 "sub_name": "CB25_TC2_config",
@@ -41,6 +41,16 @@
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_TC2_config_30-35",
+                "base_ip": "172.20.2.50",
+                "ip_range": "30-35",
+                "local_dir": "C:/default_path/quotes.xml",
+                "remote_dir": "/Hard Disk/Backup",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
             }
         ]
     },
@@ -80,7 +90,7 @@
                 "username": "Administrator",
                 "password": "E80Lgv!",
                 "transfer_type": "SFTP",
-                "local_dir": "C:/default_path/"
+                "local_dir": "C:/default_path/config.xml"
             },
             {
                 "sub_name": "CB30_Boot",
@@ -88,6 +98,16 @@
                 "ip_range": "1-25",
                 "local_dir": "C:/default_path/Boot",
                 "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "E80Lgv!",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB30_config_custom",
+                "base_ip": "111.102.103.200",
+                "ip_range": "1-5",
+                "local_dir": "\"C:/default_path/config1.xml\",\"C:/default_path/config2.xml\"",
+                "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "E80Lgv!",
                 "transfer_type": "SFTP"
