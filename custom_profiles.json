@@ -10,7 +10,7 @@
                 "password": "1",
                 "remote_dir": "\\Config",
                 "transfer_type": "SFTP",
-                "local_dir": "C:/default_path/"
+                "local_dir": "C:/default_path/test.xml"
             },
             {
                 "sub_name": "CB16_TC2_config",
@@ -41,6 +41,16 @@
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_TC2_config_30-35",
+                "base_ip": "172.20.2.50",
+                "ip_range": "30-35",
+                "local_dir": "C:/default_path/quotes.xml",
+                "remote_dir": "/Hard Disk/Backup",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
             }
         ]
     },
