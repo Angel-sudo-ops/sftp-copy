@@ -454,6 +454,8 @@ def open_lgv_table_window():
 #######################################################################################################################
 ############################################### Transfer to remote server #############################################
 #######################################################################################################################
+# Global variable to track active transfers
+active_transfers = 0
 
 def start_transfer():
     # Reset labels at the start of a new transfer
@@ -549,8 +551,13 @@ def start_transfer():
             elif transfer_type_sel.get() == 'FTP':
                 t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
             
+            t.daemon = True
             threads.append(t)
             t.start()
+
+             # Increment active_transfers
+            global active_transfers
+            active_transfers += 1
 
     # Start a separate thread to monitor the worker threads
     threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
@@ -558,7 +565,8 @@ def start_transfer():
 
 ############################################### SFTP Transfer ###############################################
 
-def sftp_transfer(host, port, username, password, local_path, remote_path, result_queue, lgv_name=""):
+def sftp_transfer(host, port, username, password, local_path, remote_path, result_queue, lgv_name):
+
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     local_file_name = os.path.basename(local_path)
@@ -621,7 +629,8 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
 
 ################################################ FTP transfer ###############################################################
 
-def ftp_transfer(host, username, password, local_path, remote_path, result_queue, lgv_name=""):
+def ftp_transfer(host, username, password, local_path, remote_path, result_queue, lgv_name):
+
     success = True  # Track overall success for the entire transfer process
     local_file_name = os.path.basename(local_path)
     try:        
@@ -1016,6 +1025,10 @@ def monitor_threads(threads, result_queue):
     # Wait for all threads to complete
     for t in threads:
         t.join()
+
+    # Decrement active_transfers
+    global active_transfers
+    active_transfers -= len(threads)
 
     # Check for any failed results grouped by host
     results_by_host = {}
@@ -2107,8 +2120,15 @@ def button_design(entry):
 ############################Closing window ##################################
 def on_close():
     """Save the last session and close the app."""
+    if active_transfers > 0:
+        if not messagebox.askyesno(
+            "Exit", 
+            "There are ongoing transfers.\nAre you sure you want to exit?"
+            ):
+                return
     save_last_session_to_config()
-    root.destroy()
+    root.destroy()  # Close the main window
+        
 
 ############################ Remove focus ############################
 def remove_focus(event):
@@ -2224,7 +2244,7 @@ menu_bar = tk.Menu(root)
 file_menu = tk.Menu(menu_bar, tearoff=0)
 file_menu.add_command(label=" Load Config.db3 ", command=populate_table_from_db3)  # Add Load Config option
 file_menu.add_command(label=" Load StaticRoutes.xml", command=populate_table_from_xml) # Add Load StaticRoutes option
-file_menu.add_command(label=" Exit ", command=root.quit)  # Add Exit option
+file_menu.add_command(label=" Exit ", command=on_close)  # Add Exit option
 menu_bar.add_cascade(label="  File ", menu=file_menu)
 
 options_menu = tk.Menu(menu_bar, tearoff=0)
