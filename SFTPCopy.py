@@ -2256,7 +2256,7 @@ menu_bar.add_cascade(label=" Options ", menu=options_menu)
 root.config(menu=menu_bar)
 
 
-frame_profile = ttk.Labelframe(root, text="Profiles", labelanchor='nw', style="Custom.TLabelframe")
+frame_profile = ttk.Labelframe(root, text="Profile configuration", labelanchor='nw', style="Custom.TLabelframe")
 frame_profile.grid(row=0, column=0, padx=10, pady=(5,10), ipadx=3)
 
 profile_label = ttk.Label(frame_profile, text="Profile:")
@@ -2298,7 +2298,7 @@ rename_prof = ttk.Button(frame_profile,
 rename_prof.grid(row=0, column=3, rowspan=2, padx=5, pady=5)
 
 
-frame_path = ttk.Labelframe(root, text="Directory", labelanchor='ne', style="Custom.TLabelframe")
+frame_path = ttk.Labelframe(root, text="Path details", labelanchor='ne', style="Custom.TLabelframe")
 frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=0, ipadx=8)
 
 frame_local = tk.Frame(frame_path)
