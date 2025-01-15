@@ -2257,7 +2257,7 @@ root.config(menu=menu_bar)
 
 
 frame_profile = tk.Frame(root)
-frame_profile.grid(row=0, column=1, padx=10, pady=5, sticky='w')
+frame_profile.grid(row=0, column=0, padx=10, pady=5)
 # Create a listbox to display saved profiles
 profiles_combobox = ttk.Combobox(frame_profile, width=40)
 profiles_combobox.set("Select a profile")
@@ -2290,30 +2290,8 @@ rename_prof = ttk.Button(frame_profile,
                           command=open_rename_popup_cond)
 rename_prof.grid(row=2, column=1, padx=5, pady=5)
 
-# Customize the focus ring (or border) of the Radiobutton
-style.configure("Custom.TRadiobutton", focuscolor="lightblue", highlightthickness=2)
 
-
-# transfer_type = tk.StringVar()
-transfer_type_sel = tk.StringVar(value='SFTP')
-# style.configure("Transfer.TLabelframe.Label", relief='groove', font=("Segoe UI", 10, "italic"))
-frame_transfer = tk.Frame(root, bd=1, relief='groove')
-frame_transfer.grid(row=0, column=0, padx=0, pady=5, sticky='e')
-# Radio buttons for selecting file or folder
-sftp_option = ttk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_path_on_selection, style="Custom.TRadiobutton")
-sftp_option.grid(row=0, column=0, padx=0, pady=0, sticky='w')
-ftp_option = ttk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_path_on_selection, style="Custom.TRadiobutton")
-ftp_option.grid(row=0, column=1, padx=0, pady=0, sticky='w')
-net_option = ttk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_path_on_selection, style="Custom.TRadiobutton")
-net_option.grid(row=0, column=2, padx=0, pady=0, sticky='w')
-
-# Bind the radio buttons to the function that removes focus
-# ftp_option.bind("<ButtonRelease-1>", remove_focus)
-# sftp_option.bind("<ButtonRelease-1>", remove_focus)
-# net_option.bind("<ButtonRelease-1>", remove_focus)
-
-
-frame_path = ttk.Labelframe(root, text="Directory", labelanchor='nw', style="Custom.TLabelframe")
+frame_path = ttk.Labelframe(root, text="Directory", labelanchor='ne', style="Custom.TLabelframe")
 frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=5)
 
 frame_local = tk.Frame(frame_path)
@@ -2410,11 +2388,13 @@ frame_typetransfer = tk.Frame(frame_lgv_login)
 frame_typetransfer.grid(row=0, column=2, padx=5, pady=5)
 
 # Transfer Type Combobox
+transfer_type_sel = tk.StringVar(value='SFTP')
+
 transfer_type_label = ttk.Label(frame_typetransfer, text="Transfer type:")
 transfer_type_label.grid(row=0, column=0, padx=5, pady=5)
 transfer_type_combobox = ttk.Combobox(frame_typetransfer, textvariable=transfer_type_sel, width=10, state="readonly")
 transfer_type_combobox['values'] = ("SFTP", "FTP", "NET")
-transfer_type_combobox.set("SFTP")  # Default selection
+transfer_type_combobox.set(transfer_type_sel.get())  # Default selection
 transfer_type_combobox.grid(row=1, column=0, padx=5, pady=5)
 transfer_type_combobox.bind("<<ComboboxSelected>>", set_path_on_selection)
 
