@@ -560,7 +560,9 @@ def start_transfer():
             active_transfers += 1
 
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
+    monitor_thread = threading.Thread(target=monitor_threads, args=(threads, result_queue))
+    monitor_thread.daemon = True
+    monitor_thread.start()
 
 
 ############################################### SFTP Transfer ###############################################
