@@ -2214,7 +2214,7 @@ else:
     icon_path = os.path.abspath("./transfer.ico")
 # root.iconbitmap(icon_path)
 
-window_width = 600
+window_width = 565
 window_lenght = 670 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
@@ -2256,19 +2256,26 @@ menu_bar.add_cascade(label=" Options ", menu=options_menu)
 root.config(menu=menu_bar)
 
 
-frame_profile = tk.Frame(root)
+frame_profile = ttk.Labelframe(root, text="Profiles", labelanchor='nw', style="Custom.TLabelframe")
 frame_profile.grid(row=0, column=0, padx=10, pady=5)
+
+profile_label = ttk.Label(frame_profile, text="Profile:")
+profile_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
+
 # Create a listbox to display saved profiles
 profiles_combobox = ttk.Combobox(frame_profile, width=40)
 profiles_combobox.set("Select a profile")
-profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+profiles_combobox.grid(row=0, column=1, padx=10, pady=5, sticky='w')
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_profile)
 profiles_combobox.bind("<Tab>", filter_profiles)
 
+subprofile_label = ttk.Label(frame_profile, text="Subprofile:")
+subprofile_label.grid(row=1, column=0, padx=5, pady=5, sticky='e')
+
 subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
 subprofiles_combobox.set("Select a subprofile")
-subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+subprofiles_combobox.grid(row=1, column=1, padx=10, pady=5, sticky='w')
 subprofiles_combobox.bind("<ButtonPress>", load_subprofile_names)
 subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_subprofile)
 subprofiles_combobox.bind("<Tab>", filter_subprofiles)
@@ -2277,22 +2284,22 @@ subprofiles_combobox.bind("<Tab>", filter_subprofiles)
 save_profile = ttk.Button(frame_profile, 
                           text="Save/Update", 
                           command=save_custom_profile)
-save_profile.grid(row=0, column=1, padx=5, pady=5)
+save_profile.grid(row=0, column=2, padx=5, pady=5)
 # button_design(save_profile)
 
 delete_profile = ttk.Button(frame_profile, 
                           text=" Delete ", 
                           command=delete_profile_or_subprofile)
-delete_profile.grid(row=1, column=1, padx=5, pady=5)
+delete_profile.grid(row=1, column=2, padx=5, pady=5)
 
 rename_prof = ttk.Button(frame_profile, 
                           text=" Rename ", 
                           command=open_rename_popup_cond)
-rename_prof.grid(row=2, column=1, padx=5, pady=5)
+rename_prof.grid(row=0, column=3, padx=5, pady=5)
 
 
 frame_path = ttk.Labelframe(root, text="Directory", labelanchor='ne', style="Custom.TLabelframe")
-frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=5)
+frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=10)
 
 frame_local = tk.Frame(frame_path)
 frame_local.grid (row=0, column=0, columnspan=2, padx=0, pady=0)
@@ -2473,7 +2480,7 @@ print(f"Download button state: {download['state']}")
 
 # Create the Treeview (table)
 table_frame = tk.Frame(root)
-table_frame.grid(row=5, column=0, columnspan=2, padx=10, pady=(10,0), sticky='nsew')
+table_frame.grid(row=5, column=0, columnspan=2, padx=(10,0), pady=(10,0), sticky='nsew')
 
 treeview_style = ttk.Style()
 treeview_style.configure("Treeview", rowheight=23)  # Increase row height for more space between items
