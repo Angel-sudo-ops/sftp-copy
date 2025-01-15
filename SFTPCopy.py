@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.3'
+__version__ = '3.4.9.4'
 
 CONFIG_FILE = "config.ini"
 
@@ -2214,7 +2214,7 @@ else:
     icon_path = os.path.abspath("./transfer.ico")
 # root.iconbitmap(icon_path)
 
-window_width = 565
+window_width = 557
 window_lenght = 670 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
@@ -2257,7 +2257,7 @@ root.config(menu=menu_bar)
 
 
 frame_profile = ttk.Labelframe(root, text="Profiles", labelanchor='nw', style="Custom.TLabelframe")
-frame_profile.grid(row=0, column=0, padx=10, pady=5)
+frame_profile.grid(row=0, column=0, padx=10, pady=(5,10), ipadx=3)
 
 profile_label = ttk.Label(frame_profile, text="Profile:")
 profile_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
@@ -2295,11 +2295,11 @@ delete_profile.grid(row=1, column=2, padx=5, pady=5)
 rename_prof = ttk.Button(frame_profile, 
                           text=" Rename ", 
                           command=open_rename_popup_cond)
-rename_prof.grid(row=0, column=3, padx=5, pady=5)
+rename_prof.grid(row=0, column=3, rowspan=2, padx=5, pady=5)
 
 
 frame_path = ttk.Labelframe(root, text="Directory", labelanchor='ne', style="Custom.TLabelframe")
-frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=10)
+frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=0, ipadx=8)
 
 frame_local = tk.Frame(frame_path)
 frame_local.grid (row=0, column=0, columnspan=2, padx=0, pady=0)
@@ -2340,17 +2340,17 @@ save_path.grid(row=0, column=2, padx=(5,0), pady=5)
 
 
 frame_lgv_login = ttk.Labelframe(root, text="Connection settings", labelanchor='nw', style="Custom.TLabelframe")
-frame_lgv_login.grid(row=3, column=0, columnspan=3, padx=5, pady=0)
+frame_lgv_login.grid(row=3, column=0, columnspan=3, padx=5, pady=(10,5))
 
 
 frame_lgvs = tk.Frame(frame_lgv_login)
-frame_lgvs.grid(row=0, column=0, columnspan=1, padx=5, pady=5, sticky='e')
+frame_lgvs.grid(row=0, column=0, columnspan=1, padx=(5,0), pady=5)
 
 frame_ip = tk.Frame(frame_lgvs)
 frame_ip.grid(row=0, column=0, padx=0, pady=0)
 
 ip_label = ttk.Label(frame_ip, text="Root IP:")
-ip_label.grid(row=0, column=0, padx=5, pady=5)
+ip_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 ip_entry = ttk.Entry(frame_ip, width=25)
 ip_entry.grid(row=0, column=1, padx=5, pady=5)
@@ -2361,7 +2361,7 @@ frame_range = tk.Frame(frame_lgvs)
 frame_range.grid(row=1, column=0, padx=0, pady=0)
 
 range_label = ttk.Label(frame_range, text="Range:")
-range_label.grid(row=0, column=0, padx=5, pady=5)
+range_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 range_entry = ttk.Entry(frame_range, width=25)
 range_entry.grid(row=0, column=1, padx=5, pady=5)
@@ -2370,7 +2370,7 @@ range_entry.bind("<KeyRelease>", validate_entry(range_entry, 'Range.TEntry', val
 
 
 frame_login = tk.Frame(frame_lgv_login)
-frame_login.grid(row=0, column=1, columnspan=1, padx=5, pady=5)
+frame_login.grid(row=0, column=1, columnspan=1, padx=(5,0), pady=5)
 
 frame_user = tk.Frame(frame_login)
 frame_user.grid(row=0, column=0, padx=0, pady=0)
@@ -2399,7 +2399,7 @@ transfer_type_sel = tk.StringVar(value='SFTP')
 
 transfer_type_label = ttk.Label(frame_typetransfer, text="Transfer type:")
 transfer_type_label.grid(row=0, column=0, padx=5, pady=5)
-transfer_type_combobox = ttk.Combobox(frame_typetransfer, textvariable=transfer_type_sel, width=10, state="readonly")
+transfer_type_combobox = ttk.Combobox(frame_typetransfer, textvariable=transfer_type_sel, width=7, state="readonly")
 transfer_type_combobox['values'] = ("SFTP", "FTP", "NET")
 transfer_type_combobox.set(transfer_type_sel.get())  # Default selection
 transfer_type_combobox.grid(row=1, column=0, padx=5, pady=5)
