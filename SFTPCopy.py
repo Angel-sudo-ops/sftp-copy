@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.2'
+__version__ = '3.4.9.3'
 
 CONFIG_FILE = "config.ini"
 
@@ -1151,6 +1151,35 @@ def choose_file_or_folder():
             file_path.set(file_or_folder)
             check_source_path_for_keywords(file_or_folder)
 
+
+def browse_local_path():
+    """Open a dialog to ask the user if they want to browse files or folders."""
+    # file_path.set("")  # Clear previous selection
+
+    response = messagebox.askyesnocancel(
+        "Browse Files or Folder",
+        "'Yes' to select Files\n'No' to select a Folder",
+    )
+
+    if response is True:  # User clicked 'Yes' for Files
+        selected_files = filedialog.askopenfilenames(
+            title="Select files"
+        )  # Select files
+        if selected_files:
+            file_path.set(", ".join(selected_files))
+            check_source_path_for_keywords(selected_files)
+
+    elif response is False:  # User clicked 'No' for Folders
+        selected_folder = filedialog.askdirectory(
+            title="Select a folder"
+        )  # Select a folder
+        if selected_folder:
+            file_path.set(selected_folder)
+            check_source_path_for_keywords(selected_folder)
+
+    else:  # User clicked 'Cancel'
+        print("Action canceled")
+
 ############################################################ Check source path for keywords ################################################
 def check_source_path_for_keywords(file_or_folder):
     # Convert the selected path to a string
@@ -1365,7 +1394,7 @@ def set_paths():
     print(f"Default paths set to: {default_paths}")
     
 
-def set_path_on_selection():
+def set_path_on_selection(*args):
     transfer_type = transfer_type_sel.get()
     remote_dir_entry.delete(0, tk.END)
     if transfer_type == 'SFTP' or transfer_type == 'NET':
@@ -2202,6 +2231,9 @@ style.configure('Range.TEntry', foreground='black')
 
 style.configure('Placeholder.TEntry', foreground='grey')
 
+# Create a custom style for the LabelFrame with an italic font
+style.configure("Custom.TLabelframe.Label", font=("Segoe UI", 10, "italic"))
+
 
 # Create the menu bar
 menu_bar = tk.Menu(root)
@@ -2281,63 +2313,49 @@ net_option.grid(row=0, column=2, padx=0, pady=0, sticky='w')
 # net_option.bind("<ButtonRelease-1>", remove_focus)
 
 
-frame_path = tk.Frame(root)
-frame_path.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+frame_path = ttk.Labelframe(root, text="Directory", labelanchor='nw', style="Custom.TLabelframe")
+frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=5)
 
-frame_file = tk.Frame(frame_path)
-frame_file.grid (row=0, column=0, columnspan=2, padx=5, pady=5)
-# Variable to store the user's choice (file or folder)
-selection = tk.StringVar(value='file')
+frame_local = tk.Frame(frame_path)
+frame_local.grid (row=0, column=0, columnspan=2, padx=0, pady=0)
 
-frame_file_selection = tk.Frame(frame_file)
-frame_file_selection.grid(row=0, column=0, padx=5, pady=5)
 
-# Radio buttons for selecting file or folder
-file_radio = ttk.Radiobutton(frame_file_selection, text="Files:", variable=selection, value='file')
-file_radio.grid(row=0, column=1, padx=0, pady=0)
-folder_radio = ttk.Radiobutton(frame_file_selection, text="Folder", variable=selection, value='folder')
-folder_radio.grid(row=0, column=0, padx=0, pady=0)
+local_dir_label = ttk.Label(frame_local, text="Local:")
+local_dir_label.grid(row=0, column=0, padx=5, pady=5)
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
-# tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
-file_path_entry = ttk.Entry(frame_file, textvariable=file_path, width=60)
-file_path_entry.grid(row=0, column=1, padx=(0,5), pady=5)
+file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=58)
+# file_path_entry = ttk.Combobox(frame_local, width=55)
+file_path_entry.grid(row=0, column=1, padx=5, pady=5)
 
-browse_btn = ttk.Button(frame_file, text="Browse",
-                        # bg='ghost white', 
-                        command=choose_file_or_folder)
-browse_btn.grid(row=0, column=2, padx=5, pady=5)
-# button_design(browse_btn)
+browse_btn = ttk.Button(frame_local, 
+                        text="Browse",
+                        command=browse_local_path)
+browse_btn.grid(row=0, column=2, padx=(5,0), pady=5)
 
 
 frame_remote = tk.Frame(frame_path)
-frame_remote.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+frame_remote.grid(row=1, column=0, columnspan=2, padx=(0,14), pady=0)
 
-remote_dir_label = ttk.Label(frame_remote, text="Remote directory:")
-remote_dir_label.grid(row=0, column=0, padx=10, pady=10)
+remote_dir_label = ttk.Label(frame_remote, text="Remote:")
+remote_dir_label.grid(row=0, column=0, padx=5, pady=5)
 
-remote_dir_entry = ttk.Combobox(frame_remote, 
-                                # values=default_paths + tuple(custom_paths), 
-                                width=55)
-# if default_paths:
-#     remote_dir_entry.insert(0, default_paths[0])
+remote_dir_entry = ttk.Combobox(frame_remote, width=55)
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
-# remote_dir_entry.bind("<ButtonPress>", set_paths)
 
 remote_dir_entry.bind("<Tab>", filter_remote_dir)
 remote_dir_entry.bind("<ButtonPress>", load_remote_paths)
 
 # Add a button to save a custom path
-save_path = ttk.Button(frame_remote, text="Save Path",
-                    #   bg='ghost white',
-                      command=on_add_path)
-save_path.grid(row=0, column=2, padx=5, pady=10)
-# button_design(save_path)
+save_path = ttk.Button(frame_remote, 
+                       text="Save Path",
+                       command=on_add_path)
+save_path.grid(row=0, column=2, padx=(5,0), pady=5)
 
 
-frame_lgv_login = tk.Frame(root)
-frame_lgv_login.grid(row=3, column=0, columnspan=2, padx=5, pady=0)
+frame_lgv_login = ttk.Labelframe(root, text="Connection settings", labelanchor='nw', style="Custom.TLabelframe")
+frame_lgv_login.grid(row=3, column=0, columnspan=3, padx=5, pady=0)
 
 
 frame_lgvs = tk.Frame(frame_lgv_login)
@@ -2387,6 +2405,18 @@ password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 password_entry = ttk.Entry(frame_password, show="*")
 password_entry.grid(row=0, column=1, padx=5, pady=5)
+
+frame_typetransfer = tk.Frame(frame_lgv_login)
+frame_typetransfer.grid(row=0, column=2, padx=5, pady=5)
+
+# Transfer Type Combobox
+transfer_type_label = ttk.Label(frame_typetransfer, text="Transfer type:")
+transfer_type_label.grid(row=0, column=0, padx=5, pady=5)
+transfer_type_combobox = ttk.Combobox(frame_typetransfer, textvariable=transfer_type_sel, width=10, state="readonly")
+transfer_type_combobox['values'] = ("SFTP", "FTP", "NET")
+transfer_type_combobox.set("SFTP")  # Default selection
+transfer_type_combobox.grid(row=1, column=0, padx=5, pady=5)
+transfer_type_combobox.bind("<<ComboboxSelected>>", set_path_on_selection)
 
 
 frame_mode = tk.Frame(root)
