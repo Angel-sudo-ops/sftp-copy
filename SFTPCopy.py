@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.4'
+__version__ = '3.4.9.5'
 
 CONFIG_FILE = "config.ini"
 
@@ -1138,19 +1138,6 @@ def validate_and_link_lgv():
 
 
 ############################################################ Choose file to transfer ################################################
-def choose_file_or_folder():
-    file_path.set("")  # Clear previous selection
-    if selection.get() == 'file':
-        file_or_folder = filedialog.askopenfilenames()  # Select files
-        if file_or_folder:
-            file_path.set(", ".join(file_or_folder))
-            check_source_path_for_keywords(file_or_folder)
-    elif selection.get() == 'folder':
-        file_or_folder = filedialog.askdirectory()  # Select a folder
-        if file_or_folder:
-            file_path.set(file_or_folder)
-            check_source_path_for_keywords(file_or_folder)
-
 
 def browse_local_path():
     """Open a dialog to ask the user if they want to browse files or folders."""
@@ -1412,16 +1399,12 @@ def select_mode():
         download.config(state="disabled")
         file_path_entry.config(state='normal')
         browse_btn.config(state='normal')
-        folder_radio.config(state='normal')
-        file_radio.config(state='normal')
 
     elif mode_selected == 'download':
         transfer.config(state='disabled')
         download.config(state="normal")
         file_path_entry.config(state='disabled')
         browse_btn.config(state='disabled')
-        folder_radio.config(state='disabled')
-        file_radio.config(state='disabled')
     print(f"Selected mode {mode_selected}")
 
 # Helper function to load a JSON file 
@@ -2256,7 +2239,7 @@ menu_bar.add_cascade(label=" Options ", menu=options_menu)
 root.config(menu=menu_bar)
 
 
-frame_profile = ttk.Labelframe(root, text="Profile configuration", labelanchor='nw', style="Custom.TLabelframe")
+frame_profile = ttk.Labelframe(root, text="Profile overview", labelanchor='nw', style="Custom.TLabelframe")
 frame_profile.grid(row=0, column=0, padx=10, pady=(5,10), ipadx=3)
 
 profile_label = ttk.Label(frame_profile, text="Profile:")
