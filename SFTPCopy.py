@@ -560,9 +560,7 @@ def start_transfer():
             active_transfers += 1
 
     # Start a separate thread to monitor the worker threads
-    monitor_thread = threading.Thread(target=monitor_threads, args=(threads, result_queue))
-    monitor_thread.daemon = True
-    monitor_thread.start()
+    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
 
 
 ############################################### SFTP Transfer ###############################################
@@ -788,7 +786,7 @@ def start_download():
 
     local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
     if not local_root_path:
-        messagebox.showerror("Input Error", "Please choose a folder where to download.")
+        messagebox.showwarning("Error", "Download cancelled.")
         return
     
     download_folder = os.path.join(local_root_path, "Download")
@@ -838,9 +836,7 @@ def start_download():
         active_transfers += 1
     
     # Start a separate thread to monitor the worker threads
-    monitor_thread = threading.Thread(target=monitor_threads, args=(threads, result_queue))
-    monitor_thread.daemon = True
-    monitor_thread.start()
+    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
 
 
 ############################################### SFTP Download ###############################################
