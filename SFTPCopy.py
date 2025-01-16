@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.5'
+__version__ = '3.4.9.6'
 
 CONFIG_FILE = "config.ini"
 
@@ -555,7 +555,7 @@ def start_transfer():
             threads.append(t)
             t.start()
 
-             # Increment active_transfers
+            # Increment active_transfers
             global active_transfers
             active_transfers += 1
 
@@ -829,11 +829,18 @@ def start_download():
         if transfer_type_sel.get() == 'FTP':
             t = threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, result_queue, lgv_name))
 
+        t.daemon = True
         threads.append(t)
         t.start()
+
+        # Increment active_transfers
+        global active_transfers
+        active_transfers += 1
     
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
+    monitor_thread = threading.Thread(target=monitor_threads, args=(threads, result_queue))
+    monitor_thread.daemon = True
+    monitor_thread.start()
 
 
 ############################################### SFTP Download ###############################################
