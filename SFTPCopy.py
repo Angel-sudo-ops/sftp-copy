@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.6'
+__version__ = '3.4.9.7'
 
 CONFIG_FILE = "config.ini"
 
@@ -456,8 +456,20 @@ def open_lgv_table_window():
 #######################################################################################################################
 # Global variable to track active transfers
 active_transfers = 0
+# Global variable to track active operation 
+operation_active = False
 
 def start_transfer():
+    global operation_active
+
+    if operation_active:
+        messagebox.showwarning("Operation in progress", "A transfer is already in progress.")
+        return
+
+    operation_active = True
+    # To avoid selecting download during transfer
+    radio_download.config(state="disable")
+
     # Reset labels at the start of a new transfer
     summary_label.config(text="Status result", fg="black")
     timestamp_label.config(text="Last operation: 00:00:00")
@@ -738,6 +750,16 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
 #######################################################################################################################
 
 def start_download():
+    global operation_active
+
+    if operation_active:
+        messagebox.showwarning("Operation in progress", "A download is already in progress.")
+        return
+
+    operation_active = True
+    # To avoid selecting transfer during download
+    radio_transfer.config(state="disable")
+
     # Reset labels at the start of a new download
     summary_label.config(text="Status result", fg="black")
     timestamp_label.config(text="Last operation: 00:00:00")
@@ -1027,12 +1049,13 @@ def monitor_threads_deprecated(threads, result_queue, status_widget):
 
 
 def monitor_threads(threads, result_queue):
+    global active_transfers
+    global operation_active
     # Wait for all threads to complete
     for t in threads:
         t.join()
 
     # Decrement active_transfers
-    global active_transfers
     active_transfers -= len(threads)
 
     # Check for any failed results grouped by host
@@ -1065,6 +1088,13 @@ def monitor_threads(threads, result_queue):
             text="All transfers completed successfully!",
             foreground="green"
         )
+
+    # Reset operation_active once all threads are done
+    operation_active = False
+
+    # Re-enable radio buttons after operation is complete
+    radio_download.config(state="normal")
+    radio_transfer.config(state="normal")
 
     # Update the timestamp label
     current_time = datetime.now()
