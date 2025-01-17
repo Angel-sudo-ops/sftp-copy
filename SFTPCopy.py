@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.5.1'
+__version__ = '3.5.2'
 
 CONFIG_FILE = "config.ini"
 
@@ -1987,7 +1987,7 @@ def open_rename_popup():
     window_lenght = 200
     rename_popup.geometry(f"{window_width}x{window_lenght}")
     rename_popup.minsize(window_width, window_lenght)
-    
+
 
     # Determine what is being renamed
     if selected_subprofile_name:
