@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.8'
+__version__ = '3.5.0'
 
 CONFIG_FILE = "config.ini"
 

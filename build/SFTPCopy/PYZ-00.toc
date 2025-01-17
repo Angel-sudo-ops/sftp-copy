@@ -79,6 +79,10 @@
    'C:\\Users\\Angel '
    'Contreras\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\codeop.py',
    'PYMODULE'),
+  ('configparser',
+   'C:\\Users\\Angel '
+   'Contreras\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\configparser.py',
+   'PYMODULE'),
   ('contextlib',
    'C:\\Users\\Angel '
    'Contreras\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\contextlib.py',

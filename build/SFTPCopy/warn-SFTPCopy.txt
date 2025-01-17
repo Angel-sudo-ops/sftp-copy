@@ -20,7 +20,7 @@ missing module named posix - imported by os (conditional, optional), posixpath (
 missing module named resource - imported by posix (top-level)
 missing module named _frozen_importlib_external - imported by importlib._bootstrap (delayed), importlib (optional), importlib.abc (optional)
 excluded module named _frozen_importlib - imported by importlib (optional), importlib.abc (optional)
-missing module named 'collections.abc' - imported by traceback (top-level), inspect (top-level), logging (top-level), typing (top-level), selectors (top-level), tracemalloc (top-level), paramiko.hostkeys (top-level), xml.etree.ElementTree (top-level), http.client (top-level), sqlite3.dbapi2 (top-level)
+missing module named 'collections.abc' - imported by traceback (top-level), inspect (top-level), logging (top-level), typing (top-level), selectors (top-level), tracemalloc (top-level), paramiko.hostkeys (top-level), xml.etree.ElementTree (top-level), http.client (top-level), sqlite3.dbapi2 (top-level), configparser (top-level)
 missing module named _suggestions - imported by traceback (delayed, optional)
 missing module named readline - imported by code (delayed, conditional, optional), sqlite3.__main__ (delayed, conditional, optional)
 missing module named _scproxy - imported by urllib.request (conditional)
