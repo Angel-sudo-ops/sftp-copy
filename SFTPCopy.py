@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.5.0'
+__version__ = '3.5.1'
 
 CONFIG_FILE = "config.ini"
 
@@ -466,14 +466,16 @@ def start_transfer():
         messagebox.showwarning("Operation in progress", "A transfer is already in progress.")
         return
 
-    operation_active = True
-    start_spinner(265, 320)
-    # To avoid selecting download during transfer
-    radio_download.config(state="disable")
-
     # Reset labels at the start of a new transfer
     summary_label.config(text="Status result", fg="black")
     timestamp_label.config(text="Last operation: 00:00:00")
+
+
+    profile_name = profiles_combobox.get().strip()
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Please enter a valid profile.")
+        return
+
 
     local_path_string = file_path.get()
     base_ip = ip_entry.get()
@@ -490,12 +492,12 @@ def start_transfer():
 
     # Parse local paths
     local_paths = [path.strip() for path in local_path_string.split(',')]
-    if not local_paths:
+    if not any(local_paths):
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
         return
 
     if not validate_range():
-        messagebox.showerror("Input Error", "Please enter the IP range.")
+        messagebox.showerror("Input Error", "Please enter a valid range.")
         return
     
     # Check LGV data availability
@@ -512,9 +514,6 @@ def start_transfer():
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
-        if not validate_range():
-            messagebox.showerror("Input Error", "Please enter a valid range.")
-            return
         ip_list = parse_ip_ranges(base_ip, range_input)
         if not ip_list:
             messagebox.showerror("Input Error", "Please provide a valid IP range.")
@@ -529,7 +528,15 @@ def start_transfer():
     if not password:
         messagebox.showerror("Input Error", "Please enter the password.")
         return
+
+
+    # Set operation active after all checks
+    operation_active = True
+    start_spinner(265, 320)
+    # To avoid selecting download during transfer
+    radio_download.config(state="disable")
     
+
     print (f"Selected port is {port}")
     print(f"Login is {username}")
     print(f"Password is {password}")
@@ -757,15 +764,11 @@ def start_download():
         messagebox.showwarning("Operation in progress", "A download is already in progress.")
         return
 
-    local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
-    if not local_root_path:
-        messagebox.showwarning("Error", "Download cancelled.")
+    profile_name = profiles_combobox.get().strip()
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Please enter a valid profile.")
         return
-
-    operation_active = True
-    start_spinner(265, 320)
-    # To avoid selecting transfer during download
-    radio_transfer.config(state="disable")
+    
 
     # Reset labels at the start of a new download
     summary_label.config(text="Status result", fg="black")
@@ -781,6 +784,14 @@ def start_download():
     elif transfer_type_sel.get() == 'FTP':
         port = FTP_PORT
 
+    if not remote_dir:
+        messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    
+    if not validate_range():
+        messagebox.showerror("Input Error", "Please enter a valid range.")
+        return
+    
     # Check LGV data availability
     lgv_data_exists = os.path.exists(LGV_DATA_FILE)
 
@@ -795,17 +806,11 @@ def start_download():
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
-        if not validate_range():
-            messagebox.showerror("Input Error", "Please enter a valid range.")
-            return
         ip_list = parse_ip_ranges(base_ip, range_input)
         if not ip_list:
             messagebox.showerror("Input Error", "Please provide a valid IP range.")
             return
 
-    if not remote_dir:
-        messagebox.showerror("Input Error", "Please enter the remote directory.")
-        return
     if not username:
         messagebox.showerror("Input Error", "Please enter the username.")
         return
@@ -813,7 +818,18 @@ def start_download():
         messagebox.showerror("Input Error", "Please enter the password.")
         return
 
-    
+    local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
+    if not local_root_path:
+        messagebox.showwarning("Error", "Download cancelled.")
+        return
+
+    # Set operation active after all checks
+    operation_active = True
+    start_spinner(265, 320)
+    # To avoid selecting transfer during download
+    radio_transfer.config(state="disable")
+
+
     download_folder = os.path.join(local_root_path, "Download")
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)
