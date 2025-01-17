@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.4.9.7'
+__version__ = '3.4.9.8'
 
 CONFIG_FILE = "config.ini"
 
@@ -467,6 +467,7 @@ def start_transfer():
         return
 
     operation_active = True
+    start_spinner(265, 320)
     # To avoid selecting download during transfer
     radio_download.config(state="disable")
 
@@ -757,6 +758,7 @@ def start_download():
         return
 
     operation_active = True
+    start_spinner(265, 320)
     # To avoid selecting transfer during download
     radio_transfer.config(state="disable")
 
@@ -1091,6 +1093,7 @@ def monitor_threads(threads, result_queue):
 
     # Reset operation_active once all threads are done
     operation_active = False
+    stop_spinner()
 
     # Re-enable radio buttons after operation is complete
     radio_download.config(state="normal")
@@ -2240,6 +2243,49 @@ def update_status_table(host, lgv_name, status, description):
             break
 
 
+##############################################################################################################
+################################################### Spinner ##################################################
+##############################################################################################################
+def create_spinner_widget():
+    global spinner_frame, spinner_canvas, spinner_arc
+
+    # Create a frame to hold the spinner (fixed position in the layout)
+    spinner_frame = tk.Frame(root, width=25, height=25, bg=root['bg'])  # Match frame bg to window bg
+
+    # Create a canvas for the spinner with the same background color as the root window
+    spinner_canvas = tk.Canvas(spinner_frame, width=25, height=25, bg=root['bg'], highlightthickness=0)
+    spinner_canvas.pack()
+
+    # Draw a rotating arc (spinner)
+    spinner_arc = spinner_canvas.create_arc((2, 2, 22, 22), start=0, extent=90, width=4, outline='#4682B4', style=tk.ARC)
+
+    # Initially hide the spinner frame
+    spinner_frame.place_forget()
+
+def start_spinner(x, y):
+    global running
+    running = True  # Set the spinner running flag
+
+     # Make the spinner visible
+    spinner_frame.place(x=x, y=y)  # Adjust position as needed
+
+    rotate_spinner()  # Start rotating the spinner
+
+def stop_spinner():
+    global running
+    running = False  # Stop the spinner from running
+
+    # Hide the spinner frame
+    spinner_frame.place_forget()
+
+def rotate_spinner():
+    global spinner_arc
+    if running:
+        current_angle = spinner_canvas.itemcget(spinner_arc, 'start')
+        new_angle = (float(current_angle) + 20) % 360  # Adjust rotation speed here
+        spinner_canvas.itemconfig(spinner_arc, start=new_angle)
+        spinner_canvas.after(50, rotate_spinner)  # Adjust the delay for rotation speed
+
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
@@ -2573,6 +2619,8 @@ load_last_session_from_config()
 load_data_from_selection()
 
 update_rename_button_state()
+
+create_spinner_widget()
 
 # Disable focus for all widgets
 # disable_focus(root)
