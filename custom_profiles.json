@@ -26,7 +26,7 @@
                 "sub_name": "CB25_TC2_config",
                 "base_ip": "172.20.2.50",
                 "ip_range": "1-15",
-                "remote_dir": "/Hard Disk/Backup/",
+                "remote_dir": "/Hard Disk/Backup",
                 "username": "anonymous",
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP",

@@ -757,7 +757,7 @@ def start_download():
     if not local_root_path:
         messagebox.showwarning("Error", "Download cancelled.")
         return
-        
+
     if operation_active:
         messagebox.showwarning("Operation in progress", "A download is already in progress.")
         return
@@ -2609,8 +2609,6 @@ timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=5)
 
 
 
-set_paths()
-
 # Enable menu for Show LGV Table if table is updated
 update_menu_state()
 
@@ -2618,6 +2616,8 @@ update_menu_state()
 # Load last session
 load_last_session_from_config()
 load_data_from_selection()
+
+set_paths()
 
 update_rename_button_state()
 
