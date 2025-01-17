@@ -20,7 +20,7 @@
                 "username": "anonymous",
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP",
-                "local_dir": "C:/default_path/quotes.xml"
+                "local_dir": "C:/Repos/super-ads-client/lgv_data.xml"
             },
             {
                 "sub_name": "CB25_TC2_config",

@@ -486,8 +486,8 @@ def start_transfer():
 
     # Parse local paths
     local_paths = [path.strip() for path in local_path_string.split(',')]
-    if not any(local_paths):
-        messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
+    if not all(os.path.exists(path) for path in local_paths):
+        messagebox.showerror("Input Error", "Please select a valid local path.")
         return
     
     if not remote_dir:
