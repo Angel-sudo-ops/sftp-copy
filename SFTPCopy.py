@@ -753,6 +753,11 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
 def start_download():
     global operation_active
 
+    local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
+    if not local_root_path:
+        messagebox.showwarning("Error", "Download cancelled.")
+        return
+        
     if operation_active:
         messagebox.showwarning("Operation in progress", "A download is already in progress.")
         return
@@ -808,10 +813,6 @@ def start_download():
         messagebox.showerror("Input Error", "Please enter the password.")
         return
 
-    local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
-    if not local_root_path:
-        messagebox.showwarning("Error", "Download cancelled.")
-        return
     
     download_folder = os.path.join(local_root_path, "Download")
     if not os.path.exists(download_folder):
