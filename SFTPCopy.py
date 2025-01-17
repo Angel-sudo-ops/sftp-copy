@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.5.2'
+__version__ = '3.5.3'
 
 CONFIG_FILE = "config.ini"
 
@@ -2443,7 +2443,7 @@ remote_dir_entry.bind("<ButtonPress>", load_remote_paths)
 save_path = ttk.Button(frame_remote, 
                        text="Save Path",
                        command=on_add_path)
-save_path.grid(row=0, column=2, padx=(5,0), pady=5)
+save_path.grid(row=0, column=2, padx=(6,0), pady=5)
 
 
 frame_lgv_login = ttk.Labelframe(root, text="Connection settings", labelanchor='nw', style="Custom.TLabelframe")
@@ -2465,7 +2465,7 @@ create_placeholder(ip_entry, "e.g., 7.204.194.10", "RootIP.TEntry", "Placeholder
 ip_entry.bind("<KeyRelease>", validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip))
 
 frame_range = tk.Frame(frame_lgvs)
-frame_range.grid(row=1, column=0, padx=0, pady=0)
+frame_range.grid(row=1, column=0, padx=(5,0), pady=0)
 
 range_label = ttk.Label(frame_range, text="Range:")
 range_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
@@ -2477,7 +2477,7 @@ range_entry.bind("<KeyRelease>", validate_entry(range_entry, 'Range.TEntry', val
 
 
 frame_login = tk.Frame(frame_lgv_login)
-frame_login.grid(row=0, column=1, columnspan=1, padx=(5,0), pady=5)
+frame_login.grid(row=0, column=1, columnspan=1, padx=5, pady=5)
 
 frame_user = tk.Frame(frame_login)
 frame_user.grid(row=0, column=0, padx=0, pady=0)
@@ -2490,7 +2490,7 @@ username_entry.insert(0, "Administrator")
 username_entry.grid(row=0, column=1, padx=5, pady=5)
 
 frame_password = tk.Frame(frame_login)
-frame_password.grid(row=1, column=0, padx=0, pady=0)
+frame_password.grid(row=1, column=0, padx=(5,0), pady=0)
 
 password_label = ttk.Label(frame_password, text="Password:")
 password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
@@ -2520,7 +2520,7 @@ mode_selection = tk.StringVar(value='transfer')
 # Radio buttons for selecting file or folder
 
 frame_transfer = tk.Frame(frame_mode)
-frame_transfer.grid(row=0, column=0, padx=20, pady=10)
+frame_transfer.grid(row=0, column=0, padx=25, pady=10)
 
 radio_transfer = ttk.Radiobutton(frame_transfer, 
                                 # text="Transfer", 
@@ -2555,7 +2555,7 @@ radio_download = ttk.Radiobutton(frame_download,
                                 takefocus=0,
                                 command=select_mode
                                 )
-radio_download.grid(row=0, column=2, padx=0, pady=0, sticky='w')
+radio_download.grid(row=0, column=2, padx=(6,0), pady=0, sticky='w')
 
 download = ttk.Button(frame_download,
                     text="Download", 
