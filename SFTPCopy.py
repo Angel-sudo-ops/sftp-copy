@@ -368,7 +368,7 @@ def open_lgv_table_window():
     lgv_table_window = tk.Toplevel(root)
     lgv_table_window.title("LGV Data ")
 
-    window_width = 300
+    window_width = 290
     window_lenght = 300
     lgv_table_window.geometry(f"{window_width}x{window_lenght}")
     lgv_table_window.minsize(window_width, window_lenght)
