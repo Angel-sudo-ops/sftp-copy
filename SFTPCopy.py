@@ -466,17 +466,11 @@ def start_transfer():
         messagebox.showwarning("Operation in progress", "A transfer is already in progress.")
         return
 
-    # Reset labels at the start of a new transfer
-    summary_label.config(text="Status result", fg="black")
-    timestamp_label.config(text="Last operation: 00:00:00")
-
-
     profile_name = profiles_combobox.get().strip()
     if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
         messagebox.showerror("Error", "Please enter a valid profile.")
         return
-
-
+    
     local_path_string = file_path.get()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
@@ -494,6 +488,10 @@ def start_transfer():
     local_paths = [path.strip() for path in local_path_string.split(',')]
     if not any(local_paths):
         messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
+        return
+    
+    if not remote_dir:
+        messagebox.showerror("Input Error", "Please enter the remote directory.")
         return
 
     if not validate_range():
@@ -519,9 +517,6 @@ def start_transfer():
             messagebox.showerror("Input Error", "Please provide a valid IP range.")
             return
 
-    if not remote_dir:
-        messagebox.showerror("Input Error", "Please enter the remote directory.")
-        return
     if not username:
         messagebox.showerror("Input Error", "Please enter the username.")
         return
@@ -529,6 +524,9 @@ def start_transfer():
         messagebox.showerror("Input Error", "Please enter the password.")
         return
 
+    # Reset labels at the start of a new transfer
+    summary_label.config(text="Status result", fg="black")
+    timestamp_label.config(text="Last operation: 00:00:00")
 
     # Set operation active after all checks
     operation_active = True
@@ -770,10 +768,6 @@ def start_download():
         return
     
 
-    # Reset labels at the start of a new download
-    summary_label.config(text="Status result", fg="black")
-    timestamp_label.config(text="Last operation: 00:00:00")
-
     range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
@@ -822,6 +816,10 @@ def start_download():
     if not local_root_path:
         messagebox.showwarning("Error", "Download cancelled.")
         return
+    
+    # Reset labels at the start of a new download
+    summary_label.config(text="Status result", fg="black")
+    timestamp_label.config(text="Last operation: 00:00:00")
 
     # Set operation active after all checks
     operation_active = True
