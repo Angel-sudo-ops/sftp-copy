@@ -1842,6 +1842,9 @@ def delete_profile_or_subprofile():
     if not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower():
         messagebox.showerror("Error", "Cannot delete the default profile.")
         return
+    elif profile_name.lower() == "select a profile":
+        messagebox.showerror("Error", "Select a valid profile.")
+        return
 
     custom_profiles = load_custom_profiles()
 
@@ -1979,7 +1982,12 @@ def open_rename_popup():
 
     rename_popup = tk.Toplevel(root)
     rename_popup.title("Rename ")
-    rename_popup.geometry("250x200")
+
+    window_width = 230
+    window_lenght = 200
+    rename_popup.geometry(f"{window_width}x{window_lenght}")
+    rename_popup.minsize(window_width, window_lenght)
+    
 
     # Determine what is being renamed
     if selected_subprofile_name:
