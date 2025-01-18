@@ -493,7 +493,10 @@ def start_transfer():
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
         return
-
+    elif not validate_remote_path(remote_dir):
+        messagebox.showerror("Input error", "Remote directory not valid.")
+        return
+    
     if not validate_range():
         messagebox.showerror("Input Error", "Please enter a valid range.")
         return
@@ -780,6 +783,9 @@ def start_download():
 
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    elif not validate_remote_path(remote_dir):
+        messagebox.showerror("Input error", "Remote directory not valid.")
         return
     
     if not validate_range():
@@ -1388,6 +1394,25 @@ def validate_ip_format(event):
         ip_entry.config(bg="yellow")
         return False
 
+def validate_local_path(path):
+    # Check if the path exists
+    if os.path.exists(path):
+        print(f"The path exists: {path}")
+        return None
+
+    # If the path doesn't exist, categorize it
+    if os.path.basename(path):  # Check if the last part of the path has a name (possible file)
+        if "." in os.path.basename(path):  # Check for a file extension
+            return f"File {path} does not exist."
+        else:
+            return f"Folder {path} does not exist."
+    else:
+        return f"The path {path} is invalid or empty."
+
+def validate_remote_path(path):
+    pattern = r"^(\/|\\)[a-zA-Z0-9_\-\.\s]+((\/|\\)[a-zA-Z0-9_\-\.\s]+)*$"
+    return re.match(pattern, path) is not None
+
 ############################################## Other methods ###############################################################
 def set_anonymous_login():
     username_entry.delete(0, tk.END)
@@ -1691,9 +1716,18 @@ def save_custom_profile():
     if not local_dir:
         messagebox.showerror("Input Error", "Please enter a local directory.")
         return
+
+    local_path_error = validate_local_path(local_dir)
+
+    if local_path_error is not None:
+        messagebox.showerror("Input Error", f"{local_path_error}")
+        return
     
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    elif not validate_remote_path(remote_dir):
+        messagebox.showerror("Input error", "Remote directory not valid.")
         return
     
     if not username:
