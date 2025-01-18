@@ -484,12 +484,13 @@ def start_transfer():
         port = FTP_PORT
 
 
-    # Parse local paths
     local_paths = [path.strip() for path in local_path_string.split(',')]
-    if not all(os.path.exists(path) for path in local_paths):
-        messagebox.showerror("Input Error", "Please select a valid local path.")
+    local_path_error = validate_local_paths(local_path_string)
+
+    if local_path_error is not None:
+        messagebox.showerror("Input Error", f"{local_path_error}")
         return
-    
+
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
         return
@@ -1394,20 +1395,37 @@ def validate_ip_format(event):
         ip_entry.config(bg="yellow")
         return False
 
-def validate_local_path(path):
-    # Check if the path exists
-    if os.path.exists(path):
-        print(f"The path exists: {path}")
-        return None
 
-    # If the path doesn't exist, categorize it
-    if os.path.basename(path):  # Check if the last part of the path has a name (possible file)
-        if "." in os.path.basename(path):  # Check for a file extension
-            return f"File {path} does not exist."
-        else:
-            return f"Folder {path} does not exist."
-    else:
-        return f"The path {path} is invalid or empty."
+def validate_local_paths(paths_string):
+    """
+    Validate a comma-separated string of local paths.
+    """
+    # Check if the input is empty
+    if not paths_string.strip():
+        return "Please input a valid file or folder path."
+
+    # Split the input string into individual paths
+    paths = [path.strip() for path in paths_string.split(',') if path.strip()]
+    
+    # Check if splitting resulted in no paths
+    if not paths:
+        return "Please input a valid file or folder path."
+    
+    multiple_paths = len(paths) > 1  # Determine if there are multiple paths
+    
+    # Iterate through the paths and validate each
+    for path in paths:
+        if not os.path.exists(path):
+            if os.path.basename(path):  # Check if the last part of the path has a name (possible file)
+                if "." in os.path.basename(path):  # Check for a file extension
+                    return f"File {path} does not exist." if multiple_paths else "The specified file does not exist."
+                else:
+                    return f"Folder {path} does not exist." if multiple_paths else "The specified folder does not exist."
+            else:
+                return f"The path {path} is invalid or empty." if multiple_paths else "The specified path is invalid or empty."
+    
+    # If all paths are valid
+    return None
 
 def validate_remote_path(path):
     pattern = r"^(\/|\\)[a-zA-Z0-9_\-\.\s]+((\/|\\)[a-zA-Z0-9_\-\.\s]+)*$"
@@ -1713,11 +1731,7 @@ def save_custom_profile():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     
-    if not local_dir:
-        messagebox.showerror("Input Error", "Please enter a local directory.")
-        return
-
-    local_path_error = validate_local_path(local_dir)
+    local_path_error = validate_local_paths(local_dir)
 
     if local_path_error is not None:
         messagebox.showerror("Input Error", f"{local_path_error}")
