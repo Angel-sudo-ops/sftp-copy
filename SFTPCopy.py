@@ -2216,6 +2216,61 @@ def load_remote_paths(event=None):
     # Populate the combobox with sorted paths
     remote_dir_entry['values'] = tuple(sorted(combined_paths, key=str.lower))
 
+
+################################################### Table Tooltip ###################################################
+class TreeviewTooltip:
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+        self.widget.bind("<Motion>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
+
+    def show_tooltip(self, event):
+        # Identify the row and column under the mouse
+        item_id = self.widget.identify_row(event.y)
+        column = self.widget.identify_column(event.x)
+
+        # If not hovering over a valid cell, hide the tooltip
+        if not item_id or column != "#4":  # "#4" corresponds to the 4th column (Description)
+            self.hide_tooltip()
+            return
+
+        # Get the description text from the identified row
+        item_values = self.widget.item(item_id, "values")
+        description = item_values[3]  # Assuming the 4th column is "Description"
+
+        if not description.strip():  # Hide the tooltip if there's no content
+            self.hide_tooltip()
+            return
+
+        # Create the tooltip window if it doesn't exist
+        if self.tipwindow:
+            return
+        x, y, _, height = self.widget.bbox(item_id, column)
+        x += self.widget.winfo_rootx()
+        y += self.widget.winfo_rooty() + height
+
+        self.tipwindow = tk.Toplevel(self.widget)
+        self.tipwindow.wm_overrideredirect(True)  # Remove window decorations
+        self.tipwindow.wm_geometry(f"+{x}+{y}")
+
+        # Add the tooltip content
+        label = tk.Label(
+            self.tipwindow,
+            text=description,
+            background="lightyellow",
+            relief="solid",
+            borderwidth=1,
+            font=("Segoe UI", 10),
+            wraplength=400,  # Set a maximum width for the tooltip
+        )
+        label.pack(ipadx=5, ipady=2)
+
+    def hide_tooltip(self, event=None):
+        if self.tipwindow:
+            self.tipwindow.destroy()
+            self.tipwindow = None
+
 ####################################################################################################################
 def on_enter(e):
     if e.widget['state']== "normal":
@@ -2650,7 +2705,7 @@ columns = ("Name", "IPAddress", "Status", "Description")
 status_table = ttk.Treeview(table_frame, columns=columns, show="headings")
 
 # Define column properties
-status_table.column("Name", width=10, anchor='w')
+status_table.column("Name", width=20, anchor='w')
 status_table.column("IPAddress", width=60, anchor='w')
 status_table.column("Status", width=30, anchor='w')
 status_table.column('Description', width=200, anchor='w')
@@ -2663,6 +2718,10 @@ status_table.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=status_table.yview)
 status_table.configure(yscroll=scrollbar.set)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+
+# Attach the tooltip
+tooltip = TreeviewTooltip(status_table)
 
 
 # Create the Description frame
