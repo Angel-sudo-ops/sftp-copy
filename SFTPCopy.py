@@ -2237,7 +2237,7 @@ class TreeviewTooltip:
 
         # Get the description text from the identified row
         item_values = self.widget.item(item_id, "values")
-        description = item_values[3]  # Assuming the 4th column is "Description"
+        description = item_values[3] if len(item_values) > 3 else ""  # Safeguard against missing data
 
         if not description.strip():  # Hide the tooltip if there's no content
             self.hide_tooltip()
@@ -2252,6 +2252,7 @@ class TreeviewTooltip:
             text=description,
             font=("Segoe UI", 10),
         )
+        temp_label.update_idletasks()  # Ensure accurate width calculation
         text_width = temp_label.winfo_reqwidth()
         temp_label.destroy()
 
@@ -2260,12 +2261,19 @@ class TreeviewTooltip:
             self.hide_tooltip()
             return
 
+        # Calculate the position for the tooltip
+        try:
+            x, y, _, height = self.widget.bbox(item_id, column)
+        except (ValueError, TypeError):
+            self.hide_tooltip()
+            return
+
+        x += self.widget.winfo_rootx()
+        y += self.widget.winfo_rooty() + height
+
         # Create the tooltip window if it doesn't exist
         if self.tipwindow:
             return
-        x, y, _, height = self.widget.bbox(item_id, column)
-        x += self.widget.winfo_rootx()
-        y += self.widget.winfo_rooty() + height
 
         self.tipwindow = tk.Toplevel(self.widget)
         self.tipwindow.wm_overrideredirect(True)  # Remove window decorations
