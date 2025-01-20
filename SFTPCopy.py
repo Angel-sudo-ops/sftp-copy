@@ -2243,6 +2243,23 @@ class TreeviewTooltip:
             self.hide_tooltip()
             return
 
+        # Get the width of the column
+        column_width = self.widget.column(column, "width")
+
+        # Create a temporary label to measure text width
+        temp_label = tk.Label(
+            self.widget,
+            text=description,
+            font=("Segoe UI", 10),
+        )
+        text_width = temp_label.winfo_reqwidth()
+        temp_label.destroy()
+
+        # Show the tooltip only if the text width exceeds the column width
+        if text_width <= column_width:
+            self.hide_tooltip()
+            return
+
         # Create the tooltip window if it doesn't exist
         if self.tipwindow:
             return
@@ -2270,6 +2287,7 @@ class TreeviewTooltip:
         if self.tipwindow:
             self.tipwindow.destroy()
             self.tipwindow = None
+
 
 ####################################################################################################################
 def on_enter(e):
