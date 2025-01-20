@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.5.3'
+__version__ = '3.5.4'
 
 CONFIG_FILE = "config.ini"
 
@@ -1405,7 +1405,11 @@ def validate_local_paths(paths_string):
         return "Please input a valid file or folder path."
 
     # Split the input string into individual paths
-    paths = [path.strip() for path in paths_string.split(',') if path.strip()]
+    paths = [path.strip() for path in paths_string.split(',')]
+
+     # Check for empty paths in the input
+    if any(not path for path in paths):
+        return "Input contains invalid or empty paths. Please check your input."
     
     # Check if splitting resulted in no paths
     if not paths:

@@ -45,8 +45,8 @@
             {
                 "sub_name": "CB16_TC2_config_30-35",
                 "base_ip": "172.20.2.50",
-                "ip_range": "30-35",
-                "local_dir": "C:/default_path/quotes.xml",
+                "ip_range": "30-31",
+                "local_dir": "C:/Repos/super-ads-client/dist/lgv_data.xml",
                 "remote_dir": "/Hard Disk/Backup",
                 "username": "anonymous",
                 "password": "anonymous@example.com",
