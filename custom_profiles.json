@@ -115,21 +115,6 @@
         ]
     },
     {
-        "profile_name": "CC2026_Danone_Longchamps",
-        "sub_profiles": [
-            {
-                "sub_name": "Reach14_boot",
-                "base_ip": "132.2.1.10",
-                "ip_range": "1-9",
-                "local_dir": "C:/Boot",
-                "remote_dir": "\\TwinCAT\\Boot",
-                "username": "Administrator",
-                "password": "danone",
-                "transfer_type": "SFTP"
-            }
-        ]
-    },
-    {
         "profile_name": "CC2034_Niagara_Wellington",
         "sub_profiles": [
             {
@@ -161,6 +146,31 @@
                 "username": "anonymous",
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC2031_Danone_Longchamps",
+        "sub_profiles": [
+            {
+                "sub_name": "Reach14_config",
+                "base_ip": "10.77.204.10",
+                "ip_range": "1-5",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2031_DanoneLongchamps/MyFiles/ForAll/test.txt",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_boot",
+                "base_ip": "10.77.204.10",
+                "ip_range": "1-5",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2031_DanoneLongchamps/Reach14Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
             }
         ]
     }

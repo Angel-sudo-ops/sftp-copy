@@ -1,29 +1,19 @@
 [
     {
-        "profile_name": "CC1527_GP",
+        "profile_name": "CC1527_GP_Portland",
         "sub_profiles": [
             {
-                "sub_name": "CC1527_GP_Portland_TC2",
-                "base_ip": "172.20.2.50",
-                "ip_range": "1-15,30-42",
-                "username": "anonymous",
-                "password": "anonymous@example.com",
-                "remote_dir": "/Hard Disk/Backup/",
-                "transfer_type": "FTP",
-                "local_dir": "C:/default_path/"
-            },
-            {
-                "sub_name": "CC1527_GP_Portland_TC3_CB25",
+                "sub_name": "TC3_CB25",
                 "base_ip": "172.20.2.50",
                 "ip_range": "16-18",
                 "username": "Administrator",
                 "password": "1",
                 "remote_dir": "\\Config",
                 "transfer_type": "SFTP",
-                "local_dir": "C:/default_path/"
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1965_GPRivergate/MyFiles/Backup/CB25TC3/172.20.2.66/Quotes.xml"
             },
             {
-                "sub_name": "CC1527_GP_Portland_TC2_CB16",
+                "sub_name": "TC2_CB16",
                 "base_ip": "172.20.2.50",
                 "ip_range": "30-42",
                 "remote_dir": "/Hard Disk/Backup/",
@@ -33,7 +23,7 @@
                 "local_dir": "C:/default_path/"
             },
             {
-                "sub_name": "CC1527_GP_Portland_TC2_CB25",
+                "sub_name": "TC2_CB25",
                 "base_ip": "172.20.2.50",
                 "ip_range": "1-15",
                 "remote_dir": "/Hard Disk/Backup/",
@@ -45,10 +35,10 @@
         ]
     },
     {
-        "profile_name": "CC200_Hilmar",
+        "profile_name": "CC2000_Hilmar_Dodge",
         "sub_profiles": [
             {
-                "sub_name": "CC200_Hilmar_Dodge",
+                "sub_name": "Reach20",
                 "base_ip": "10.40.10.69",
                 "ip_range": "1-10",
                 "remote_dir": "\\Config",
@@ -60,10 +50,10 @@
         ]
     },
     {
-        "profile_name": "CC2002_Pepsico",
+        "profile_name": "CC2002_Pepsico_StoneMountain",
         "sub_profiles": [
             {
-                "sub_name": "CC2002_Pepsico_StoneMt",
+                "sub_name": "CB30",
                 "base_ip": "7.34.130.9",
                 "ip_range": "1-25",
                 "remote_dir": "\\Config",
@@ -71,6 +61,31 @@
                 "password": "E80Lgv!",
                 "transfer_type": "SFTP",
                 "local_dir": "C:/default_path/"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC2031_Danone_Longchamps",
+        "sub_profiles": [
+            {
+                "sub_name": "Reach14_config",
+                "base_ip": "10.77.204.10",
+                "ip_range": "1-5",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2031_DanoneLongchamps/MyFiles/ForAll/Movements.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_boot",
+                "base_ip": "10.77.204.10",
+                "ip_range": "1-5",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2031_DanoneLongchamps/Reach14Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
             }
         ]
     }

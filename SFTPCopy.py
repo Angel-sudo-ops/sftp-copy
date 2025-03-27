@@ -20,7 +20,7 @@ from xml.dom import minidom
 import sqlite3
 import configparser
 
-__version__ = '3.5.5'
+__version__ = '3.5.6'
 
 CONFIG_FILE = "config.ini"
 
@@ -601,8 +601,12 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
         if os.path.isfile(local_path):
             try:
                 sftp.put(local_path, os.path.join(remote_path, local_file_name))
+                description = f"Successfully transferred {local_file_name}"
             except Exception as e:
+                description = f"Failed to transfer {local_file_name}"
                 success = False
+            finally:
+                update_status_table(host, lgv_name, "In Progress", description)
                 
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -627,9 +631,9 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     try:
                         sftp.put(local_file, remote_file)
-                        description = f"Successfully transferred {local_file}"
+                        description = f"Successfully transferred {os.path.basename(local_file)}"
                     except Exception as e:
-                        description = f"Failed to transfer {local_file}"
+                        description = f"Failed to transfer {os.path.basename(local_file)}"
                         success = False
                     finally:
                         update_status_table(host, lgv_name, "In Progress", description)
@@ -664,8 +668,12 @@ def ftp_transfer(host, username, password, local_path, remote_path, result_queue
             try:
                 with open(local_path, 'rb') as file:
                     ftp.storbinary(f"STOR {os.path.join(remote_path, local_file_name).replace('\\', '/')}", file)
+                description = f"Successfully transferred {local_file_name}"
             except Exception as e:
+                description = f"Failed to transfer {local_file_name}"
                 success = False
+            finally:
+                        update_status_table(host, lgv_name, "In Progress", description)
 
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -692,9 +700,9 @@ def ftp_transfer(host, username, password, local_path, remote_path, result_queue
                     try:
                         with open(local_file, 'rb') as file:
                             ftp.storbinary(f"STOR {remote_file}", file)
-                        description = f"Successfully transferred {local_file}"
+                        description = f"Successfully transferred {os.path.basename(local_file)}"
                     except Exception as e:
-                        description = f"Failed to transfer {local_file}"
+                        description = f"Failed to transfer {os.path.basename(local_file)}"
                         success = False
                     finally:
                         update_status_table(host, lgv_name, "In Progress", description)
@@ -905,7 +913,7 @@ def sftp_download(host, port, username, password, remote_path, local_path, resul
             nonlocal success, description
             try:
                 sftp.get(remote_file_path, local_file_path)
-                description = f"Successfully downloaded {remote_file_path}"
+                description = f"Successfully downloaded {os.path.basename(remote_file_path)}"
             except Exception as e:
                 description = f"Failed to download {remote_file_path}: {e}"
                 success = False
@@ -978,7 +986,7 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
             try:
                 with open(local_file_path, 'wb') as local_file:
                     ftp.retrbinary(f'RETR {remote_file_path}', local_file.write)
-                description = f"Successfully downloaded {remote_file_path}"
+                description = f"Successfully downloaded {os.path.basename(remote_file_path)}"
             except Exception as e:
                 description = f"Failed to download {remote_file_path}: {e}"
                 success = False
@@ -2808,3 +2816,5 @@ root.mainloop()
 # Poner Files para que el usuario sepa que puede seleccionar varios
 
 # Line 586, make user able to save local paths, and separate if they are either folders or filesand when opening a new one pop up a message if they want to actually save that path
+
+# Transfer or Download maybe should update the profile

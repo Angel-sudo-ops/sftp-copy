@@ -2,152 +2,27 @@
 <LGVData>
     <LGV>
         <Name>LGV01</Name>
-        <IPAddress>7.34.130.10</IPAddress>
+        <IPAddress>10.77.204.11</IPAddress>
         <Type>TC3</Type>
     </LGV>
     <LGV>
         <Name>LGV02</Name>
-        <IPAddress>7.34.130.11</IPAddress>
+        <IPAddress>10.77.204.12</IPAddress>
         <Type>TC3</Type>
     </LGV>
     <LGV>
         <Name>LGV03</Name>
-        <IPAddress>7.34.130.12</IPAddress>
+        <IPAddress>10.77.204.13</IPAddress>
         <Type>TC3</Type>
     </LGV>
     <LGV>
         <Name>LGV04</Name>
-        <IPAddress>7.34.130.13</IPAddress>
+        <IPAddress>10.77.204.14</IPAddress>
         <Type>TC3</Type>
     </LGV>
     <LGV>
         <Name>LGV05</Name>
-        <IPAddress>7.34.130.14</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV06</Name>
-        <IPAddress>7.34.130.15</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV07</Name>
-        <IPAddress>7.34.130.16</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV08</Name>
-        <IPAddress>7.34.130.17</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV09</Name>
-        <IPAddress>7.34.130.18</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV10</Name>
-        <IPAddress>7.34.130.19</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV11</Name>
-        <IPAddress>7.34.130.20</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV12</Name>
-        <IPAddress>7.34.130.21</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV13</Name>
-        <IPAddress>7.34.130.22</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV14</Name>
-        <IPAddress>7.34.130.23</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV15</Name>
-        <IPAddress>7.34.130.24</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV16</Name>
-        <IPAddress>7.34.130.25</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV17</Name>
-        <IPAddress>7.34.130.26</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV18</Name>
-        <IPAddress>7.34.130.27</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV19</Name>
-        <IPAddress>7.34.130.28</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV20</Name>
-        <IPAddress>7.34.130.29</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV21</Name>
-        <IPAddress>7.34.130.30</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV22</Name>
-        <IPAddress>7.34.130.31</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV23</Name>
-        <IPAddress>7.34.130.32</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV24</Name>
-        <IPAddress>7.34.130.33</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV25</Name>
-        <IPAddress>7.34.130.34</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV31</Name>
-        <IPAddress>7.34.130.40</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV32</Name>
-        <IPAddress>7.34.130.41</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV33</Name>
-        <IPAddress>7.34.130.42</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV34</Name>
-        <IPAddress>7.34.130.43</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV35</Name>
-        <IPAddress>7.34.130.44</IPAddress>
+        <IPAddress>10.77.204.15</IPAddress>
         <Type>TC3</Type>
     </LGV>
 </LGVData>
