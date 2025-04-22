@@ -127,7 +127,7 @@ def netfolder_transfer(host, username, password, local_path, shared_folder, lgv_
 
 
 
-host= "172.16.12.105"
+host= "172.16.12.104"
 user= "Administrator"
 pass_="1"
 remote_folder="\Backup"
@@ -139,6 +139,6 @@ local_path = filedialog.askdirectory(title="Choose a folder to save downloads")
 
 
 
-netfolder_download(host, user, pass_, remote_folder, local_path, "LGV05")
+netfolder_download(host, user, pass_, remote_folder, local_path, "LGV04")
 
 # netfolder_transfer(host, user, pass_, local_path, remote_folder, "LGV02")

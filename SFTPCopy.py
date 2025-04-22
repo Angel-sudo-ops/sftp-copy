@@ -19,8 +19,10 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 import configparser
+import subprocess
+import shutil
 
-__version__ = '3.5.6'
+__version__ = '3.5.7'
 
 CONFIG_FILE = "config.ini"
 
@@ -784,11 +786,14 @@ def start_download():
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
+    transfer_type = transfer_type_sel.get()
 
-    if transfer_type_sel.get() == 'SFTP':
+    if transfer_type == 'SFTP':
         port = 20022
-    elif transfer_type_sel.get() == 'FTP':
+    elif transfer_type == 'FTP':
         port = FTP_PORT
+    elif transfer_type == 'NET':
+        port = 21
 
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
@@ -876,10 +881,12 @@ def start_download():
         description = f"Preparing to download {remote_dir}..."
         update_status_table(host, lgv_name, "In Progress", description)
 
-        if transfer_type_sel.get() == 'SFTP': 
+        if transfer_type == 'SFTP': 
             t = threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, result_queue, lgv_name))
-        if transfer_type_sel.get() == 'FTP':
+        elif transfer_type == 'FTP':
             t = threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, result_queue, lgv_name))
+        elif transfer_type == 'NET':
+            t = threading.Thread(target=net_download, args=(host, username, password, remote_dir, local_path, result_queue, lgv_name))
 
         t.daemon = True
         threads.append(t)
@@ -1042,6 +1049,57 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
         status = "Failed"
         success = False
     finally:
+        update_status_table(host, lgv_name, status, description)
+        result_queue.put((host, "Success" if success else "Failed"))
+
+################################################ NET download ###############################################################
+def net_download(host, username, password, remote_path, local_path, result_queue, lgv_name=""):
+    success = True
+    description = ""
+    status = "In Progress"
+    unc_path = fr"\\{host}{remote_path}"
+
+    try:
+
+         # Update table with "In Progress" status
+        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
+
+        # Disconnect existing connections to the host
+        subprocess.run(["net", "use", f"\\{host}", "/delete"], shell=True)
+        # Connect to the shared folder using credentials
+        subprocess.run(
+            ["net", "use", unc_path, password, f"/user:{username}"],
+            check=True,
+            shell=True
+        )
+
+        os.makedirs(local_path, exist_ok=True)
+
+        for item in os.listdir(unc_path):
+            src_item = os.path.join(unc_path, item)
+            dst_item = os.path.join(local_path, item)
+
+            if os.path.isfile(src_item):
+                try:
+                    shutil.copy2(src_item, dst_item)
+                    description = f"Successfully downloaded {os.path.basename(src_item)}"
+                except Exception as e:
+                    description = f"Failed to download {os.path.basename(src_item)}: {e}"
+                    success = False
+                finally:
+                    update_status_table(host, lgv_name, status, description)
+
+        description = "Download completed successfully!" if success else "Download completed with errors."
+        status = "Completed" if success else "Failed"
+        
+    except Exception as e:
+        success = False
+        status = "Failed"
+        description = f"Error navigating to {remote_path}: {e}"
+
+    finally:
+        # Disconnect from the network share
+        subprocess.run(["net", "use", unc_path, "/delete"], shell=True)
         update_status_table(host, lgv_name, status, description)
         result_queue.put((host, "Success" if success else "Failed"))
 
