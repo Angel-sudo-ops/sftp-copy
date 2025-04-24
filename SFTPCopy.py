@@ -1498,7 +1498,7 @@ def validate_local_paths(paths_string):
     return None
 
 def validate_remote_path(path):
-    pattern = r"^(\/|\\)[a-zA-Z0-9_\-\.\s]+((\/|\\)[a-zA-Z0-9_\-\.\s]+)*$"
+    pattern = r"^(\/|\\)([a-zA-Z0-9_\-.\s]+((\/|\\)[a-zA-Z0-9_\-.\s]+)*)?$"
     return re.match(pattern, path) is not None
 
 ############################################## Other methods ###############################################################
