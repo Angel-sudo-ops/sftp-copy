@@ -19,8 +19,10 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import sqlite3
 import configparser
+import subprocess
+import shutil
 
-__version__ = '3.4.9.2'
+__version__ = '3.5.7'
 
 CONFIG_FILE = "config.ini"
 
@@ -368,7 +370,7 @@ def open_lgv_table_window():
     lgv_table_window = tk.Toplevel(root)
     lgv_table_window.title("LGV Data ")
 
-    window_width = 300
+    window_width = 290
     window_lenght = 300
     lgv_table_window.geometry(f"{window_width}x{window_lenght}")
     lgv_table_window.minsize(window_width, window_lenght)
@@ -454,12 +456,23 @@ def open_lgv_table_window():
 #######################################################################################################################
 ############################################### Transfer to remote server #############################################
 #######################################################################################################################
+# Global variable to track active transfers
+active_transfers = 0
+# Global variable to track active operation 
+operation_active = False
 
 def start_transfer():
-    # Reset labels at the start of a new transfer
-    summary_label.config(text="Status result", fg="black")
-    timestamp_label.config(text="Last operation: 00:00:00")
+    global operation_active
 
+    if operation_active:
+        messagebox.showwarning("Operation in progress", "A transfer is already in progress.")
+        return
+
+    profile_name = profiles_combobox.get().strip()
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Please enter a valid profile.")
+        return
+    
     local_path_string = file_path.get()
     base_ip = ip_entry.get()
     range_input = range_entry.get()
@@ -473,14 +486,22 @@ def start_transfer():
         port = FTP_PORT
 
 
-    # Parse local paths
     local_paths = [path.strip() for path in local_path_string.split(',')]
-    if not local_paths:
-        messagebox.showerror("Input Error", "Please choose a file or folder to transfer.")
+    local_path_error = validate_local_paths(local_path_string)
+
+    if local_path_error is not None:
+        messagebox.showerror("Input Error", f"{local_path_error}")
         return
 
+    if not remote_dir:
+        messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    elif not validate_remote_path(remote_dir):
+        messagebox.showerror("Input error", "Remote directory not valid.")
+        return
+    
     if not validate_range():
-        messagebox.showerror("Input Error", "Please enter the IP range.")
+        messagebox.showerror("Input Error", "Please enter a valid range.")
         return
     
     # Check LGV data availability
@@ -497,24 +518,29 @@ def start_transfer():
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
-        if not validate_range():
-            messagebox.showerror("Input Error", "Please enter a valid range.")
-            return
         ip_list = parse_ip_ranges(base_ip, range_input)
         if not ip_list:
             messagebox.showerror("Input Error", "Please provide a valid IP range.")
             return
 
-    if not remote_dir:
-        messagebox.showerror("Input Error", "Please enter the remote directory.")
-        return
     if not username:
         messagebox.showerror("Input Error", "Please enter the username.")
         return
     if not password:
         messagebox.showerror("Input Error", "Please enter the password.")
         return
+
+    # Reset labels at the start of a new transfer
+    summary_label.config(text="Status result", fg="black")
+    timestamp_label.config(text="Last operation: 00:00:00")
+
+    # Set operation active after all checks
+    operation_active = True
+    start_spinner(265, 320)
+    # To avoid selecting download during transfer
+    radio_download.config(state="disable")
     
+
     print (f"Selected port is {port}")
     print(f"Login is {username}")
     print(f"Password is {password}")
@@ -549,16 +575,22 @@ def start_transfer():
             elif transfer_type_sel.get() == 'FTP':
                 t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
             
+            t.daemon = True
             threads.append(t)
             t.start()
 
+            # Increment active_transfers
+            global active_transfers
+            active_transfers += 1
+
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
+    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
 
 
 ############################################### SFTP Transfer ###############################################
 
-def sftp_transfer(host, port, username, password, local_path, remote_path, result_queue, lgv_name=""):
+def sftp_transfer(host, port, username, password, local_path, remote_path, result_queue, lgv_name):
+
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     local_file_name = os.path.basename(local_path)
@@ -571,8 +603,12 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
         if os.path.isfile(local_path):
             try:
                 sftp.put(local_path, os.path.join(remote_path, local_file_name))
+                description = f"Successfully transferred {local_file_name}"
             except Exception as e:
+                description = f"Failed to transfer {local_file_name}"
                 success = False
+            finally:
+                update_status_table(host, lgv_name, "In Progress", description)
                 
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -597,9 +633,9 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
                     remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
                     try:
                         sftp.put(local_file, remote_file)
-                        description = f"Successfully transferred {local_file}"
+                        description = f"Successfully transferred {os.path.basename(local_file)}"
                     except Exception as e:
-                        description = f"Failed to transfer {local_file}"
+                        description = f"Failed to transfer {os.path.basename(local_file)}"
                         success = False
                     finally:
                         update_status_table(host, lgv_name, "In Progress", description)
@@ -621,7 +657,8 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
 
 ################################################ FTP transfer ###############################################################
 
-def ftp_transfer(host, username, password, local_path, remote_path, result_queue, lgv_name=""):
+def ftp_transfer(host, username, password, local_path, remote_path, result_queue, lgv_name):
+
     success = True  # Track overall success for the entire transfer process
     local_file_name = os.path.basename(local_path)
     try:        
@@ -633,8 +670,12 @@ def ftp_transfer(host, username, password, local_path, remote_path, result_queue
             try:
                 with open(local_path, 'rb') as file:
                     ftp.storbinary(f"STOR {os.path.join(remote_path, local_file_name).replace('\\', '/')}", file)
+                description = f"Successfully transferred {local_file_name}"
             except Exception as e:
+                description = f"Failed to transfer {local_file_name}"
                 success = False
+            finally:
+                        update_status_table(host, lgv_name, "In Progress", description)
 
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -661,9 +702,9 @@ def ftp_transfer(host, username, password, local_path, remote_path, result_queue
                     try:
                         with open(local_file, 'rb') as file:
                             ftp.storbinary(f"STOR {remote_file}", file)
-                        description = f"Successfully transferred {local_file}"
+                        description = f"Successfully transferred {os.path.basename(local_file)}"
                     except Exception as e:
-                        description = f"Failed to transfer {local_file}"
+                        description = f"Failed to transfer {os.path.basename(local_file)}"
                         success = False
                     finally:
                         update_status_table(host, lgv_name, "In Progress", description)
@@ -729,20 +770,42 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
 #######################################################################################################################
 
 def start_download():
-    # Reset labels at the start of a new download
-    summary_label.config(text="Status result", fg="black")
-    timestamp_label.config(text="Last operation: 00:00:00")
+    global operation_active
+
+    if operation_active:
+        messagebox.showwarning("Operation in progress", "A download is already in progress.")
+        return
+
+    profile_name = profiles_combobox.get().strip()
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Please enter a valid profile.")
+        return
+    
 
     range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
+    transfer_type = transfer_type_sel.get()
 
-    if transfer_type_sel.get() == 'SFTP':
+    if transfer_type == 'SFTP':
         port = 20022
-    elif transfer_type_sel.get() == 'FTP':
+    elif transfer_type == 'FTP':
         port = FTP_PORT
+    elif transfer_type == 'NET':
+        port = 21
 
+    if not remote_dir:
+        messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    elif not validate_remote_path(remote_dir):
+        messagebox.showerror("Input error", "Remote directory not valid.")
+        return
+    
+    if not validate_range():
+        messagebox.showerror("Input Error", "Please enter a valid range.")
+        return
+    
     # Check LGV data availability
     lgv_data_exists = os.path.exists(LGV_DATA_FILE)
 
@@ -757,17 +820,11 @@ def start_download():
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
-        if not validate_range():
-            messagebox.showerror("Input Error", "Please enter a valid range.")
-            return
         ip_list = parse_ip_ranges(base_ip, range_input)
         if not ip_list:
             messagebox.showerror("Input Error", "Please provide a valid IP range.")
             return
 
-    if not remote_dir:
-        messagebox.showerror("Input Error", "Please enter the remote directory.")
-        return
     if not username:
         messagebox.showerror("Input Error", "Please enter the username.")
         return
@@ -777,9 +834,20 @@ def start_download():
 
     local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
     if not local_root_path:
-        messagebox.showerror("Input Error", "Please choose a folder where to download.")
+        messagebox.showwarning("Error", "Download cancelled.")
         return
     
+    # Reset labels at the start of a new download
+    summary_label.config(text="Status result", fg="black")
+    timestamp_label.config(text="Last operation: 00:00:00")
+
+    # Set operation active after all checks
+    operation_active = True
+    start_spinner(265, 320)
+    # To avoid selecting transfer during download
+    radio_transfer.config(state="disable")
+
+
     download_folder = os.path.join(local_root_path, "Download")
     if not os.path.exists(download_folder):
         os.makedirs(download_folder)
@@ -813,16 +881,23 @@ def start_download():
         description = f"Preparing to download {remote_dir}..."
         update_status_table(host, lgv_name, "In Progress", description)
 
-        if transfer_type_sel.get() == 'SFTP': 
+        if transfer_type == 'SFTP': 
             t = threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, result_queue, lgv_name))
-        if transfer_type_sel.get() == 'FTP':
+        elif transfer_type == 'FTP':
             t = threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, result_queue, lgv_name))
+        elif transfer_type == 'NET':
+            t = threading.Thread(target=net_download, args=(host, username, password, remote_dir, local_path, result_queue, lgv_name))
 
+        t.daemon = True
         threads.append(t)
         t.start()
+
+        # Increment active_transfers
+        global active_transfers
+        active_transfers += 1
     
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue)).start()
+    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
 
 
 ############################################### SFTP Download ###############################################
@@ -845,7 +920,7 @@ def sftp_download(host, port, username, password, remote_path, local_path, resul
             nonlocal success, description
             try:
                 sftp.get(remote_file_path, local_file_path)
-                description = f"Successfully downloaded {remote_file_path}"
+                description = f"Successfully downloaded {os.path.basename(remote_file_path)}"
             except Exception as e:
                 description = f"Failed to download {remote_file_path}: {e}"
                 success = False
@@ -918,7 +993,7 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
             try:
                 with open(local_file_path, 'wb') as local_file:
                     ftp.retrbinary(f'RETR {remote_file_path}', local_file.write)
-                description = f"Successfully downloaded {remote_file_path}"
+                description = f"Successfully downloaded {os.path.basename(remote_file_path)}"
             except Exception as e:
                 description = f"Failed to download {remote_file_path}: {e}"
                 success = False
@@ -977,6 +1052,57 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
         update_status_table(host, lgv_name, status, description)
         result_queue.put((host, "Success" if success else "Failed"))
 
+################################################ NET download ###############################################################
+def net_download(host, username, password, remote_path, local_path, result_queue, lgv_name=""):
+    success = True
+    description = ""
+    status = "In Progress"
+    unc_path = fr"\\{host}{remote_path}"
+
+    try:
+
+         # Update table with "In Progress" status
+        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
+
+        # Disconnect existing connections to the host
+        subprocess.run(["net", "use", f"\\{host}", "/delete"], shell=True)
+        # Connect to the shared folder using credentials
+        subprocess.run(
+            ["net", "use", unc_path, password, f"/user:{username}"],
+            check=True,
+            shell=True
+        )
+
+        os.makedirs(local_path, exist_ok=True)
+
+        for item in os.listdir(unc_path):
+            src_item = os.path.join(unc_path, item)
+            dst_item = os.path.join(local_path, item)
+
+            if os.path.isfile(src_item):
+                try:
+                    shutil.copy2(src_item, dst_item)
+                    description = f"Successfully downloaded {os.path.basename(src_item)}"
+                except Exception as e:
+                    description = f"Failed to download {os.path.basename(src_item)}: {e}"
+                    success = False
+                finally:
+                    update_status_table(host, lgv_name, status, description)
+
+        description = "Download completed successfully!" if success else "Download completed with errors."
+        status = "Completed" if success else "Failed"
+        
+    except Exception as e:
+        success = False
+        status = "Failed"
+        description = f"Error navigating to {remote_path}: {e}"
+
+    finally:
+        # Disconnect from the network share
+        subprocess.run(["net", "use", unc_path, "/delete"], shell=True)
+        update_status_table(host, lgv_name, status, description)
+        result_queue.put((host, "Success" if success else "Failed"))
+
 
 ############################################ Monitor threads ##################################################
 def monitor_threads_deprecated(threads, result_queue, status_widget):
@@ -1013,9 +1139,14 @@ def monitor_threads_deprecated(threads, result_queue, status_widget):
 
 
 def monitor_threads(threads, result_queue):
+    global active_transfers
+    global operation_active
     # Wait for all threads to complete
     for t in threads:
         t.join()
+
+    # Decrement active_transfers
+    active_transfers -= len(threads)
 
     # Check for any failed results grouped by host
     results_by_host = {}
@@ -1047,6 +1178,14 @@ def monitor_threads(threads, result_queue):
             text="All transfers completed successfully!",
             foreground="green"
         )
+
+    # Reset operation_active once all threads are done
+    operation_active = False
+    stop_spinner()
+
+    # Re-enable radio buttons after operation is complete
+    radio_download.config(state="normal")
+    radio_transfer.config(state="normal")
 
     # Update the timestamp label
     current_time = datetime.now()
@@ -1138,18 +1277,34 @@ def validate_and_link_lgv():
 
 
 ############################################################ Choose file to transfer ################################################
-def choose_file_or_folder():
-    file_path.set("")  # Clear previous selection
-    if selection.get() == 'file':
-        file_or_folder = filedialog.askopenfilenames()  # Select files
-        if file_or_folder:
-            file_path.set(", ".join(file_or_folder))
-            check_source_path_for_keywords(file_or_folder)
-    elif selection.get() == 'folder':
-        file_or_folder = filedialog.askdirectory()  # Select a folder
-        if file_or_folder:
-            file_path.set(file_or_folder)
-            check_source_path_for_keywords(file_or_folder)
+
+def browse_local_path():
+    """Open a dialog to ask the user if they want to browse files or folders."""
+    # file_path.set("")  # Clear previous selection
+
+    response = messagebox.askyesnocancel(
+        "Browse Files or Folder",
+        "'Yes' to select Files\n'No' to select a Folder",
+    )
+
+    if response is True:  # User clicked 'Yes' for Files
+        selected_files = filedialog.askopenfilenames(
+            title="Select files"
+        )  # Select files
+        if selected_files:
+            file_path.set(", ".join(selected_files))
+            check_source_path_for_keywords(selected_files)
+
+    elif response is False:  # User clicked 'No' for Folders
+        selected_folder = filedialog.askdirectory(
+            title="Select a folder"
+        )  # Select a folder
+        if selected_folder:
+            file_path.set(selected_folder)
+            check_source_path_for_keywords(selected_folder)
+
+    else:  # User clicked 'Cancel'
+        print("Action canceled")
 
 ############################################################ Check source path for keywords ################################################
 def check_source_path_for_keywords(file_or_folder):
@@ -1306,6 +1461,46 @@ def validate_ip_format(event):
         ip_entry.config(bg="yellow")
         return False
 
+
+def validate_local_paths(paths_string):
+    """
+    Validate a comma-separated string of local paths.
+    """
+    # Check if the input is empty
+    if not paths_string.strip():
+        return "Please input a valid file or folder path."
+
+    # Split the input string into individual paths
+    paths = [path.strip() for path in paths_string.split(',')]
+
+     # Check for empty paths in the input
+    if any(not path for path in paths):
+        return "Input contains invalid or empty paths. Please check your input."
+    
+    # Check if splitting resulted in no paths
+    if not paths:
+        return "Please input a valid file or folder path."
+    
+    multiple_paths = len(paths) > 1  # Determine if there are multiple paths
+    
+    # Iterate through the paths and validate each
+    for path in paths:
+        if not os.path.exists(path):
+            if os.path.basename(path):  # Check if the last part of the path has a name (possible file)
+                if "." in os.path.basename(path):  # Check for a file extension
+                    return f"File {path} does not exist." if multiple_paths else "The specified file does not exist."
+                else:
+                    return f"Folder {path} does not exist." if multiple_paths else "The specified folder does not exist."
+            else:
+                return f"The path {path} is invalid or empty." if multiple_paths else "The specified path is invalid or empty."
+    
+    # If all paths are valid
+    return None
+
+def validate_remote_path(path):
+    pattern = r"^(\/|\\)([a-zA-Z0-9_\-.\s]+((\/|\\)[a-zA-Z0-9_\-.\s]+)*)?$"
+    return re.match(pattern, path) is not None
+
 ############################################## Other methods ###############################################################
 def set_anonymous_login():
     username_entry.delete(0, tk.END)
@@ -1365,7 +1560,7 @@ def set_paths():
     print(f"Default paths set to: {default_paths}")
     
 
-def set_path_on_selection():
+def set_path_on_selection(*args):
     transfer_type = transfer_type_sel.get()
     remote_dir_entry.delete(0, tk.END)
     if transfer_type == 'SFTP' or transfer_type == 'NET':
@@ -1383,16 +1578,12 @@ def select_mode():
         download.config(state="disabled")
         file_path_entry.config(state='normal')
         browse_btn.config(state='normal')
-        folder_radio.config(state='normal')
-        file_radio.config(state='normal')
 
     elif mode_selected == 'download':
         transfer.config(state='disabled')
         download.config(state="normal")
         file_path_entry.config(state='disabled')
         browse_btn.config(state='disabled')
-        folder_radio.config(state='disabled')
-        file_radio.config(state='disabled')
     print(f"Selected mode {mode_selected}")
 
 # Helper function to load a JSON file 
@@ -1610,12 +1801,17 @@ def save_custom_profile():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     
-    if not local_dir:
-        messagebox.showerror("Input Error", "Please enter a local directory.")
+    local_path_error = validate_local_paths(local_dir)
+
+    if local_path_error is not None:
+        messagebox.showerror("Input Error", f"{local_path_error}")
         return
     
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
+        return
+    elif not validate_remote_path(remote_dir):
+        messagebox.showerror("Input error", "Remote directory not valid.")
         return
     
     if not username:
@@ -1764,6 +1960,9 @@ def delete_profile_or_subprofile():
     if not profile_name or profile_name.lower() == str(default_profile["profile_name"]).lower():
         messagebox.showerror("Error", "Cannot delete the default profile.")
         return
+    elif profile_name.lower() == "select a profile":
+        messagebox.showerror("Error", "Select a valid profile.")
+        return
 
     custom_profiles = load_custom_profiles()
 
@@ -1901,7 +2100,12 @@ def open_rename_popup():
 
     rename_popup = tk.Toplevel(root)
     rename_popup.title("Rename ")
-    rename_popup.geometry("250x200")
+
+    window_width = 230
+    window_lenght = 200
+    rename_popup.geometry(f"{window_width}x{window_lenght}")
+    rename_popup.minsize(window_width, window_lenght)
+
 
     # Determine what is being renamed
     if selected_subprofile_name:
@@ -2078,6 +2282,87 @@ def load_remote_paths(event=None):
     # Populate the combobox with sorted paths
     remote_dir_entry['values'] = tuple(sorted(combined_paths, key=str.lower))
 
+
+################################################### Table Tooltip ###################################################
+class TreeviewTooltip:
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+        self.widget.bind("<Motion>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
+
+    def show_tooltip(self, event):
+        # Identify the row and column under the mouse
+        item_id = self.widget.identify_row(event.y)
+        column = self.widget.identify_column(event.x)
+
+        # If not hovering over a valid cell, hide the tooltip
+        if not item_id or column != "#4":  # "#4" corresponds to the 4th column (Description)
+            self.hide_tooltip()
+            return
+
+        # Get the description text from the identified row
+        item_values = self.widget.item(item_id, "values")
+        description = item_values[3] if len(item_values) > 3 else ""  # Safeguard against missing data
+
+        if not description.strip():  # Hide the tooltip if there's no content
+            self.hide_tooltip()
+            return
+
+        # Get the width of the column
+        column_width = self.widget.column(column, "width")
+
+        # Create a temporary label to measure text width
+        temp_label = tk.Label(
+            self.widget,
+            text=description,
+            font=("Segoe UI", 10),
+        )
+        temp_label.update_idletasks()  # Ensure accurate width calculation
+        text_width = temp_label.winfo_reqwidth()
+        temp_label.destroy()
+
+        # Show the tooltip only if the text width exceeds the column width
+        if text_width <= column_width:
+            self.hide_tooltip()
+            return
+
+        # Calculate the position for the tooltip
+        try:
+            x, y, _, height = self.widget.bbox(item_id, column)
+        except (ValueError, TypeError):
+            self.hide_tooltip()
+            return
+
+        x += self.widget.winfo_rootx()
+        y += self.widget.winfo_rooty() + height
+
+        # Create the tooltip window if it doesn't exist
+        if self.tipwindow:
+            return
+
+        self.tipwindow = tk.Toplevel(self.widget)
+        self.tipwindow.wm_overrideredirect(True)  # Remove window decorations
+        self.tipwindow.wm_geometry(f"+{x}+{y}")
+
+        # Add the tooltip content
+        label = tk.Label(
+            self.tipwindow,
+            text=description,
+            background="lightyellow",
+            relief="solid",
+            borderwidth=1,
+            font=("Segoe UI", 10),
+            wraplength=400,  # Set a maximum width for the tooltip
+        )
+        label.pack(ipadx=5, ipady=2)
+
+    def hide_tooltip(self, event=None):
+        if self.tipwindow:
+            self.tipwindow.destroy()
+            self.tipwindow = None
+
+
 ####################################################################################################################
 def on_enter(e):
     if e.widget['state']== "normal":
@@ -2095,8 +2380,15 @@ def button_design(entry):
 ############################Closing window ##################################
 def on_close():
     """Save the last session and close the app."""
+    if active_transfers > 0:
+        if not messagebox.askyesno(
+            "Exit", 
+            "There are ongoing transfers.\nAre you sure you want to exit?"
+            ):
+                return
     save_last_session_to_config()
-    root.destroy()
+    root.destroy()  # Close the main window
+        
 
 ############################ Remove focus ############################
 def remove_focus(event):
@@ -2173,6 +2465,49 @@ def update_status_table(host, lgv_name, status, description):
             break
 
 
+##############################################################################################################
+################################################### Spinner ##################################################
+##############################################################################################################
+def create_spinner_widget():
+    global spinner_frame, spinner_canvas, spinner_arc
+
+    # Create a frame to hold the spinner (fixed position in the layout)
+    spinner_frame = tk.Frame(root, width=25, height=25, bg=root['bg'])  # Match frame bg to window bg
+
+    # Create a canvas for the spinner with the same background color as the root window
+    spinner_canvas = tk.Canvas(spinner_frame, width=25, height=25, bg=root['bg'], highlightthickness=0)
+    spinner_canvas.pack()
+
+    # Draw a rotating arc (spinner)
+    spinner_arc = spinner_canvas.create_arc((2, 2, 22, 22), start=0, extent=90, width=4, outline='#4682B4', style=tk.ARC)
+
+    # Initially hide the spinner frame
+    spinner_frame.place_forget()
+
+def start_spinner(x, y):
+    global running
+    running = True  # Set the spinner running flag
+
+     # Make the spinner visible
+    spinner_frame.place(x=x, y=y)  # Adjust position as needed
+
+    rotate_spinner()  # Start rotating the spinner
+
+def stop_spinner():
+    global running
+    running = False  # Stop the spinner from running
+
+    # Hide the spinner frame
+    spinner_frame.place_forget()
+
+def rotate_spinner():
+    global spinner_arc
+    if running:
+        current_angle = spinner_canvas.itemcget(spinner_arc, 'start')
+        new_angle = (float(current_angle) + 20) % 360  # Adjust rotation speed here
+        spinner_canvas.itemconfig(spinner_arc, start=new_angle)
+        spinner_canvas.after(50, rotate_spinner)  # Adjust the delay for rotation speed
+
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
@@ -2185,7 +2520,7 @@ else:
     icon_path = os.path.abspath("./transfer.ico")
 # root.iconbitmap(icon_path)
 
-window_width = 600
+window_width = 557
 window_lenght = 670 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
@@ -2202,6 +2537,9 @@ style.configure('Range.TEntry', foreground='black')
 
 style.configure('Placeholder.TEntry', foreground='grey')
 
+# Create a custom style for the LabelFrame with an italic font
+style.configure("Custom.TLabelframe.Label", font=("Segoe UI", 10, "italic"))
+
 
 # Create the menu bar
 menu_bar = tk.Menu(root)
@@ -2209,7 +2547,7 @@ menu_bar = tk.Menu(root)
 file_menu = tk.Menu(menu_bar, tearoff=0)
 file_menu.add_command(label=" Load Config.db3 ", command=populate_table_from_db3)  # Add Load Config option
 file_menu.add_command(label=" Load StaticRoutes.xml", command=populate_table_from_xml) # Add Load StaticRoutes option
-file_menu.add_command(label=" Exit ", command=root.quit)  # Add Exit option
+file_menu.add_command(label=" Exit ", command=on_close)  # Add Exit option
 menu_bar.add_cascade(label="  File ", menu=file_menu)
 
 options_menu = tk.Menu(menu_bar, tearoff=0)
@@ -2224,19 +2562,26 @@ menu_bar.add_cascade(label=" Options ", menu=options_menu)
 root.config(menu=menu_bar)
 
 
-frame_profile = tk.Frame(root)
-frame_profile.grid(row=0, column=1, padx=10, pady=5, sticky='w')
+frame_profile = ttk.Labelframe(root, text="Profile overview", labelanchor='nw', style="Custom.TLabelframe")
+frame_profile.grid(row=0, column=0, padx=10, pady=(5,10), ipadx=3)
+
+profile_label = ttk.Label(frame_profile, text="Profile:")
+profile_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
+
 # Create a listbox to display saved profiles
 profiles_combobox = ttk.Combobox(frame_profile, width=40)
 profiles_combobox.set("Select a profile")
-profiles_combobox.grid(row=0, column=0, padx=10, pady=5, sticky='w')
+profiles_combobox.grid(row=0, column=1, padx=10, pady=5, sticky='w')
 profiles_combobox.bind("<ButtonPress>", load_profile_names)
 profiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_profile)
 profiles_combobox.bind("<Tab>", filter_profiles)
 
+subprofile_label = ttk.Label(frame_profile, text="Subprofile:")
+subprofile_label.grid(row=1, column=0, padx=5, pady=5, sticky='e')
+
 subprofiles_combobox = ttk.Combobox(frame_profile, width=40)
 subprofiles_combobox.set("Select a subprofile")
-subprofiles_combobox.grid(row=1, column=0, padx=10, pady=5, sticky='w')
+subprofiles_combobox.grid(row=1, column=1, padx=10, pady=5, sticky='w')
 subprofiles_combobox.bind("<ButtonPress>", load_subprofile_names)
 subprofiles_combobox.bind("<<ComboboxSelected>>", combined_combobox_selected_subprofile)
 subprofiles_combobox.bind("<Tab>", filter_subprofiles)
@@ -2245,109 +2590,73 @@ subprofiles_combobox.bind("<Tab>", filter_subprofiles)
 save_profile = ttk.Button(frame_profile, 
                           text="Save/Update", 
                           command=save_custom_profile)
-save_profile.grid(row=0, column=1, padx=5, pady=5)
+save_profile.grid(row=0, column=2, padx=5, pady=5)
 # button_design(save_profile)
 
 delete_profile = ttk.Button(frame_profile, 
                           text=" Delete ", 
                           command=delete_profile_or_subprofile)
-delete_profile.grid(row=1, column=1, padx=5, pady=5)
+delete_profile.grid(row=1, column=2, padx=5, pady=5)
 
 rename_prof = ttk.Button(frame_profile, 
                           text=" Rename ", 
                           command=open_rename_popup_cond)
-rename_prof.grid(row=2, column=1, padx=5, pady=5)
-
-# Customize the focus ring (or border) of the Radiobutton
-style.configure("Custom.TRadiobutton", focuscolor="lightblue", highlightthickness=2)
+rename_prof.grid(row=0, column=3, rowspan=2, padx=5, pady=5)
 
 
-# transfer_type = tk.StringVar()
-transfer_type_sel = tk.StringVar(value='SFTP')
-# style.configure("Transfer.TLabelframe.Label", relief='groove', font=("Segoe UI", 10, "italic"))
-frame_transfer = tk.Frame(root, bd=1, relief='groove')
-frame_transfer.grid(row=0, column=0, padx=0, pady=5, sticky='e')
-# Radio buttons for selecting file or folder
-sftp_option = ttk.Radiobutton(frame_transfer, text="FTP", variable=transfer_type_sel, value='FTP', command=set_path_on_selection, style="Custom.TRadiobutton")
-sftp_option.grid(row=0, column=0, padx=0, pady=0, sticky='w')
-ftp_option = ttk.Radiobutton(frame_transfer, text="SFTP", variable=transfer_type_sel, value='SFTP', command=set_path_on_selection, style="Custom.TRadiobutton")
-ftp_option.grid(row=0, column=1, padx=0, pady=0, sticky='w')
-net_option = ttk.Radiobutton(frame_transfer, text="NetFolder", variable=transfer_type_sel, value='NET', command=set_path_on_selection, style="Custom.TRadiobutton")
-net_option.grid(row=0, column=2, padx=0, pady=0, sticky='w')
+frame_path = ttk.Labelframe(root, text="Path details", labelanchor='ne', style="Custom.TLabelframe")
+frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=0, ipadx=8)
 
-# Bind the radio buttons to the function that removes focus
-# ftp_option.bind("<ButtonRelease-1>", remove_focus)
-# sftp_option.bind("<ButtonRelease-1>", remove_focus)
-# net_option.bind("<ButtonRelease-1>", remove_focus)
+frame_local = tk.Frame(frame_path)
+frame_local.grid (row=0, column=0, columnspan=2, padx=0, pady=0)
 
 
-frame_path = tk.Frame(root)
-frame_path.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
-
-frame_file = tk.Frame(frame_path)
-frame_file.grid (row=0, column=0, columnspan=2, padx=5, pady=5)
-# Variable to store the user's choice (file or folder)
-selection = tk.StringVar(value='file')
-
-frame_file_selection = tk.Frame(frame_file)
-frame_file_selection.grid(row=0, column=0, padx=5, pady=5)
-
-# Radio buttons for selecting file or folder
-file_radio = ttk.Radiobutton(frame_file_selection, text="Files:", variable=selection, value='file')
-file_radio.grid(row=0, column=1, padx=0, pady=0)
-folder_radio = ttk.Radiobutton(frame_file_selection, text="Folder", variable=selection, value='folder')
-folder_radio.grid(row=0, column=0, padx=0, pady=0)
+local_dir_label = ttk.Label(frame_local, text="Local:")
+local_dir_label.grid(row=0, column=0, padx=5, pady=5)
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
-# tk.Label(root, text="Choose file or folder to transfer:").grid(row=1, column=0, padx=10, pady=10)
-file_path_entry = ttk.Entry(frame_file, textvariable=file_path, width=60)
-file_path_entry.grid(row=0, column=1, padx=(0,5), pady=5)
+file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=58)
+# file_path_entry = ttk.Combobox(frame_local, width=55)
+file_path_entry.grid(row=0, column=1, padx=5, pady=5)
 
-browse_btn = ttk.Button(frame_file, text="Browse",
-                        # bg='ghost white', 
-                        command=choose_file_or_folder)
-browse_btn.grid(row=0, column=2, padx=5, pady=5)
-# button_design(browse_btn)
+browse_btn = ttk.Button(frame_local, 
+                        text="Browse",
+                        command=browse_local_path)
+browse_btn.grid(row=0, column=2, padx=(5,0), pady=5)
 
 
 frame_remote = tk.Frame(frame_path)
-frame_remote.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+frame_remote.grid(row=1, column=0, columnspan=2, padx=(0,14), pady=0)
 
-remote_dir_label = ttk.Label(frame_remote, text="Remote directory:")
-remote_dir_label.grid(row=0, column=0, padx=10, pady=10)
+remote_dir_label = ttk.Label(frame_remote, text="Remote:")
+remote_dir_label.grid(row=0, column=0, padx=5, pady=5)
 
-remote_dir_entry = ttk.Combobox(frame_remote, 
-                                # values=default_paths + tuple(custom_paths), 
-                                width=55)
-# if default_paths:
-#     remote_dir_entry.insert(0, default_paths[0])
+remote_dir_entry = ttk.Combobox(frame_remote, width=55)
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
-# remote_dir_entry.bind("<ButtonPress>", set_paths)
 
 remote_dir_entry.bind("<Tab>", filter_remote_dir)
 remote_dir_entry.bind("<ButtonPress>", load_remote_paths)
 
 # Add a button to save a custom path
-save_path = ttk.Button(frame_remote, text="Save Path",
-                    #   bg='ghost white',
-                      command=on_add_path)
-save_path.grid(row=0, column=2, padx=5, pady=10)
-# button_design(save_path)
+save_path = ttk.Button(frame_remote, 
+                       text="Save Path",
+                       command=on_add_path)
+save_path.grid(row=0, column=2, padx=(6,0), pady=5)
 
 
-frame_lgv_login = tk.Frame(root)
-frame_lgv_login.grid(row=3, column=0, columnspan=2, padx=5, pady=0)
+frame_lgv_login = ttk.Labelframe(root, text="Connection settings", labelanchor='nw', style="Custom.TLabelframe")
+frame_lgv_login.grid(row=3, column=0, columnspan=3, padx=5, pady=(10,5))
 
 
 frame_lgvs = tk.Frame(frame_lgv_login)
-frame_lgvs.grid(row=0, column=0, columnspan=1, padx=5, pady=5, sticky='e')
+frame_lgvs.grid(row=0, column=0, columnspan=1, padx=(5,0), pady=5)
 
 frame_ip = tk.Frame(frame_lgvs)
 frame_ip.grid(row=0, column=0, padx=0, pady=0)
 
 ip_label = ttk.Label(frame_ip, text="Root IP:")
-ip_label.grid(row=0, column=0, padx=5, pady=5)
+ip_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 ip_entry = ttk.Entry(frame_ip, width=25)
 ip_entry.grid(row=0, column=1, padx=5, pady=5)
@@ -2355,10 +2664,10 @@ create_placeholder(ip_entry, "e.g., 7.204.194.10", "RootIP.TEntry", "Placeholder
 ip_entry.bind("<KeyRelease>", validate_entry(ip_entry, 'RootIP.TEntry', validate_base_ip))
 
 frame_range = tk.Frame(frame_lgvs)
-frame_range.grid(row=1, column=0, padx=0, pady=0)
+frame_range.grid(row=1, column=0, padx=(5,0), pady=0)
 
 range_label = ttk.Label(frame_range, text="Range:")
-range_label.grid(row=0, column=0, padx=5, pady=5)
+range_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 range_entry = ttk.Entry(frame_range, width=25)
 range_entry.grid(row=0, column=1, padx=5, pady=5)
@@ -2380,13 +2689,27 @@ username_entry.insert(0, "Administrator")
 username_entry.grid(row=0, column=1, padx=5, pady=5)
 
 frame_password = tk.Frame(frame_login)
-frame_password.grid(row=1, column=0, padx=0, pady=0)
+frame_password.grid(row=1, column=0, padx=(5,0), pady=0)
 
 password_label = ttk.Label(frame_password, text="Password:")
 password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
 password_entry = ttk.Entry(frame_password, show="*")
 password_entry.grid(row=0, column=1, padx=5, pady=5)
+
+frame_typetransfer = tk.Frame(frame_lgv_login)
+frame_typetransfer.grid(row=0, column=2, padx=5, pady=5)
+
+# Transfer Type Combobox
+transfer_type_sel = tk.StringVar(value='SFTP')
+
+transfer_type_label = ttk.Label(frame_typetransfer, text="Transfer type:")
+transfer_type_label.grid(row=0, column=0, padx=5, pady=5)
+transfer_type_combobox = ttk.Combobox(frame_typetransfer, textvariable=transfer_type_sel, width=7, state="readonly")
+transfer_type_combobox['values'] = ("SFTP", "FTP", "NET")
+transfer_type_combobox.set(transfer_type_sel.get())  # Default selection
+transfer_type_combobox.grid(row=1, column=0, padx=5, pady=5)
+transfer_type_combobox.bind("<<ComboboxSelected>>", set_path_on_selection)
 
 
 frame_mode = tk.Frame(root)
@@ -2396,7 +2719,7 @@ mode_selection = tk.StringVar(value='transfer')
 # Radio buttons for selecting file or folder
 
 frame_transfer = tk.Frame(frame_mode)
-frame_transfer.grid(row=0, column=0, padx=20, pady=10)
+frame_transfer.grid(row=0, column=0, padx=25, pady=10)
 
 radio_transfer = ttk.Radiobutton(frame_transfer, 
                                 # text="Transfer", 
@@ -2431,7 +2754,7 @@ radio_download = ttk.Radiobutton(frame_download,
                                 takefocus=0,
                                 command=select_mode
                                 )
-radio_download.grid(row=0, column=2, padx=0, pady=0, sticky='w')
+radio_download.grid(row=0, column=2, padx=(6,0), pady=0, sticky='w')
 
 download = ttk.Button(frame_download,
                     text="Download", 
@@ -2463,7 +2786,7 @@ print(f"Download button state: {download['state']}")
 
 # Create the Treeview (table)
 table_frame = tk.Frame(root)
-table_frame.grid(row=5, column=0, columnspan=2, padx=10, pady=(10,0), sticky='nsew')
+table_frame.grid(row=5, column=0, columnspan=2, padx=(10,0), pady=(10,0), sticky='nsew')
 
 treeview_style = ttk.Style()
 treeview_style.configure("Treeview", rowheight=23)  # Increase row height for more space between items
@@ -2474,7 +2797,7 @@ columns = ("Name", "IPAddress", "Status", "Description")
 status_table = ttk.Treeview(table_frame, columns=columns, show="headings")
 
 # Define column properties
-status_table.column("Name", width=10, anchor='w')
+status_table.column("Name", width=20, anchor='w')
 status_table.column("IPAddress", width=60, anchor='w')
 status_table.column("Status", width=30, anchor='w')
 status_table.column('Description', width=200, anchor='w')
@@ -2487,6 +2810,10 @@ status_table.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=status_table.yview)
 status_table.configure(yscroll=scrollbar.set)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+
+# Attach the tooltip
+tooltip = TreeviewTooltip(status_table)
 
 
 # Create the Description frame
@@ -2507,8 +2834,6 @@ timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=5)
 
 
 
-set_paths()
-
 # Enable menu for Show LGV Table if table is updated
 update_menu_state()
 
@@ -2517,7 +2842,11 @@ update_menu_state()
 load_last_session_from_config()
 load_data_from_selection()
 
+set_paths()
+
 update_rename_button_state()
+
+create_spinner_widget()
 
 # Disable focus for all widgets
 # disable_focus(root)
@@ -2545,3 +2874,5 @@ root.mainloop()
 # Poner Files para que el usuario sepa que puede seleccionar varios
 
 # Line 586, make user able to save local paths, and separate if they are either folders or filesand when opening a new one pop up a message if they want to actually save that path
+
+# Transfer or Download maybe should update the profile

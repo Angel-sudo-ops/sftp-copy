@@ -51,16 +51,6 @@
         <Type>TC2</Type>
     </LGV>
     <LGV>
-        <Name>LGV101</Name>
-        <IPAddress>172.16.12.115</IPAddress>
-        <Type>TC2</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV102</Name>
-        <IPAddress>172.16.12.114</IPAddress>
-        <Type>TC2</Type>
-    </LGV>
-    <LGV>
         <Name>LGV11</Name>
         <IPAddress>172.16.12.113</IPAddress>
         <Type>TC3</Type>
