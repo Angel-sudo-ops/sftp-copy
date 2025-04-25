@@ -22,7 +22,7 @@ import configparser
 import subprocess
 import shutil
 
-__version__ = '3.5.7'
+__version__ = '3.5.8'
 
 CONFIG_FILE = "config.ini"
 
@@ -474,16 +474,17 @@ def start_transfer():
         return
     
     local_path_string = file_path.get()
-    base_ip = ip_entry.get()
-    range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
+    transfer_type = transfer_type_sel.get()
     
-    if transfer_type_sel.get() == 'SFTP':
+    if transfer_type == 'SFTP':
         port = 20022
-    elif transfer_type_sel.get() == 'FTP':
+    elif transfer_type == 'FTP':
         port = FTP_PORT
+    elif transfer_type == 'NET':
+        port = 21
 
 
     local_paths = [path.strip() for path in local_path_string.split(',')]
@@ -515,6 +516,7 @@ def start_transfer():
             return
     else:
         base_ip = ip_entry.get()
+        range_input = range_entry.get()
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
@@ -570,10 +572,12 @@ def start_transfer():
         update_status_table(host, lgv_name, "In Progress", description)
 
         for local_path in local_paths:
-            if transfer_type_sel.get() == 'SFTP': 
+            if transfer_type == 'SFTP': 
                 t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, result_queue, lgv_name))
-            elif transfer_type_sel.get() == 'FTP':
+            elif transfer_type == 'FTP':
                 t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
+            elif transfer_type == 'NET':
+                t = threading.Thread(target=net_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
             
             t.daemon = True
             threads.append(t)
@@ -646,6 +650,7 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
         # After completing all transfers, update the table
         description = "All files transferred successfully!" if success else "Some transfers failed."
         status = "Completed" if success else "Failed"
+
     except Exception as e:
         description = f"Connection failed: {e}"
         status = "Failed"
@@ -675,7 +680,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, result_queue
                 description = f"Failed to transfer {local_file_name}"
                 success = False
             finally:
-                        update_status_table(host, lgv_name, "In Progress", description)
+                update_status_table(host, lgv_name, "In Progress", description)
 
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -715,10 +720,12 @@ def ftp_transfer(host, username, password, local_path, remote_path, result_queue
         # After completing all transfers, update the table
         description = "All files transferred successfully!" if success else "Some transfers failed."
         status = "Completed" if success else "Failed"
+
     except Exception as e:
         description = f"Connection failed: {e}"
         status = "Failed"
         success = False
+
     finally:
         update_status_table(host, lgv_name, status, description)
         result_queue.put((host, "Success" if success else "Failed"))
@@ -765,6 +772,81 @@ def ftp_transfer_anonymous(host, username, password, local_path, remote_path, st
     finally:
         status_widget.yview(tk.END)
 
+################################################ NET transfer ###############################################################
+
+def net_transfer(host, username, password, local_path, remote_path, result_queue, lgv_name=""):
+    success = True
+    description = ""
+    status = "In Progress"
+    unc_path = fr"\\{host}{remote_path}"
+
+    try:
+        # Disconnect first to avoid conflicts (1219 error)
+        subprocess.run(["net", "use", f"\\\\{host}", "/delete"], shell=True)
+
+        # Connect to the network folder using credentials
+        subprocess.run(
+            ["net", "use", unc_path, password, f"/user:{username}"],
+            check=True,
+            shell=True
+        )
+
+        # Handle file or folder transfer
+        if os.path.isfile(local_path):
+            try:
+                file_name = os.path.basename(local_path)
+                dst_file = os.path.join(unc_path, file_name)
+                shutil.copy2(local_path, dst_file)
+                description = f"Successfully transferred {file_name}"
+            except Exception as e:
+                description = f"Failed to transfer {file_name}: {e}"
+                success = False
+            finally:
+                update_status_table(host, lgv_name, status, description)
+
+        else:
+            for root, dirs, files in os.walk(local_path):
+                rel_path = os.path.relpath(root, local_path)
+                target_dir = os.path.join(unc_path, rel_path)
+
+                if not os.path.exists(target_dir):
+                    try:
+                        os.makedirs(target_dir, exist_ok=True)
+                        description = f"Created directory {target_dir} on {host}"
+                    except Exception as e:
+                        description = f"Failed to create directory {target_dir} on {host}: {e}"
+                        success = False
+                        continue
+                    finally:
+                        update_status_table(host, lgv_name, "In Progress", description)
+
+                for file in files:
+                    src_file = os.path.join(root, file)
+                    dst_file = os.path.join(target_dir, file)
+
+                    try:
+                        shutil.copy2(src_file, dst_file)
+                        description = f"Successfully transferred {os.path.basename(src_file)}"
+                    except Exception as e:
+                        description = f"Failed to transfer {os.path.basename(src_file)}: {e}"
+                        success = False
+                    finally:
+                        update_status_table(host, lgv_name, status, description)
+
+        status = "Completed" if success else "Failed"
+        description = "All files transferred successfully!" if success else "Some transfers failed."
+
+    except Exception as e:
+        success = False
+        status = "Failed"
+        description = f"Connection failed"
+
+    finally:
+        subprocess.run(["net", "use", f"\\\\{host}", "/delete"], shell=True)
+        update_status_table(host, lgv_name, status, description)
+        result_queue.put((host, "Success" if success else "Failed"))
+
+
 #######################################################################################################################
 ############################################# Download from remote server #############################################
 #######################################################################################################################
@@ -781,8 +863,6 @@ def start_download():
         messagebox.showerror("Error", "Please enter a valid profile.")
         return
     
-
-    range_input = range_entry.get()
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
     password = password_entry.get()
@@ -817,6 +897,7 @@ def start_download():
             return
     else:
         base_ip = ip_entry.get()
+        range_input = range_entry.get()
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
@@ -1053,6 +1134,7 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
         result_queue.put((host, "Success" if success else "Failed"))
 
 ################################################ NET download ###############################################################
+
 def net_download(host, username, password, remote_path, local_path, result_queue, lgv_name=""):
     success = True
     description = ""
@@ -1061,11 +1143,12 @@ def net_download(host, username, password, remote_path, local_path, result_queue
 
     try:
 
-         # Update table with "In Progress" status
+        # Update table with "In Progress" status
         update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
 
         # Disconnect existing connections to the host
         subprocess.run(["net", "use", f"\\{host}", "/delete"], shell=True)
+
         # Connect to the shared folder using credentials
         subprocess.run(
             ["net", "use", unc_path, password, f"/user:{username}"],
@@ -1095,7 +1178,7 @@ def net_download(host, username, password, remote_path, local_path, result_queue
     except Exception as e:
         success = False
         status = "Failed"
-        description = f"Error navigating to {remote_path}: {e}"
+        description = f"Error navigating to {remote_path}"
 
     finally:
         # Disconnect from the network share
