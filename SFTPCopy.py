@@ -548,19 +548,24 @@ def start_transfer():
     print(f"Password is {password}")
     print(local_paths)
 
+    hosts = [
+        (
+            f"LGV{int(item['number']):02}" if lgv_data_exists else "",
+            item["ip_address"] if lgv_data_exists else item
+        )
+        for item in ip_list
+    ]
+
     # Clear and populate the status table
     status_table.delete(*status_table.get_children())
-    for item in ip_list:
-        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
-        ip_address = item["ip_address"] if lgv_data_exists else item
-        status_table.insert("", "end", values=(lgv_name, ip_address, "Queued", ""))
+    for lgv_name, host in hosts:
+        status_table.insert("", "end", values=(lgv_name, host, "Queued", ""))
 
     result_queue = queue.Queue()
     threads = []
 
-    for item in ip_list:
-        lgv_name = f"LGV{int(item["number"]):02}" if lgv_data_exists else ""
-        host = item["ip_address"] if lgv_data_exists else item
+    for lgv_name, host in hosts:
+        
         file_count = len(local_paths)
 
         # Update the table with a summary of the transfer
@@ -939,21 +944,23 @@ def start_download():
     print(download_folder)
     print(local_root_path)
 
+    hosts = [
+        (
+            f"LGV{int(item['number']):02}" if lgv_data_exists else "",
+            item["ip_address"] if lgv_data_exists else item
+        )
+        for item in ip_list
+    ]
 
     # Clear and populate the status table
     status_table.delete(*status_table.get_children())
-    for item in ip_list:
-        lgv_name = f"LGV{int(item['number']):02}" if lgv_data_exists else ""
-        ip_address = item["ip_address"] if lgv_data_exists else item
-        status_table.insert("", "end", values=(lgv_name, ip_address, "Queued", "")) 
-
+    for lgv_name, host in hosts:
+        status_table.insert("", "end", values=(lgv_name, host, "Queued", "")) 
 
     result_queue = queue.Queue()
     threads = []
 
-    for item in ip_list:
-        lgv_name = f"LGV{int(item['number']):02}" if lgv_data_exists else ""
-        host = item["ip_address"] if lgv_data_exists else item
+    for lgv_name, host in hosts:
 
         folder_name = lgv_name if lgv_data_exists else host
         local_path = os.path.join(download_folder, folder_name)
