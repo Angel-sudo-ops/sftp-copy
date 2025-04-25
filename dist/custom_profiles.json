@@ -161,6 +161,26 @@
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach20_TC2_NET_config",
+                "base_ip": "172.16.12.100",
+                "ip_range": "1-9",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2113_PapeleraSanAndres/MyFiles/Backup/test.txt",
+                "remote_dir": "\\Backup",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "NET"
+            },
+            {
+                "sub_name": "Reach20_TC2_FTP_config",
+                "base_ip": "172.16.12.100",
+                "ip_range": "10",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2113_PapeleraSanAndres/MyFiles/Backup/test.txt",
+                "remote_dir": "/Backup",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
             }
         ]
     }
