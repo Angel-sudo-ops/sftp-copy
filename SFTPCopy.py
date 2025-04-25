@@ -21,8 +21,9 @@ import sqlite3
 import configparser
 import subprocess
 import shutil
+import platform
 
-__version__ = '3.5.8'
+__version__ = '3.5.9'
 
 CONFIG_FILE = "config.ini"
 
@@ -452,6 +453,33 @@ def open_lgv_table_window():
 
     load_table_data_from_xml(treeview)
 
+################################################## Ping host ###################################################
+def is_host_reachable(host, timeout=2):
+    """Ping the host to check if it is reachable."""
+    # Define the ping command based on the OS
+    if platform.system().lower() == "windows":
+        ping_cmd = ["ping", "-n", "1", "-w", str(timeout * 1000), host]
+        creation_flags = subprocess.CREATE_NO_WINDOW
+    else:
+        ping_cmd = ["ping", "-c", "1", "-W", str(timeout), host]
+        creation_flags = 0
+
+    try:
+        subprocess.run(
+            ping_cmd, 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL, 
+            check=True, timeout=timeout + 1,
+            creationflags=creation_flags
+        )
+        return True
+    except subprocess.TimeoutExpired:
+        print(f"Ping to {host} timed out.")
+        return False
+    except subprocess.CalledProcessError:
+        print(f"Ping to {host} failed.")
+        return False
+
 
 #######################################################################################################################
 ############################################### Transfer to remote server #############################################
@@ -541,13 +569,13 @@ def start_transfer():
     start_spinner(265, 320)
     # To avoid selecting download during transfer
     radio_download.config(state="disable")
-    
 
     print (f"Selected port is {port}")
     print(f"Login is {username}")
     print(f"Password is {password}")
     print(local_paths)
 
+    
     hosts = [
         (
             f"LGV{int(item['number']):02}" if lgv_data_exists else "",
@@ -559,12 +587,18 @@ def start_transfer():
     # Clear and populate the status table
     status_table.delete(*status_table.get_children())
     for lgv_name, host in hosts:
-        status_table.insert("", "end", values=(lgv_name, host, "Queued", ""))
+        status_table.insert("", "end", values=(lgv_name, host, "Queued", "Attempting connection..."))
 
     result_queue = queue.Queue()
     threads = []
 
-    for lgv_name, host in hosts:
+    def ping_and_transfer(lgv_name, host):
+
+        # Ping check
+        if not is_host_reachable(host, timeout=5):
+            update_status_table(host, lgv_name, "Failed", "Host is not reachable")
+            result_queue.put((host, "Unreachable"))
+            return
         
         file_count = len(local_paths)
 
@@ -575,6 +609,7 @@ def start_transfer():
             else f"Transferring {os.path.basename(local_paths[0])}..."
         )
         update_status_table(host, lgv_name, "In Progress", description)
+
 
         for local_path in local_paths:
             if transfer_type == 'SFTP': 
@@ -592,10 +627,14 @@ def start_transfer():
             global active_transfers
             active_transfers += 1
 
+    for lgv_name, host in hosts:
+        t = threading.Thread(target=ping_and_transfer, args=(lgv_name, host))
+        t.daemon = True
+        threads.append(t)
+        t.start()
+        
     # Start a separate thread to monitor the worker threads
     threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
-
-
 ############################################### SFTP Transfer ###############################################
 
 def sftp_transfer(host, port, username, password, local_path, remote_path, result_queue, lgv_name):
@@ -961,6 +1000,11 @@ def start_download():
     threads = []
 
     for lgv_name, host in hosts:
+         # Ping check
+        if not is_host_reachable(host, timeout=5):
+            update_status_table(host, lgv_name, "Failed", "Host is not reachable")
+            result_queue.put((host, "Unreachable"))
+            continue
 
         folder_name = lgv_name if lgv_data_exists else host
         local_path = os.path.join(download_folder, folder_name)
@@ -1240,12 +1284,13 @@ def monitor_threads(threads, result_queue):
 
     # Check for any failed results grouped by host
     results_by_host = {}
+
     while not result_queue.empty():
         host, result = result_queue.get()
         if host not in results_by_host:
             results_by_host[host] = {"total": 0, "failed": 0}
         results_by_host[host]["total"] += 1
-        if result == "Failed":
+        if result in ["Failed", "Unreachable"]:
             results_by_host[host]["failed"] += 1
 
     # Calculate summary
@@ -1255,7 +1300,6 @@ def monitor_threads(threads, result_queue):
     for host, counts in results_by_host.items():
         if counts["failed"] > 0:
             failed_hosts_count += 1
-
 
     # Update the summary label
     if failed_hosts_count > 0:
