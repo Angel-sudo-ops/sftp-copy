@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.0'
+__version__ = '3.6.1'
 
 CONFIG_FILE = "config.ini"
 
@@ -45,6 +45,9 @@ def populate_table_from_xml(path=None):
                                             filetypes=[("XML files", "*.xml")])
     else:
         file_path = path
+
+    if not file_path:
+        return
 
     if file_path and not os.path.exists(file_path):
         print(f"The file {path} does not exist.")
@@ -228,6 +231,9 @@ def populate_table_from_db3():
     # Enable menu for Show LGV Table if table is updated
     update_menu_state()
 
+def extract_numeric_part(name):
+    match = re.search(r'\d+', name) #Extract numeric part
+    return int(match.group()) if match else float('inf') # Convert to int for correct sorting
 
 # Save data to XML
 def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
@@ -249,7 +255,7 @@ def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
         })
 
     # Sort the current data to ensure consistent ordering
-    current_data.sort(key=lambda x: x["Name"])
+    current_data.sort(key=lambda x: extract_numeric_part(x["Name"]))
 
 
     # If the file exists, compare it with the current data
@@ -268,7 +274,7 @@ def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
             })
 
         # Sort the existing data to ensure consistent ordering
-        existing_data.sort(key=lambda x: x["Name"])
+        existing_data.sort(key=lambda x: extract_numeric_part(x["Name"]))
 
         # Compare existing data with current data
         if existing_data == current_data:
