@@ -1,1 +1,3 @@
 pyinstaller --onefile --icon=transfer.ico --windowed --add-data "transfer.ico;." SFTPCopy.py
+
+pyinstaller SFTPCopy.spec

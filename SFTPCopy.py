@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.1'
+__version__ = '3.6.3'
 
 CONFIG_FILE = "config.ini"
 
@@ -507,6 +507,8 @@ def start_transfer():
         messagebox.showerror("Error", "Please enter a valid profile.")
         return
     
+    subprofile_name = subprofiles_combobox.get().strip()
+    
     local_path_string = file_path.get()
     remote_dir = remote_dir_entry.get()
     username = username_entry.get()
@@ -522,12 +524,26 @@ def start_transfer():
         port = 21
 
 
-    local_paths = [path.strip() for path in local_path_string.split(',')]
-    local_path_error = validate_local_paths(local_path_string)
+    if not local_path_string :
+        selected_path = browse_local_path()
+        if not selected_path:
+            messagebox.showwarning("Transfer canceled", "A valid local file or folder path is required.")
+            return
+        
+        file_path.set(selected_path) # update the StringVar
+        local_path_string = selected_path
+    
+    path_changed = is_path_changed(local_path_string, profile_name, subprofile_name)
 
+    local_path_error = validate_local_paths(local_path_string)
     if local_path_error is not None:
         messagebox.showerror("Input Error", f"{local_path_error}")
         return
+    
+    if path_changed:
+        save_custom_profile(silent_update=True)
+    
+    local_paths = [path.strip() for path in local_path_string.split(',')]
 
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
@@ -1429,9 +1445,91 @@ def validate_and_link_lgv(range_input):
 
 ############################################################ Choose file to transfer ################################################
 
+def show_status_message(
+    status_label,
+    message,
+    duration=3000,
+    fade_steps=10,
+    start_color="#00aa00",
+    end_color="#aaaaaa"
+):
+    """Show a temporary status message that fades from start_color to end_color before disappearing."""
+    status_label.config(text=message, foreground=start_color)
+
+    step_duration = duration // fade_steps
+
+    # Helper to convert hex to RGB tuple
+    def hex_to_rgb(hex_color):
+        hex_color = hex_color.lstrip("#")
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+    # Helper to convert RGB tuple to hex
+    def rgb_to_hex(rgb_tuple):
+        return "#{:02x}{:02x}{:02x}".format(*rgb_tuple)
+
+    start_rgb = hex_to_rgb(start_color)
+    end_rgb = hex_to_rgb(end_color)
+
+    def fade(step=0):
+        if step >= fade_steps:
+            status_label.config(text="")
+            return
+
+        # Interpolate between start and end RGB values
+        current_rgb = tuple(
+            int(start + (end - start) * (step / fade_steps))
+            for start, end in zip(start_rgb, end_rgb)
+        )
+
+        faded_color = rgb_to_hex(current_rgb)
+        status_label.config(foreground=faded_color)
+
+        root.after(step_duration, lambda: fade(step + 1))
+
+    root.after(duration, fade)
+
+
+def is_path_changed(current_path, profile_name, subprofile_name):
+    """Check if the current local path differs from the saved one."""
+    custom_profiles = load_custom_profiles()
+
+    for profile in custom_profiles:
+        if profile["profile_name"] == profile_name:
+            for sub in profile.get("sub_profiles", []):
+                if sub["sub_name"] == subprofile_name:
+                    saved_local_dir = sub.get("local_dir", "").strip()
+                    return current_path.strip() != saved_local_dir
+            break
+
+    # If profile or subprofile not found, treat it as changed
+    return True
+
+
+def get_initial_dir(current_path):
+    """Extract a clean initial directory from the current file_path value."""
+    paths = [path.strip() for path in current_path.split(",") if path.strip()]
+    for path in paths:
+        if os.path.exists(path):
+            return path if os.path.isdir(path) else os.path.dirname(path)
+    return None
+
+
+def browse_local_path_cmd():
+    selected_path = browse_local_path()
+    if selected_path:
+        file_path.set(selected_path)
+
+        profile_name = profiles_combobox.get().strip()
+        subprofile_name = subprofiles_combobox.get().strip()
+
+        if is_path_changed(selected_path, profile_name, subprofile_name):
+            save_custom_profile(silent_update=True)
+
+
 def browse_local_path():
-    """Open a dialog to ask the user if they want to browse files or folders."""
-    # file_path.set("")  # Clear previous selection
+    """Prompt the user to choose files or folders and return the selected paths(s)"""
+    current_path = file_path.get().strip()
+    initial_dir = get_initial_dir(current_path)
 
     response = messagebox.askyesnocancel(
         "Browse Files or Folder",
@@ -1440,22 +1538,25 @@ def browse_local_path():
 
     if response is True:  # User clicked 'Yes' for Files
         selected_files = filedialog.askopenfilenames(
-            title="Select files"
+            title="Select files",
+            initialdir=initial_dir
         )  # Select files
         if selected_files:
-            file_path.set(", ".join(selected_files))
             check_source_path_for_keywords(selected_files)
+            return ", ".join(selected_files)
 
     elif response is False:  # User clicked 'No' for Folders
         selected_folder = filedialog.askdirectory(
-            title="Select a folder"
+            title="Select a folder",
+            initialdir=initial_dir
         )  # Select a folder
         if selected_folder:
-            file_path.set(selected_folder)
             check_source_path_for_keywords(selected_folder)
+            return selected_folder
 
     else:  # User clicked 'Cancel'
-        print("Action canceled")
+        print("Browse action canceled")
+        return None
 
 ############################################################ Check source path for keywords ################################################
 def check_source_path_for_keywords(file_or_folder):
@@ -1923,7 +2024,7 @@ def save_custom_profiles(profile):
         json.dump(profile, file, indent=4)
 
 
-def save_custom_profile():
+def save_custom_profile(silent_update=False):
     """Save a custom profile and its sub-profile."""
     profile_name = profiles_combobox.get().strip()
     subprofile_name = subprofiles_combobox.get().strip()
@@ -1935,6 +2036,7 @@ def save_custom_profile():
     username = username_entry.get().strip()
     password = password_entry.get() # what if password has a space
     transfer_mode = transfer_type_sel.get()
+
 
     if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
         messagebox.showerror("Error", "Please enter a valid profile name")
@@ -1952,11 +2054,11 @@ def save_custom_profile():
         messagebox.showerror("Input Error", "Please enter the IP range.")
         return
     
-    local_path_error = validate_local_paths(local_dir)
-
-    if local_path_error is not None:
-        messagebox.showerror("Input Error", f"{local_path_error}")
-        return
+    if local_dir.strip():
+        local_path_error = validate_local_paths(local_dir)
+        if local_path_error is not None:
+            messagebox.showerror("Input Error", f"{local_path_error}")
+            return
     
     if not remote_dir:
         messagebox.showerror("Input Error", "Please enter the remote directory.")
@@ -2000,7 +2102,10 @@ def save_custom_profile():
                 if existing_subprofile["sub_name"] == subprofile_name:
                     # Update the existing sub-profile
                     existing_subprofile.update(subprofile)
-                    messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' updated successfully.")
+                    if not silent_update:
+                        messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' updated successfully.")
+                    else:
+                        show_status_message(status_path_label, "Path updated successfully", fade_steps=20)
                     break
             else:
                 # Add a new sub-profile to the profile
@@ -2758,6 +2863,9 @@ rename_prof.grid(row=0, column=3, rowspan=2, padx=5, pady=5)
 frame_path = ttk.Labelframe(root, text="Path details", labelanchor='ne', style="Custom.TLabelframe")
 frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=0, ipadx=8)
 
+status_path_label = ttk.Label(frame_path, text="")
+status_path_label.place(relx=1.0, rely=0.0, x=-520, y=-20, anchor="nw")
+
 frame_local = tk.Frame(frame_path)
 frame_local.grid (row=0, column=0, columnspan=2, padx=0, pady=0)
 
@@ -2773,7 +2881,7 @@ file_path_entry.grid(row=0, column=1, padx=5, pady=5)
 
 browse_btn = ttk.Button(frame_local, 
                         text="Browse",
-                        command=browse_local_path)
+                        command=browse_local_path_cmd)
 browse_btn.grid(row=0, column=2, padx=(5,0), pady=5)
 
 
