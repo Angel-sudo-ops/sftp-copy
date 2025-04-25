@@ -191,7 +191,7 @@
                 "sub_name": "CB30_config",
                 "base_ip": "10.188.80.100",
                 "ip_range": "1-9",
-                "local_dir": "C:/Users/contreras.j/Pictures/ControlCenter.xml",
+                "local_dir": "C:/Users/contreras.j/Pictures/test.txt",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",

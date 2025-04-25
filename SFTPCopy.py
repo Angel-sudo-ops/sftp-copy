@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.3'
+__version__ = '3.6.4'
 
 CONFIG_FILE = "config.ini"
 
@@ -1519,17 +1519,16 @@ def browse_local_path_cmd():
     if selected_path:
         file_path.set(selected_path)
 
-        profile_name = profiles_combobox.get().strip()
-        subprofile_name = subprofiles_combobox.get().strip()
-
-        if is_path_changed(selected_path, profile_name, subprofile_name):
-            save_custom_profile(silent_update=True)
-
 
 def browse_local_path():
     """Prompt the user to choose files or folders and return the selected paths(s)"""
     current_path = file_path.get().strip()
     initial_dir = get_initial_dir(current_path)
+
+    if initial_dir and os.path.exists(initial_dir):
+        pass  # Good, use it
+    else:
+        initial_dir = os.path.expanduser("~/Documents")  # Fast fallback
 
     response = messagebox.askyesnocancel(
         "Browse Files or Folder",
