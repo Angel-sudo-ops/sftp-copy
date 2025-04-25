@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.5.9'
+__version__ = '3.6.0'
 
 CONFIG_FILE = "config.ini"
 
@@ -506,6 +506,7 @@ def start_transfer():
     username = username_entry.get()
     password = password_entry.get()
     transfer_type = transfer_type_sel.get()
+    range_input = range_entry.get()
     
     if transfer_type == 'SFTP':
         port = 20022
@@ -538,13 +539,12 @@ def start_transfer():
 
     # Validate IP source
     if lgv_data_exists:
-        ip_list = validate_and_link_lgv()
+        ip_list = validate_and_link_lgv(range_input)
         if not ip_list:
             messagebox.showerror("Input Error", "Invalid LGV range or no matching data in the LGV table.")
             return
     else:
         base_ip = ip_entry.get()
-        range_input = range_entry.get()
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
@@ -593,7 +593,6 @@ def start_transfer():
     threads = []
 
     def ping_and_transfer(lgv_name, host):
-
         # Ping check
         if not is_host_reachable(host, timeout=5):
             update_status_table(host, lgv_name, "Failed", "Host is not reachable")
@@ -626,6 +625,7 @@ def start_transfer():
             # Increment active_transfers
             global active_transfers
             active_transfers += 1
+
 
     for lgv_name, host in hosts:
         t = threading.Thread(target=ping_and_transfer, args=(lgv_name, host))
@@ -911,6 +911,7 @@ def start_download():
     username = username_entry.get()
     password = password_entry.get()
     transfer_type = transfer_type_sel.get()
+    range_input = range_entry.get()
 
     if transfer_type == 'SFTP':
         port = 20022
@@ -935,13 +936,12 @@ def start_download():
 
     # Validate IP source
     if lgv_data_exists:
-        ip_list = validate_and_link_lgv()
+        ip_list = validate_and_link_lgv(range_input)
         if not ip_list:
             messagebox.showerror("Input Error", "Invalid LGV range or no matching data in the LGV table.")
             return
     else:
         base_ip = ip_entry.get()
-        range_input = range_entry.get()
         if not validate_base_ip():
             messagebox.showerror("Input Error", "Please enter the base IP.")
             return
@@ -959,7 +959,7 @@ def start_download():
 
     local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
     if not local_root_path:
-        messagebox.showwarning("Error", "Download cancelled.")
+        # messagebox.showwarning("Error", "Download cancelled.")
         return
     
     # Reset labels at the start of a new download
@@ -974,8 +974,7 @@ def start_download():
 
 
     download_folder = os.path.join(local_root_path, "Download")
-    if not os.path.exists(download_folder):
-        os.makedirs(download_folder)
+    download_folder_created = False
     
     print (f"Selected port is {port}")
     print(f"Login is {username}")
@@ -994,17 +993,23 @@ def start_download():
     # Clear and populate the status table
     status_table.delete(*status_table.get_children())
     for lgv_name, host in hosts:
-        status_table.insert("", "end", values=(lgv_name, host, "Queued", "")) 
+        status_table.insert("", "end", values=(lgv_name, host, "Queued", "Attempting connection...")) 
 
     result_queue = queue.Queue()
     threads = []
 
-    for lgv_name, host in hosts:
-         # Ping check
+    def ping_and_download(lgv_name, host):
+        nonlocal download_folder_created
+
+        # Ping check
         if not is_host_reachable(host, timeout=5):
             update_status_table(host, lgv_name, "Failed", "Host is not reachable")
             result_queue.put((host, "Unreachable"))
-            continue
+            return
+        
+        if not download_folder_created:
+            os.makedirs(download_folder, exist_ok=True)
+            download_folder_created = True
 
         folder_name = lgv_name if lgv_data_exists else host
         local_path = os.path.join(download_folder, folder_name)
@@ -1027,10 +1032,16 @@ def start_download():
         # Increment active_transfers
         global active_transfers
         active_transfers += 1
+
+
+    for lgv_name, host in hosts:
+        t = threading.Thread(target=ping_and_download, args=(lgv_name, host))
+        t.daemon = True
+        threads.append(t)
+        t.start()
     
     # Start a separate thread to monitor the worker threads
     threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
-
 
 ############################################### SFTP Download ###############################################
 
@@ -1363,19 +1374,19 @@ def parse_lgv_range(range_str):
     return lgv_numbers
 
 
-def validate_and_link_lgv():
+def validate_and_link_lgv(range_input):
     """
     Validate the LGV range and link IP addresses from the LGV data table.
     """
     try:
         # Check if the LGV range entry is empty
-        if range_entry.get().strip() == '':
+        if range_input.strip() == '':
             print("LGV range is empty!")
             # log_message("LGV range is empty!")
             return None
 
         # Parse the LGV range input into a set of numbers
-        lgv_numbers = parse_lgv_range(range_entry.get())
+        lgv_numbers = parse_lgv_range(range_input)
         found_entries = []
 
         # Load data from the LGV XML table
