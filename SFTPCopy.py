@@ -23,11 +23,18 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.5'
+__version__ = '3.6.5.1'
 
 CONFIG_FILE = "config.ini"
 
 LGV_DATA_FILE = "lgv_address_list.xml"
+
+
+class OperationCancelledException(Exception):
+    """Raised when an operation (transfer/download) is cancelled by the user."""
+    pass
+
+
 ############################################## Load/Save LGV Data #############################################
 def extract_lgv_name(input_name):
     # Regex pattern to capture 'LGV' followed by numbers
@@ -515,9 +522,6 @@ def start_transfer():
         messagebox.showwarning("Operation in progress", "A transfer is already in progress.")
         return
     
-    active_operations = 0
-    cancel_event.clear()
-    show_cancel_button()
 
     profile_name = profiles_combobox.get().strip()
     if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
@@ -609,6 +613,10 @@ def start_transfer():
     # To avoid selecting download during transfer
     radio_download.config(state="disable")
 
+    active_operations = 0
+    cancel_event.clear()
+    show_cancel_button("transfer")
+
     print (f"Selected port is {port}")
     print(f"Login is {username}")
     print(f"Password is {password}")
@@ -651,7 +659,7 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
     try: 
         
         # Ping check
-        if not is_host_reachable_fake(host, timeout=3):
+        if not is_host_reachable(host, timeout=5):
             if cancel_event.is_set():
                 description = "Transfer cancelled before starting."
                 status = "Cancelled"
@@ -662,7 +670,6 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
         
         
         file_count = len(local_paths)
-
         # Update the table with a summary of the transfer
         description = (
             f"Transferring {file_count} files..." 
@@ -670,17 +677,11 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
             else f"Transferring {os.path.basename(local_paths[0])}..."
         )
 
-        update_status_table(host, lgv_name, "In Progress", description)
+        safe_update_status_table(host, lgv_name, "In Progress", description)
 
         all_success = True
 
-        for local_path in local_paths:
-
-            if cancel_event.is_set():
-                description = "Transfer cancelled before file transfer."
-                status = "Cancelled"
-                return
-            
+        for local_path in local_paths:           
             if transfer_type == 'SFTP': 
                 success = sftp_transfer(lgv_name, host, port, username, password, local_path, remote_dir)
             elif transfer_type == 'FTP':
@@ -691,18 +692,18 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
             if not success:
                 all_success = False
 
-            # Maybe remove ??
-            if cancel_event.is_set():
-                description = "Transfer cancelled before file transfer."
-                status = "Cancelled"
-                return
-
         description = "All files transferred successfully!" if all_success else "Some transfers failed."
         status = "Completed" if all_success else "Failed"
+    
+    except OperationCancelledException:
+        description = "Transfer cancelled during file transfer."
+        status = "Cancelled"
+        success = False
 
     except Exception as e:
         description = f"Transfer failed: {e}"
         status = "Failed"
+        success = False
 
     finally:
         update_status_table(host, lgv_name, status, description)
@@ -717,13 +718,7 @@ def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_p
     local_file_name = os.path.basename(local_path)
     success = True  # Track overall success for the entire transfer process
 
-    try:
-        if cancel_event.is_set():
-            description = "Transfer cancelled during file transfer."
-            status = "Cancelled"
-            success = False
-            return
-        
+    try:      
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
@@ -738,7 +733,7 @@ def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_p
                 description = f"Failed to transfer {local_file_name}"
                 success = False
             finally:
-                update_status_table(host, lgv_name, "In Progress", description)
+                safe_update_status_table(host, lgv_name, "In Progress", description)
                 
         else:
             for root_dir, dirs, files in os.walk(local_path):
@@ -756,11 +751,11 @@ def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_p
                             description = f"Failed to create directory {remote_dir} on {host}: {e}"
                             continue  # Continue with other directories/files even if one fails
                         finally:
-                            update_status_table(host, lgv_name, "In Progress", description)
+                            safe_update_status_table(host, lgv_name, "In Progress", description)
 
                 for file_name in files:
                     local_file = os.path.join(root_dir, file_name)
-                    remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path))
+                    remote_file = os.path.join(remote_path, os.path.relpath(local_file, local_path)).replace("\\", "/")
                     try:
                         sftp.put(local_file, remote_file)
                         description = f"Successfully transferred {os.path.basename(local_file)}"
@@ -768,24 +763,32 @@ def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_p
                         description = f"Failed to transfer {os.path.basename(local_file)}"
                         success = False
                     finally:
-                        update_status_table(host, lgv_name, "In Progress", description)
+                        safe_update_status_table(host, lgv_name, "In Progress", description)
 
-        sftp.close()
-        ssh.close()
+        # sftp.close()
+        # ssh.close()
 
         # After completing all transfers, update the table
         # description = "All files transferred successfully!" if success else "Some transfers failed."
         # status = "Completed" if success else "Failed"
-        return success
+    
+    except OperationCancelledException:
+        success = False
+        raise  # re-raise immediately, don't handle Cancel here
 
     except Exception as e:
-        description = f"Connection failed: {e}"
-        status = "Failed"
+        # description = f"Connection failed: {e}"
         success = False
-        return success
     
     finally:
-        update_status_table(host, lgv_name, status, description)
+        try:
+            sftp.close()
+            ssh.close()
+        except:
+            pass
+        # update_status_table(host, lgv_name, status, description)
+
+    return success
 
 
 ################################################ FTP transfer ###############################################################
@@ -1473,18 +1476,21 @@ def finalize_operation(success, result_queue, host):
 def cancel_transfers():
     """User pressed Cancel button."""
     if active_operations > 0:
-        if messagebox.askyesno("Cancel Transfers", "Are you sure you want to cancel all ongoing transfers?"):
+        if messagebox.askyesno("Cancel Operation", "Are you sure you want to cancel all ongoing operation?"):
             cancel_event.set()
             hide_cancel_button()
     # else:
         # messagebox.showinfo("Info", "There are no active transfers to cancel.")
 
 
-def show_cancel_button():
+def show_cancel_button(operation_type):
     cancel_button.config(text="Cancel")
-    cancel_button.place(relx=1.0, rely=0.0, x=-145, y=30, anchor="ne")
+    if operation_type == "download":
+        cancel_button.place(relx=1.0, rely=0.0, x=-100, y=321, anchor="nw")
+    elif operation_type == "transfer":
+        cancel_button.place(relx=0.0, rely=0.0, x=20, y=321, anchor="nw")
 
-def hide_cancel_button(delay_ms=500):
+def hide_cancel_button(delay_ms=10000):
     """Hides the cancel button after a small delay (default 500ms)."""
     cancel_button.config(text="Cancelling...")  # Optional: show immediate feedback
     cancel_button.after(delay_ms, cancel_button.place_forget)
@@ -2852,6 +2858,18 @@ def update_status_table(host, lgv_name, status, description):
             break
 
 
+def safe_update_status_table(host, lgv_name, status, description):
+    """
+    Update the status table and check if operation was cancelled.
+    Raises:
+        OperationCancelledException: If the cancel_event is set.
+    """
+    update_status_table(host, lgv_name, status, description)
+
+    if cancel_event.is_set():
+        raise OperationCancelledException()
+
+
 ##############################################################################################################
 ################################################### Spinner ##################################################
 ##############################################################################################################
@@ -3106,7 +3124,7 @@ frame_mode = tk.Frame(root)
 frame_mode.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
 
 
-cancel_button = ttk.Button(frame_mode, text="Cancel", command=cancel_transfers)
+cancel_button = ttk.Button(root, text="Cancel", command=cancel_transfers)
 # No .grid() yet — we will grid it dynamically when transfers start
 
 
