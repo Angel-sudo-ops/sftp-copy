@@ -659,7 +659,7 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
     try: 
         
         # Ping check
-        if not is_host_reachable(host, timeout=5):
+        if not is_host_reachable(host, timeout=7):
             if cancel_event.is_set():
                 description = "Transfer cancelled before starting."
                 status = "Cancelled"
@@ -706,11 +706,10 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
         success = False
 
     finally:
-        update_status_table(host, lgv_name, status, description)
         finalize_operation(success, result_queue, host)
+        update_status_table(host, lgv_name, status, description)
+        
 
-
-    
 ############################################### SFTP Transfer ###############################################
 
 def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_path):
@@ -786,7 +785,7 @@ def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_p
             ssh.close()
         except:
             pass
-        # update_status_table(host, lgv_name, status, description)
+        # safe_update_status_table(host, lgv_name, status, description)
 
     return success
 
@@ -1305,7 +1304,7 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
 
     finally:
         update_status_table(host, lgv_name, status, description)
-        finalize_transfer(success, result_queue, host)
+        finalize_operation(success, result_queue, host)
 
 ################################################ NET download ###############################################################
 
@@ -1439,6 +1438,8 @@ def monitor_threads(threads, result_queue):
     # Reset operation_active once all threads are done
     operation_active = False
     stop_spinner()
+    del_cancel_button()
+    
 
     # Re-enable radio buttons after operation is complete
     radio_download.config(state="normal")
@@ -1472,13 +1473,17 @@ def finalize_operation(success, result_queue, host):
     
     decrement_active_operations()
 
-
+cancel_active = False  
 def cancel_transfers():
     """User pressed Cancel button."""
+    global cancel_active
+    if cancel_active:
+        return
     if active_operations > 0:
         if messagebox.askyesno("Cancel Operation", "Are you sure you want to cancel all ongoing operation?"):
             cancel_event.set()
             hide_cancel_button()
+            cancel_active = True
     # else:
         # messagebox.showinfo("Info", "There are no active transfers to cancel.")
 
@@ -1490,10 +1495,17 @@ def show_cancel_button(operation_type):
     elif operation_type == "transfer":
         cancel_button.place(relx=0.0, rely=0.0, x=20, y=321, anchor="nw")
 
-def hide_cancel_button(delay_ms=10000):
+def hide_cancel_button(delay_ms=3000):
     """Hides the cancel button after a small delay (default 500ms)."""
+    global cancel_active
     cancel_button.config(text="Cancelling...")  # Optional: show immediate feedback
     cancel_button.after(delay_ms, cancel_button.place_forget)
+    cancel_active = False
+
+def del_cancel_button():
+    global cancel_active
+    cancel_button.place_forget()
+    cancel_active = False
 
 
 
