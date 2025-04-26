@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.4'
+__version__ = '3.6.5'
 
 CONFIG_FILE = "config.ini"
 
@@ -485,28 +485,39 @@ def is_host_reachable(host, timeout=2):
     except subprocess.CalledProcessError:
         print(f"Ping to {host} failed.")
         return False
+    
+
+def is_host_reachable_fake(host, timeout=3):
+    import time
+    """Fake ping for testing cancel button responsiveness."""
+    for i in range(timeout):
+        if cancel_event.is_set():
+            return False
+        time.sleep(1)  # Simulate work / waiting
+    return True
 
 
 #######################################################################################################################
 ############################################### Transfer to remote server #############################################
 #######################################################################################################################
 # Global variable to track active transfers/downloads
-active_transfers = 0
-active_transfers_lock = threading.Lock()
+active_operations = 0
+active_operations_lock = threading.Lock()
 cancel_event = threading.Event()
 # Global variable to track active operation 
 operation_active = False
 
 def start_transfer():
     global operation_active
-    global active_transfers
-    active_transfers = 0
-    cancel_event.clear()
-    cancel_button.grid_remove()
-
+    global active_operations
+    
     if operation_active:
         messagebox.showwarning("Operation in progress", "A transfer is already in progress.")
         return
+    
+    active_operations = 0
+    cancel_event.clear()
+    show_cancel_button()
 
     profile_name = profiles_combobox.get().strip()
     if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
@@ -620,12 +631,35 @@ def start_transfer():
     result_queue = queue.Queue()
     threads = []
 
-    def ping_and_transfer(lgv_name, host, timeout=30):
+    for lgv_name, host in hosts:
+        t = threading.Thread(
+            target=ping_and_transfer, 
+            args=(lgv_name, host, transfer_type, port, username, password, local_paths, remote_dir, result_queue)
+        )
+        t.daemon = True
+        threads.append(t)
+        t.start()
+        
+    # Start a separate thread to monitor the worker threads
+    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
+
+
+def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, local_paths, remote_dir, result_queue):
+    success = False
+    increment_active_operations()
+
+    try: 
+        
         # Ping check
-        if not is_host_reachable(host, timeout):
-            update_status_table(host, lgv_name, "Failed", "Host is not reachable")
-            result_queue.put((host, "Unreachable"))
+        if not is_host_reachable_fake(host, timeout=3):
+            if cancel_event.is_set():
+                description = "Transfer cancelled before starting."
+                status = "Cancelled"
+            else:
+                description = "Host is not reachable."
+                status = "Failed"
             return
+        
         
         file_count = len(local_paths)
 
@@ -635,48 +669,64 @@ def start_transfer():
             if file_count > 1 
             else f"Transferring {os.path.basename(local_paths[0])}..."
         )
+
         update_status_table(host, lgv_name, "In Progress", description)
 
+        all_success = True
 
         for local_path in local_paths:
-            if transfer_type == 'SFTP': 
-                t = threading.Thread(target=sftp_transfer, args=(host, port, username, password, local_path, remote_dir, result_queue, lgv_name))
-            elif transfer_type == 'FTP':
-                t = threading.Thread(target=ftp_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
-            elif transfer_type == 'NET':
-                t = threading.Thread(target=net_transfer, args=(host, username, password, local_path, remote_dir, result_queue, lgv_name))
+
+            if cancel_event.is_set():
+                description = "Transfer cancelled before file transfer."
+                status = "Cancelled"
+                return
             
-            t.daemon = True
-            threads.append(t)
-            t.start()
+            if transfer_type == 'SFTP': 
+                success = sftp_transfer(lgv_name, host, port, username, password, local_path, remote_dir)
+            elif transfer_type == 'FTP':
+                success = ftp_transfer(lgv_name, host, username, password, local_path, remote_dir)
+            elif transfer_type == 'NET':
+                success = net_transfer(lgv_name, host, username, password, local_path, remote_dir)
+            
+            if not success:
+                all_success = False
 
-            # Increment active_transfers
-            increment_active_transfers()
+            # Maybe remove ??
+            if cancel_event.is_set():
+                description = "Transfer cancelled before file transfer."
+                status = "Cancelled"
+                return
+
+        description = "All files transferred successfully!" if all_success else "Some transfers failed."
+        status = "Completed" if all_success else "Failed"
+
+    except Exception as e:
+        description = f"Transfer failed: {e}"
+        status = "Failed"
+
+    finally:
+        update_status_table(host, lgv_name, status, description)
+        finalize_operation(success, result_queue, host)
 
 
-    for lgv_name, host in hosts:
-        t = threading.Thread(target=ping_and_transfer, args=(lgv_name, host))
-        t.daemon = True
-        threads.append(t)
-        t.start()
-        
-    # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
+    
 ############################################### SFTP Transfer ###############################################
 
-def sftp_transfer(host, port, username, password, local_path, remote_path, result_queue, lgv_name):
+def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_path):
 
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     local_file_name = os.path.basename(local_path)
     success = True  # Track overall success for the entire transfer process
 
     try:
         if cancel_event.is_set():
-            description = "Transfer cancelled by user."
+            description = "Transfer cancelled during file transfer."
             status = "Cancelled"
+            success = False
             return
-       
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
 
@@ -724,16 +774,18 @@ def sftp_transfer(host, port, username, password, local_path, remote_path, resul
         ssh.close()
 
         # After completing all transfers, update the table
-        description = "All files transferred successfully!" if success else "Some transfers failed."
-        status = "Completed" if success else "Failed"
+        # description = "All files transferred successfully!" if success else "Some transfers failed."
+        # status = "Completed" if success else "Failed"
+        return success
 
     except Exception as e:
         description = f"Connection failed: {e}"
         status = "Failed"
         success = False
+        return success
+    
     finally:
         update_status_table(host, lgv_name, status, description)
-        finalize_transfer(success, result_queue, host)
 
 
 ################################################ FTP transfer ###############################################################
@@ -810,7 +862,7 @@ def ftp_transfer(host, username, password, local_path, remote_path, result_queue
 
     finally:
         update_status_table(host, lgv_name, status, description)
-        finalize_transfer(success, result_queue, host)
+        finalize_operation(success, result_queue, host)
 
 def ftp_transfer_anonymous(host, username, password, local_path, remote_path, status_widget):
     try:
@@ -931,7 +983,7 @@ def net_transfer(host, username, password, local_path, remote_path, result_queue
     finally:
         subprocess.run(["net", "use", f"\\\\{host}", "/delete"], shell=True)
         update_status_table(host, lgv_name, status, description)
-        finalize_transfer(success, result_queue, host)
+        finalize_operation(success, result_queue, host)
 
 
 #######################################################################################################################
@@ -940,10 +992,10 @@ def net_transfer(host, username, password, local_path, remote_path, result_queue
 
 def start_download():
     global operation_active
-    global active_transfers
-    active_transfers = 0
+    global active_operations
+    active_operations = 0
     cancel_event.clear()
-    cancel_button.grid_remove()
+    cancel_button.place_forget()
 
     if operation_active:
         messagebox.showwarning("Operation in progress", "A download is already in progress.")
@@ -1076,8 +1128,8 @@ def start_download():
         threads.append(t)
         t.start()
 
-        # Increment active_transfers
-        increment_active_transfers()
+        # Increment active_operations
+        increment_active_operations()
 
 
     for lgv_name, host in hosts:
@@ -1395,37 +1447,48 @@ def monitor_threads(threads, result_queue):
     timestamp_label.config(text=f"Last operation: {formatted_time}")
 
 
-def increment_active_transfers():
-    global active_transfers
-    with active_transfers_lock:
-        active_transfers += 1
-        if active_transfers == 1:
-            cancel_button.place(relx=1.0, rely=0.0, x=-5, y=-20, anchor="ne")
+def increment_active_operations():
+    global active_operations
+    with active_operations_lock:
+        active_operations += 1
 
-def decrement_active_transfers():
-    global active_transfers
-    with active_transfers_lock:
-        if active_transfers > 0:
-            active_transfers -= 1
-        if active_transfers == 0:
-            cancel_button.grid_remove()
+def decrement_active_operations():
+    global active_operations
+    with active_operations_lock:
+        if active_operations > 0:
+            active_operations -= 1
 
-def finalize_transfer(success, result_queue, host):
+def finalize_operation(success, result_queue, host):
     if cancel_event.is_set():
         result_queue.put((host, "Cancelled"))
+        print(f"[CANCELLED] Transfer for {host} was cancelled by user.")
     else:
-        result_queue.put((host, "Success" if success else "Failed"))
-    decrement_active_transfers()
+        result = "Success" if success else "Failed"
+        result_queue.put((host, result))
+        print(f"[{result.upper()}] Transfer for {host} completed.")
+    
+    decrement_active_operations()
 
 
 def cancel_transfers():
     """User pressed Cancel button."""
-    if active_transfers > 0:
+    if active_operations > 0:
         if messagebox.askyesno("Cancel Transfers", "Are you sure you want to cancel all ongoing transfers?"):
             cancel_event.set()
-            cancel_button.config(text="Cancelling...")  # (optional UX trick if you want, easy to remove)
-    else:
-        messagebox.showinfo("Info", "There are no active transfers to cancel.")
+            hide_cancel_button()
+    # else:
+        # messagebox.showinfo("Info", "There are no active transfers to cancel.")
+
+
+def show_cancel_button():
+    cancel_button.config(text="Cancel")
+    cancel_button.place(relx=1.0, rely=0.0, x=-145, y=30, anchor="ne")
+
+def hide_cancel_button(delay_ms=500):
+    """Hides the cancel button after a small delay (default 500ms)."""
+    cancel_button.config(text="Cancelling...")  # Optional: show immediate feedback
+    cancel_button.after(delay_ms, cancel_button.place_forget)
+
 
 
 
@@ -2704,7 +2767,7 @@ def button_design(entry):
 ############################Closing window ##################################
 def on_close():
     """Save the last session and close the app."""
-    if active_transfers > 0:
+    if active_operations > 0:
         if not messagebox.askyesno(
             "Exit", 
             "There are ongoing transfers.\nAre you sure you want to exit?"
@@ -3043,7 +3106,7 @@ frame_mode = tk.Frame(root)
 frame_mode.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
 
 
-cancel_button = ttk.Button(frame_mode, text="Cancel Transfer", command=cancel_transfers)
+cancel_button = ttk.Button(frame_mode, text="Cancel", command=cancel_transfers)
 # No .grid() yet — we will grid it dynamically when transfers start
 
 
