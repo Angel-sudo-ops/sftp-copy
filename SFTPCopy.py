@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.5.2'
+__version__ = '3.6.5.3'
 
 CONFIG_FILE = "config.ini"
 
@@ -1188,7 +1188,7 @@ def sftp_download(lgv_name, host, port, username, password, remote_path, local_p
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
+        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=5, auth_timeout=5)
         sftp = ssh.open_sftp()
 
         if is_sftp_dir(sftp, remote_path):
