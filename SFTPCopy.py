@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.5.1'
+__version__ = '3.6.5.2'
 
 CONFIG_FILE = "config.ini"
 
@@ -524,7 +524,6 @@ def start_transfer():
         messagebox.showwarning("Operation in progress", "A transfer is already in progress.")
         return
     
-
     profile_name = profiles_combobox.get().strip()
     if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
         messagebox.showerror("Error", "Please enter a valid profile.")
@@ -662,7 +661,7 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
     try: 
         
         # Ping check
-        if not is_host_reachable(host, timeout=7):
+        if not is_host_reachable(host, timeout=5):
             if cancel_event.is_set():
                 description = "Transfer cancelled before starting."
                 status = "Cancelled"
@@ -695,7 +694,7 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
             if not success:
                 all_success = False
 
-        description = "All files transferred successfully!" if all_success else "Some transfers failed."
+        description = "All files transferred successfully!" if all_success else "Some transfers failed." if file_count > 1 else "Transfer failed."
         status = "Completed" if all_success else "Failed"
     
     except OperationCancelledException:
@@ -724,7 +723,7 @@ def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_p
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
+        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=5, auth_timeout=5)
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
@@ -1005,9 +1004,6 @@ def net_transfer(host, username, password, local_path, remote_path, result_queue
 def start_download():
     global operation_active
     global active_operations
-    active_operations = 0
-    cancel_event.clear()
-    cancel_button.place_forget()
 
     if operation_active:
         messagebox.showwarning("Operation in progress", "A download is already in progress.")
@@ -1083,9 +1079,11 @@ def start_download():
     # To avoid selecting transfer during download
     radio_transfer.config(state="disable")
 
+    active_operations = 0
+    cancel_event.clear()
+    show_cancel_button("download")
 
     download_folder = os.path.join(local_root_path, "Download")
-    download_folder_created = False
     
     print (f"Selected port is {port}")
     print(f"Login is {username}")
@@ -1109,43 +1107,12 @@ def start_download():
     result_queue = queue.Queue()
     threads = []
 
-    def ping_and_download(lgv_name, host):
-        nonlocal download_folder_created
-
-        # Ping check
-        if not is_host_reachable(host, timeout=5):
-            update_status_table(host, lgv_name, "Failed", "Host is not reachable")
-            result_queue.put((host, "Unreachable"))
-            return
-        
-        if not download_folder_created:
-            os.makedirs(download_folder, exist_ok=True)
-            download_folder_created = True
-
-        folder_name = lgv_name if lgv_data_exists else host
-        local_path = os.path.join(download_folder, folder_name)
-
-        # Update the table with a summary of the download
-        description = f"Preparing to download {remote_dir}..."
-        update_status_table(host, lgv_name, "In Progress", description)
-
-        if transfer_type == 'SFTP': 
-            t = threading.Thread(target=sftp_download, args=(host, port, username, password, remote_dir, local_path, result_queue, lgv_name))
-        elif transfer_type == 'FTP':
-            t = threading.Thread(target=ftp_download, args=(host, username, password, remote_dir, local_path, result_queue, lgv_name))
-        elif transfer_type == 'NET':
-            t = threading.Thread(target=net_download, args=(host, username, password, remote_dir, local_path, result_queue, lgv_name))
-
-        t.daemon = True
-        threads.append(t)
-        t.start()
-
-        # Increment active_operations
-        increment_active_operations()
-
 
     for lgv_name, host in hosts:
-        t = threading.Thread(target=ping_and_download, args=(lgv_name, host))
+        t = threading.Thread(
+            target=ping_and_download, 
+            args=(lgv_name, host, transfer_type, port, username, password, remote_dir, download_folder, result_queue)
+            )
         t.daemon = True
         threads.append(t)
         t.start()
@@ -1153,27 +1120,88 @@ def start_download():
     # Start a separate thread to monitor the worker threads
     threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
 
+
+def ping_and_download(lgv_name, host, transfer_type, port, username, password, remote_dir, download_folder, result_queue):
+    success = False
+    increment_active_operations()
+
+    try:
+
+        # Ping check
+        if not is_host_reachable_fake(host, timeout=1):
+            if cancel_event.is_set():
+                description = "Transfer cancelled before starting."
+                status = "Cancelled"
+            else:
+                description = "Host is not reachable."
+                status = "Failed"
+            return
+        
+        os.makedirs(download_folder, exist_ok=True)
+
+        folder_name = lgv_name if lgv_name else host
+        local_path = os.path.join(download_folder, folder_name)
+        os.makedirs(local_path, exist_ok=True)
+
+        # Update the table with a summary of the download
+        description = f"Starting download from {remote_dir}.."
+        safe_update_status_table(host, lgv_name, "In Progress", description)
+
+
+        if transfer_type == 'SFTP': 
+            success, description = sftp_download(lgv_name, host, port, username, password, remote_dir, local_path)
+        elif transfer_type == 'FTP':
+            success, description = ftp_download(lgv_name, host, username, password, remote_dir, local_path)
+        elif transfer_type == 'NET':
+            success, description = net_download(lgv_name, host, username, password, remote_dir, local_path)
+        
+        if not description:
+            description = "Download completed successfully!" if success else "Download failed."
+        status = "Completed" if success else "Failed"
+
+    except OperationCancelledException:
+        description = "Download cancelled."
+        status = "Cancelled"
+        success = False
+
+    except Exception as e:
+        description = f"Download failed: {e}"
+        status = "Failed"
+        success = False
+
+    finally:
+        finalize_operation(success, result_queue, host)
+        update_status_table(host, lgv_name, status, description)
+
 ############################################### SFTP Download ###############################################
 
-def sftp_download(host, port, username, password, remote_path, local_path, result_queue, lgv_name=""):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+def sftp_download(lgv_name, host, port, username, password, remote_path, local_path):
+    
     success = True  # Track overall success for the entire download process
     description = ""
     status = "In Progress"  # Default status
 
     try:
-        if cancel_event.is_set():
-            description = "Transfer cancelled by user."
-            status = "Cancelled"
-            return
-        
         # Update table with "In Progress" status
-        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
+        safe_update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
 
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=10, auth_timeout=10)
         sftp = ssh.open_sftp()
-        
+
+        if is_sftp_dir(sftp, remote_path):
+            download_folder(sftp, remote_path, local_path)
+        else:
+            download_file(sftp, remote_path, local_path)
+
+        def is_sftp_dir(sftp, path):
+            try:
+                return stat.S_ISDIR(sftp.stat(path).st_mode)
+            except IOError:
+                return False
+            
         def download_file(sftp, remote_file_path, local_file_path):
             nonlocal success, description
             try:
@@ -1183,7 +1211,7 @@ def sftp_download(host, port, username, password, remote_path, local_path, resul
                 description = f"Failed to download {remote_file_path}: {e}"
                 success = False
             finally:
-                update_status_table(host, lgv_name, status, description)
+                safe_update_status_table(host, lgv_name, status, description)
 
         def download_folder(sftp, remote_folder_path, local_folder_path):
             os.makedirs(local_folder_path, exist_ok=True)
@@ -1193,49 +1221,45 @@ def sftp_download(host, port, username, password, remote_path, local_path, resul
                 if stat.S_ISDIR(entry.st_mode):
                     download_folder(sftp, remote_path, local_path)
                 else:
-                    download_file(sftp, remote_path, local_path)
+                    download_file(sftp, remote_path, local_path)        
 
-        def is_sftp_dir(sftp, path):
-            try:
-                return stat.S_ISDIR(sftp.stat(path).st_mode)
-            except IOError:
-                return False
-        
-        if is_sftp_dir(sftp, remote_path):
-            download_folder(sftp, remote_path, local_path)
-        else:
-            download_file(sftp, remote_path, local_path)
+        # sftp.close()
+        # ssh.close()
 
-        sftp.close()
-        ssh.close()
+        # # Final status if all files are downloaded successfully
+        # description = "Download completed successfully!" if success else "Download completed with errors."
+        # status = "Completed" if success else "Failed"
+        description = ""
 
-        # Final status if all files are downloaded successfully
-        description = "Download completed successfully!" if success else "Download completed with errors."
-        status = "Completed" if success else "Failed"
-        
+    except OperationCancelledException:
+        description = ""
+        success = False
+        raise  # re-raise immediately, don't handle Cancel here
+
     except Exception as e:
         description = f"Failed to initiate download: {e}"
-        status="Failed"
         success = False
+
     finally:
-        update_status_table(host, lgv_name, status, description)
-        finalize_transfer(success, result_queue, host)
+        try:
+            sftp.close()
+            ssh.close()
+        except:
+            pass
+        
+    return success, description
 
 ################################################ FTP download ###############################################################
 
-def ftp_download(host, username, password, remote_path, local_path, result_queue, lgv_name=""):
+def ftp_download(lgv_name, host, username, password, remote_path, local_path):
+
     success = True  # Track overall success for the entire download process
     description = ""
     status = "In Progress"
 
-    try:
-        if cancel_event.is_set():
-            description = "Transfer cancelled by user."
-            status = "Cancelled"
-            return
-        
+    try:        
         # Update table with "In Progress" status
-        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
+        safe_update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
         
         # Connect to the FTP server
         ftp = FTP(host)
@@ -1249,7 +1273,9 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
             success = False
             return
         finally:
-            update_status_table(host, lgv_name, status, description)
+            safe_update_status_table(host, lgv_name, status, description)
+
+        download_files_only(ftp, remote_path, local_path)
 
         def download_file(ftp, remote_file_path, local_file_path):
             nonlocal success, description
@@ -1261,7 +1287,7 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
                 description = f"Failed to download {remote_file_path}: {e}"
                 success = False
             finally:
-                update_status_table(host, lgv_name, "In Progress", description)
+                safe_update_status_table(host, lgv_name, "In Progress", description)
 
         def download_folder(ftp, remote_folder_path, local_folder_path):
             os.makedirs(local_folder_path, exist_ok=True)
@@ -1298,40 +1324,42 @@ def ftp_download(host, username, password, remote_path, local_path, result_queue
                 return True
             except Exception as e:
                 return False
-
-        download_files_only(ftp, remote_path, local_path)
         
-        # Close the FTP connection
-        ftp.quit()
+    
+        # description = "Download completed successfully!" if success else "Download completed with errors."
+        # status = "Completed" if success else "Failed"
+        description = ""
 
-        description = "Download completed successfully!" if success else "Download completed with errors."
-        status = "Completed" if success else "Failed"
+    except OperationCancelledException:
+        description = ""
+        success = False
+        raise  # re-raise immediately, don't handle Cancel here
 
     except Exception as e:
         description = f"Failed to initiate download: {e}"
-        status = "Failed"
         success = False
 
     finally:
-        update_status_table(host, lgv_name, status, description)
-        finalize_operation(success, result_queue, host)
+        try:
+            # Close the FTP connection
+            ftp.quit()
+        except:
+            pass
+    
+    return success, description
 
 ################################################ NET download ###############################################################
 
-def net_download(host, username, password, remote_path, local_path, result_queue, lgv_name=""):
+def net_download(lgv_name, host, username, password, remote_path, local_path):
+
     success = True
     description = ""
     status = "In Progress"
     unc_path = fr"\\{host}{remote_path}"
 
     try:
-        if cancel_event.is_set():
-            description = "Transfer cancelled by user."
-            status = "Cancelled"
-            return
-
         # Update table with "In Progress" status
-        update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
+        safe_update_status_table(host, lgv_name, status, f"Downloading {os.path.basename(remote_path)}")
 
         # Disconnect existing connections to the host
         subprocess.run(["net", "use", f"\\{host}", "/delete"], shell=True)
@@ -1357,22 +1385,26 @@ def net_download(host, username, password, remote_path, local_path, result_queue
                     description = f"Failed to download {os.path.basename(src_item)}: {e}"
                     success = False
                 finally:
-                    update_status_table(host, lgv_name, status, description)
+                    safe_update_status_table(host, lgv_name, status, description)
 
-        description = "Download completed successfully!" if success else "Download completed with errors."
-        status = "Completed" if success else "Failed"
-        
-    except Exception as e:
+        # description = "Download completed successfully!" if success else "Download completed with errors."
+        # status = "Completed" if success else "Failed"
+        description = ""
+
+    except OperationCancelledException:
+        description = ""
         success = False
-        status = "Failed"
+        raise  # re-raise immediately, don't handle Cancel here
+
+    except Exception as e:
         description = f"Error navigating to {remote_path}"
+        success = False
 
     finally:
         # Disconnect from the network share
         subprocess.run(["net", "use", unc_path, "/delete"], shell=True)
-        update_status_table(host, lgv_name, status, description)
-        finalize_transfer(success, result_queue, host)
-
+    
+    return success, description
 
 ############################################ Monitor threads ##################################################
 def monitor_threads_deprecated(threads, result_queue, status_widget):
@@ -1475,11 +1507,11 @@ def decrement_active_operations():
 def finalize_operation(success, result_queue, host):
     if cancel_event.is_set():
         result_queue.put((host, "Cancelled"))
-        print(f"[CANCELLED] Transfer for {host} was cancelled by user.")
+        print(f"[CANCELLED] Operation for {host} was cancelled by user.")
     else:
         result = "Success" if success else "Failed"
         result_queue.put((host, result))
-        print(f"[{result.upper()}] Transfer for {host} completed.")
+        print(f"[{result.upper()}] Operation for {host} completed.")
     
     decrement_active_operations()
 
