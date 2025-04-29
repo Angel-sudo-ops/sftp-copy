@@ -198,5 +198,20 @@
                 "transfer_type": "SFTP"
             }
         ]
+    },
+    {
+        "profile_name": "CC2053_Kronospan",
+        "sub_profiles": [
+            {
+                "sub_name": "CB45_config",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-15",
+                "local_dir": "",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
     }
 ]

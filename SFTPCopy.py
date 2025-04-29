@@ -23,7 +23,7 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.5.3'
+__version__ = '3.6.5.4'
 
 CONFIG_FILE = "config.ini"
 
@@ -1128,7 +1128,7 @@ def ping_and_download(lgv_name, host, transfer_type, port, username, password, r
     try:
 
         # Ping check
-        if not is_host_reachable_fake(host, timeout=1):
+        if not is_host_reachable(host, timeout=5):
             if cancel_event.is_set():
                 description = "Transfer cancelled before starting."
                 status = "Cancelled"
@@ -1191,11 +1191,6 @@ def sftp_download(lgv_name, host, port, username, password, remote_path, local_p
         ssh.connect(hostname=host, port=port, username=username, password=password, timeout=5, auth_timeout=5)
         sftp = ssh.open_sftp()
 
-        if is_sftp_dir(sftp, remote_path):
-            download_folder(sftp, remote_path, local_path)
-        else:
-            download_file(sftp, remote_path, local_path)
-
         def is_sftp_dir(sftp, path):
             try:
                 return stat.S_ISDIR(sftp.stat(path).st_mode)
@@ -1221,7 +1216,12 @@ def sftp_download(lgv_name, host, port, username, password, remote_path, local_p
                 if stat.S_ISDIR(entry.st_mode):
                     download_folder(sftp, remote_path, local_path)
                 else:
-                    download_file(sftp, remote_path, local_path)        
+                    download_file(sftp, remote_path, local_path)    
+
+        if is_sftp_dir(sftp, remote_path):
+            download_folder(sftp, remote_path, local_path)
+        else:
+            download_file(sftp, remote_path, local_path)    
 
         # sftp.close()
         # ssh.close()
@@ -1275,7 +1275,6 @@ def ftp_download(lgv_name, host, username, password, remote_path, local_path):
         finally:
             safe_update_status_table(host, lgv_name, status, description)
 
-        download_files_only(ftp, remote_path, local_path)
 
         def download_file(ftp, remote_file_path, local_file_path):
             nonlocal success, description
@@ -1324,6 +1323,8 @@ def ftp_download(lgv_name, host, username, password, remote_path, local_path):
                 return True
             except Exception as e:
                 return False
+            
+        download_files_only(ftp, remote_path, local_path)
         
     
         # description = "Download completed successfully!" if success else "Download completed with errors."
@@ -1941,7 +1942,7 @@ def validate_local_paths(paths_string):
     return None
 
 def validate_remote_path(path):
-    pattern = r"^(\/|\\)([a-zA-Z0-9_\-.\s]+((\/|\\)[a-zA-Z0-9_\-.\s]+)*)?$"
+    pattern = r"^(\/|\\)([\w\-.\s():&+@,'!~$=]+((\/|\\)[\w\-.\s():&+@,'!~$=]+)*)?$"
     return re.match(pattern, path) is not None
 
 ############################################## Other methods ###############################################################

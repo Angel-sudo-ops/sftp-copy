@@ -2,7 +2,8 @@
     "SFTP": [
         "\\Config\\ini",
         "\\Config\\Laserview",
-        "\\Layout\\Background"
+        "\\Layout\\Background",
+        "/___OS (C:)___/Users/Administrator/Desktop/UnlockTools_2.0.0/ViewerMaps"
     ],
     "NET": [
         "\\Backup\\Laserview\\ini"
