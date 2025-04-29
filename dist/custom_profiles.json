@@ -183,5 +183,35 @@
                 "transfer_type": "FTP"
             }
         ]
+    },
+    {
+        "profile_name": "CC1665_NIA_HAZ",
+        "sub_profiles": [
+            {
+                "sub_name": "CB30_config",
+                "base_ip": "10.188.80.100",
+                "ip_range": "1-9",
+                "local_dir": "C:/Users/contreras.j/Pictures/StaticRoutes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC2053_Kronospan",
+        "sub_profiles": [
+            {
+                "sub_name": "CB45_config",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-15",
+                "local_dir": "",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
     }
 ]
