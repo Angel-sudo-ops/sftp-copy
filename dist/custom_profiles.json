@@ -183,5 +183,55 @@
                 "transfer_type": "FTP"
             }
         ]
+    },
+    {
+        "profile_name": "CC1665_NIA_HAZ",
+        "sub_profiles": [
+            {
+                "sub_name": "CB30_config",
+                "base_ip": "10.188.80.100",
+                "ip_range": "1-9",
+                "local_dir": "C:/Users/contreras.j/Pictures/StaticRoutes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC2053_Kronospan",
+        "sub_profiles": [
+            {
+                "sub_name": "CB45_config",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2053_Kronospan/MyFiles/test",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB45_boot",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-15",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2053_Kronospan/CB45Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB45_panel",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-7",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2053_Kronospan/MyFiles/Panel/UpdatePackage.zip",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
     }
 ]
