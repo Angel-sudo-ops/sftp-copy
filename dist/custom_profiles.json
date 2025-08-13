@@ -79,8 +79,8 @@
             },
             {
                 "sub_name": "Reach14_boot",
-                "base_ip": "10.77.204.10",
-                "ip_range": "1-5",
+                "base_ip": "10.80.14.10",
+                "ip_range": "1,4,5,8",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2031_DanoneLongchamps/Reach14Code/LGV/_Boot/TwinCAT RT (x64)",
                 "remote_dir": "\\TwinCAT\\Boot",
                 "username": "Administrator",
@@ -205,8 +205,8 @@
             {
                 "sub_name": "CB45_config",
                 "base_ip": "10.81.35.10",
-                "ip_range": "1",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2053_Kronospan/MyFiles/test",
+                "ip_range": "1-15",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2053_Kronospan/MyFiles/Backup/LGV01/LMSAreas.prj",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
@@ -228,6 +228,221 @@
                 "ip_range": "1-7",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2053_Kronospan/MyFiles/Panel/UpdatePackage.zip",
                 "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC2051_Smuckers_McCalla",
+        "sub_profiles": [
+            {
+                "sub_name": "Reach12_boot",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-13",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2051_SmuckerMcCalla/Reach12Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach12_config",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-13",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2051_SmuckerMcCalla/MyFiles/Backup/ForAll/LMSAreas.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach12_license",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-13",
+                "local_dir": "",
+                "remote_dir": "/___OS (C:)___/TwinCAT/3.1/Target/License",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach12_layout",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-13",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC2051_Smucker_McCalla/Layout/export_to_agv/layout.bin",
+                "remote_dir": "\\Layout",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC1842_GP_Greenbay",
+        "sub_profiles": [
+            {
+                "sub_name": "Layout_for_all",
+                "base_ip": "172.20.71.50",
+                "ip_range": "64",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC1842_GP_Greenbay/Layout/export_to_agv/layout.bin",
+                "remote_dir": "\\Layout",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "All_config",
+                "base_ip": "172.20.71.50",
+                "ip_range": "51-54,61-66,71-73,81-87",
+                "local_dir": "",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "ANT_boot",
+                "base_ip": "172.20.71.50",
+                "ip_range": "61-66",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1842_GPGreenBay/ANTCode/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "ELE_boot",
+                "base_ip": "172.20.71.50",
+                "ip_range": "51-54",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1842_GPGreenBay/ElephantCode/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "ELE_panel",
+                "base_ip": "172.20.71.50",
+                "ip_range": "51-54",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1842_GPGreenBay/MyFiles/Panel/ELE/X5Wired/UniqueElephantType1X5Wired_Export_RuntimeAndProject/UpdatePackage.zip",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "ANT_panel",
+                "base_ip": "172.20.71.50",
+                "ip_range": "61-66",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1842_GPGreenBay/MyFiles/Panel/ANT/UniqueANTType1X5Wired_Export_RuntimeAndProject/UpdatePackage.zip",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "ANT_casespeed",
+                "base_ip": "172.20.71.50",
+                "ip_range": "61-66",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1842_GPGreenBay/MyFiles/Download/ForAll/ANT/CaseSpeed.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC1863_GP_PortHudson",
+        "sub_profiles": [
+            {
+                "sub_name": "CB25_boot",
+                "base_ip": "172.23.51.140",
+                "ip_range": "40-44",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/CB25Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_config",
+                "base_ip": "172.23.51.140",
+                "ip_range": "40-44",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB25/ForAll/Quotes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_AreaMonitor",
+                "base_ip": "172.23.51.140",
+                "ip_range": "40-44",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/MyFiles/Download/ForAll/AM_RearSearchScanner.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_layout",
+                "base_ip": "172.23.51.140",
+                "ip_range": "42",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC1863_GP_PortHudson/Layout/export_to_agv/export_to_agv_LayoutLoader_5p01/layout.bin",
+                "remote_dir": "\\Layout",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_mov",
+                "base_ip": "172.23.51.140",
+                "ip_range": "40-44",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB25/ForAll/Movements.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_casespeed",
+                "base_ip": "172.23.51.140",
+                "ip_range": "40-44",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB25/ForAll/CaseSpeed.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_config",
+                "base_ip": "172.23.51.140",
+                "ip_range": "50-54",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB16/ForAll/Quotes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_config_quote_areamonitor",
+                "base_ip": "172.23.51.140",
+                "ip_range": "50-54",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB16/ForAll/AM_RearSearchScanner.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB16/ForAll/AM_VertLeft.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB16/ForAll/AM_VertRight.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB16/ForAll/Quotes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_boot",
+                "base_ip": "172.23.51.140",
+                "ip_range": "50-54",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/CB16Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"

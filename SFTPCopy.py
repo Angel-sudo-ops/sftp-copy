@@ -420,6 +420,8 @@ def open_lgv_table_window():
         for index, (val, k) in enumerate(l):
             tv.move(k, '', index)
 
+        tv.yview_moveto(0)
+
         # Change the heading to show the sort direction
         for column in tv['columns']:
             heading_text = headings[column] + (' ↓' if reverse and column == col else ' ↑' if not reverse and column == col else '')
@@ -2881,6 +2883,8 @@ def treeview_sort_column(tv, col, reverse):
     # Rearrange items in sorted positions
     for index, (val, k) in enumerate(l):
         tv.move(k, '', index)
+    
+    tv.yview_moveto(0)
 
     # Change the heading to show the sort direction
     for column in tv['columns']:
