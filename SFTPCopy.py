@@ -23,17 +23,29 @@ import subprocess
 import shutil
 import platform
 
-__version__ = '3.6.5.4'
+from myutils.autoupdater import check_for_updates_async, get_app_version
+
 
 CONFIG_FILE = "config.ini"
 
 LGV_DATA_FILE = "lgv_address_list.xml"
 
+################################################################# Version check #####################################################################
+updated = False
+
+VERSION = get_app_version()
+
+if "--updated" in sys.argv:
+    sys.argv.remove("--updated")  # Optional: clean it up
+    updated = True
+    print("[Updater] App launched after update.")
+    # You could show a message or log something if needed
+
+############################################################# Custom exception class ##################################################################
 
 class OperationCancelledException(Exception):
     """Raised when an operation (transfer/download) is cancelled by the user."""
     pass
-
 
 ############################################## Load/Save LGV Data #############################################
 def extract_lgv_name(input_name):
@@ -2975,7 +2987,7 @@ def rotate_spinner():
 ######################################################## Create UI ##################################################
 
 root = tk.Tk()
-root.title(f"Super File Transfer {__version__}")
+root.title(f"Super File Transfer {VERSION}")
 
 # Check if running as a script or frozen executable
 if getattr(sys, 'frozen', False):
@@ -3324,6 +3336,19 @@ create_spinner_widget()
 # disable_focus(root)
 
 root.protocol("WM_DELETE_WINDOW", on_close)
+
+################################################################# Version check ######################################################################
+
+if getattr(sys, 'frozen', False) and not updated:  # Only in PyInstaller .exe
+    root.after(1500, lambda: check_for_updates_async(
+            root=root,
+            current_version=VERSION,
+            version_url="https://github.com/sudojac/sftp-copy/releases/latest/download/version.txt",
+            download_url="https://github.com/sudojac/sftp-copy/releases/latest/download/SFTPCopy.exe"
+        ))
+
+################################################################### Main loop ##########################################################################
+
 root.mainloop()
 
 ## not showing connection timeout fix that
