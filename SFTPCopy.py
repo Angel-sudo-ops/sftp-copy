@@ -1554,9 +1554,9 @@ def cancel_transfers():
 def show_cancel_button(operation_type):
     cancel_button.config(text="Cancel")
     if operation_type == "download":
-        cancel_button.place(relx=1.0, rely=0.0, x=-100, y=321, anchor="nw")
+        cancel_button.place(relx=1.0, rely=0.0, x=-100, y=317, anchor="nw")
     elif operation_type == "transfer":
-        cancel_button.place(relx=0.0, rely=0.0, x=20, y=321, anchor="nw")
+        cancel_button.place(relx=0.0, rely=0.0, x=20, y=317, anchor="nw")
 
 def hide_cancel_button(delay_ms=3000):
     """Hides the cancel button after a small delay (default 500ms)."""
@@ -2935,7 +2935,7 @@ def create_tooltip_btn(widget, text_var):
             in_=widget,  # Anchor to the button
             relx=0.5,    # Centered horizontally
             rely=0.0,    # Just above the button
-            x=0,
+            x=-7,
             y=0,       # Shift up
             anchor="s"   # Anchor the bottom center of tooltip to relx/rel...
         )
@@ -3079,7 +3079,7 @@ else:
 # root.iconbitmap(icon_path)
 
 window_width = 557
-window_lenght = 670 # 670
+window_lenght = 660 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
 
@@ -3275,7 +3275,7 @@ frame_password.grid(row=1, column=0, padx=(5,0), pady=0)
 password_label = ttk.Label(frame_password, text="Password:")
 password_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
-password_entry = ttk.Entry(frame_password, show="*")
+password_entry = ttk.Entry(frame_password, show='*')
 password_entry.grid(row=0, column=1, padx=5, pady=5)
 
 frame_typetransfer = tk.Frame(frame_lgv_login)
@@ -3294,7 +3294,7 @@ transfer_type_combobox.bind("<<ComboboxSelected>>", set_path_on_selection)
 
 
 frame_mode = tk.Frame(root)
-frame_mode.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+frame_mode.grid(row=4, column=0, columnspan=2, padx=5, pady=(5,0))
 
 
 cancel_button = ttk.Button(root, text="Cancel", command=cancel_transfers)
@@ -3412,11 +3412,11 @@ description_frame.columnconfigure(1, weight=0)  # Right column (timestamp label)
 
 # Create the status summary label
 summary_label = tk.Label(description_frame, text="Status result", font=("Arial", 10), anchor="w")
-summary_label.grid(row=0, column=0, sticky='w', padx=10, pady=5)
+summary_label.grid(row=0, column=0, sticky='w', padx=0, pady=0)
 
 # Create the timestamp label
 timestamp_label = tk.Label(description_frame, text="Last operation: 00:00:00", font=("Arial", 10), anchor="e")
-timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=5)
+timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=0)
 
 
 
