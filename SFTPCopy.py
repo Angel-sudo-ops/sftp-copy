@@ -3161,9 +3161,10 @@ rename_prof = ttk.Button(frame_profile,
                           command=open_rename_popup_cond)
 rename_prof.grid(row=0, column=3, rowspan=2, padx=5, pady=5)
 
+################################## Path details ###################################################
 
 frame_path = ttk.Labelframe(root, text="Path details", labelanchor='nw', style="Custom.TLabelframe")
-frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=0, ipadx=8)
+frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=0, ipadx=2)
 
 status_path_label = ttk.Label(frame_path, text="")
 status_path_label.place(relx=1.0, rely=0.0, x=-250, y=-20, anchor="nw")
@@ -3177,25 +3178,25 @@ local_dir_label.grid(row=0, column=0, padx=5, pady=5)
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
-file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=62)
+file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=67)
 # file_path_entry = ttk.Combobox(frame_local, width=55)
-file_path_entry.grid(row=0, column=1, padx=5, pady=5)
+file_path_entry.grid(row=0, column=1, padx=5, pady=5, sticky='nw')
 
 
 frame_browse = tk.Frame(frame_local)
-frame_browse.grid(row=0, column=2, padx=1, pady=1)
+frame_browse.grid(row=0, column=2, padx=3, pady=1, sticky='ne')
 
 # browse_label = ttk.Label(frame_browse, text="Select")
 # browse_label.grid(row=0, column=0, padx=(1,3), pady=1)
 
 files_btn = ttk.Button(frame_browse, width=3, text="🗐", command=browse_files)
-files_btn.grid(row=0, column=0, padx=(0,2), pady=2)
+files_btn.grid(row=0, column=0, padx=(0,3), pady=2)
 files_text = tk.StringVar(value="Browse File(s)")
 
 create_tooltip_btn(files_btn, files_text)
 
 folder_btn = ttk.Button(frame_browse, width=3, text="🗁", command=browse_folder)
-folder_btn.grid(row=0, column=1, padx=(2,0), pady=0)
+folder_btn.grid(row=0, column=1, padx=(3,0), pady=0)
 folder_text = tk.StringVar(value="Browse Folder")
 
 create_tooltip_btn(folder_btn, folder_text)
@@ -3207,12 +3208,12 @@ create_tooltip_btn(folder_btn, folder_text)
 
 
 frame_remote = tk.Frame(frame_path)
-frame_remote.grid(row=1, column=0, columnspan=2, padx=(0,14), pady=0)
+frame_remote.grid(row=1, column=0, columnspan=2, padx=0, pady=0, sticky='nw')
 
 remote_dir_label = ttk.Label(frame_remote, text="Remote:")
 remote_dir_label.grid(row=0, column=0, padx=5, pady=5)
 
-remote_dir_entry = ttk.Combobox(frame_remote, width=55)
+remote_dir_entry = ttk.Combobox(frame_remote, width=58)
 remote_dir_entry.grid(row=0, column=1, padx=5, pady=5)
 
 remote_dir_entry.bind("<Tab>", filter_remote_dir)
@@ -3226,11 +3227,11 @@ save_path.grid(row=0, column=2, padx=(6,0), pady=5)
 
 
 frame_lgv_login = ttk.Labelframe(root, text="Connection settings", labelanchor='nw', style="Custom.TLabelframe")
-frame_lgv_login.grid(row=3, column=0, columnspan=3, padx=5, pady=(10,5))
+frame_lgv_login.grid(row=3, column=0, columnspan=3, padx=0, pady=(10,5))
 
 
 frame_lgvs = tk.Frame(frame_lgv_login)
-frame_lgvs.grid(row=0, column=0, columnspan=1, padx=(5,0), pady=5)
+frame_lgvs.grid(row=0, column=0, columnspan=1, padx=0, pady=5)
 
 frame_ip = tk.Frame(frame_lgvs)
 frame_ip.grid(row=0, column=0, padx=0, pady=0)
