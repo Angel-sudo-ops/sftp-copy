@@ -213,5 +213,30 @@
                 "transfer_type": "SFTP"
             }
         ]
+    },
+    {
+        "profile_name": "CC2080_Baxter_Marion",
+        "sub_profiles": [
+            {
+                "sub_name": "CB25_config",
+                "base_ip": "10.49.62.35",
+                "ip_range": "32",
+                "local_dir": "C:/Users/contreras.j/Pictures/test",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Turtle_config",
+                "base_ip": "10.49.62.35",
+                "ip_range": "1",
+                "local_dir": "C:/Users/contreras.j/Pictures/test/test1.txt",
+                "remote_dir": "/",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            }
+        ]
     }
 ]

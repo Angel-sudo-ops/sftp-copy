@@ -562,13 +562,15 @@ def start_transfer():
 
 
     if not local_path_string :
-        selected_path = browse_local_path()
-        if not selected_path:
-            messagebox.showwarning("Transfer canceled", "A valid local file or folder path is required.")
-            return
+        messagebox.showwarning("Warning", "A valid local file or folder path is required.")
+        return
+        # selected_path = browse_local_path()
+        # if not selected_path:
+        #     messagebox.showwarning("Transfer canceled", "A valid local file or folder path is required.")
+        #     return
         
-        file_path.set(selected_path) # update the StringVar
-        local_path_string = selected_path
+        # file_path.set(selected_path) # update the StringVar
+        # local_path_string = selected_path
     
     path_changed = is_path_changed(local_path_string, profile_name, subprofile_name)
 
@@ -824,7 +826,7 @@ def ftp_transfer(lgv_name, host, username, password, local_path, remote_path):
                     ftp.storbinary(f"STOR {os.path.join(remote_path, local_file_name).replace('\\', '/')}", file)
                 description = f"Successfully transferred {local_file_name}"
             except Exception as e:
-                description = f"Failed to transfer {local_file_name}"
+                description = f"Failed to transfer {local_file_name}: {e}"
                 success = False
             finally:
                 safe_update_status_table(host, lgv_name, "In Progress", description)
@@ -1082,6 +1084,10 @@ def start_download():
     if not local_root_path:
         # messagebox.showwarning("Error", "Download cancelled.")
         return
+    
+    # Set local_root_path into local path entry
+    global file_path
+    file_path.set(local_root_path)
     
     # Reset labels at the start of a new download
     summary_label.config(text="Status result", fg="black")
@@ -1764,6 +1770,52 @@ def browse_local_path():
         print("Browse action canceled")
         return None
 
+
+def is_mode_transfer():
+    if mode_selection.get() == "transfer":
+        return True
+
+def browse_files():
+    if not is_mode_transfer():
+        return
+    
+    current_path = file_path.get().strip()
+    initial_dir = get_initial_dir(current_path)
+
+    if initial_dir and os.path.exists(initial_dir):
+        pass  # Good, use it
+    else:
+        initial_dir = os.path.expanduser("~/Documents")  # Fast fallback
+
+    selected_files = filedialog.askopenfilenames(
+            title="Select files",
+            initialdir=initial_dir
+        )  # Select files
+    if selected_files:
+        check_source_path_for_keywords(selected_files)
+        file_path.set(", ".join(selected_files))
+
+
+def browse_folder():
+    if not is_mode_transfer():
+        return
+    
+    current_path = file_path.get().strip()
+    initial_dir = get_initial_dir(current_path)
+
+    if initial_dir and os.path.exists(initial_dir):
+        pass  # Good, use it
+    else:
+        initial_dir = os.path.expanduser("~/Documents")  # Fast fallback
+
+    selected_folder = filedialog.askdirectory(
+            title="Select a folder",
+            initialdir=initial_dir
+        )  # Select a folder
+    if selected_folder:
+        check_source_path_for_keywords(selected_folder)
+        file_path.set(selected_folder)
+
 ############################################################ Check source path for keywords ################################################
 def check_source_path_for_keywords(file_or_folder):
     # Convert the selected path to a string
@@ -1956,7 +2008,7 @@ def validate_local_paths(paths_string):
     return None
 
 def validate_remote_path(path):
-    pattern = r"^(\/|\\)([\w\-.\s():&+@,'!~$=]+((\/|\\)[\w\-.\s():&+@,'!~$=]+)*)?$"
+    pattern = r"^(\/|\\)([\w\-.\s():&+@,'!~$=]+((\/|\\)[\w\-.\s():&+@,'!~$=]+)*)?(\/|\\)?$"
     return re.match(pattern, path) is not None
 
 ############################################## Other methods ###############################################################
@@ -2035,13 +2087,13 @@ def select_mode():
         transfer.config(state='normal')
         download.config(state="disabled")
         file_path_entry.config(state='normal')
-        browse_btn.config(state='normal')
+        load_data_from_selection()
 
     elif mode_selected == 'download':
         transfer.config(state='disabled')
         download.config(state="normal")
-        file_path_entry.config(state='disabled')
-        browse_btn.config(state='disabled')
+        # file_path_entry.config(state='readonly')
+
     print(f"Selected mode {mode_selected}")
 
 # Helper function to load a JSON file 
@@ -2864,6 +2916,36 @@ def disable_focus(widget):
     for child in widget.winfo_children():
         disable_focus(child)
 
+############################### Button tooltip ########################
+
+# Tooltip Logic
+def create_tooltip_btn(widget, text_var):
+    tooltip = tk.Label(root, text="", bg="white", relief="solid", bd=1, font=("helvetica", "8", "normal"), padx=1, pady=1)
+    tooltip.place_forget()
+
+    def on_enter(event):
+        tooltip.config(text=text_var.get())
+        # Place it in the global reference
+        # tooltip.place(x=400, y=160)
+
+        widget = event.widget
+
+        # Use widget-relative placement inside the same parent
+        tooltip.place(
+            in_=widget,  # Anchor to the button
+            relx=0.5,    # Centered horizontally
+            rely=0.0,    # Just above the button
+            x=0,
+            y=0,       # Shift up
+            anchor="s"   # Anchor the bottom center of tooltip to relx/rel...
+        )
+
+    def on_leave(event):
+        tooltip.place_forget()
+
+    widget.bind("<Enter>", on_enter)
+    widget.bind("<Leave>", on_leave)
+
 ############################# Set GUI icon ##########################
 def set_icon():
     if os.path.exists(icon_path):
@@ -3080,29 +3162,48 @@ rename_prof = ttk.Button(frame_profile,
 rename_prof.grid(row=0, column=3, rowspan=2, padx=5, pady=5)
 
 
-frame_path = ttk.Labelframe(root, text="Path details", labelanchor='ne', style="Custom.TLabelframe")
+frame_path = ttk.Labelframe(root, text="Path details", labelanchor='nw', style="Custom.TLabelframe")
 frame_path.grid(row=1, column=0, columnspan=2, padx=0, pady=0, ipadx=8)
 
 status_path_label = ttk.Label(frame_path, text="")
-status_path_label.place(relx=1.0, rely=0.0, x=-520, y=-20, anchor="nw")
+status_path_label.place(relx=1.0, rely=0.0, x=-250, y=-20, anchor="nw")
+
 
 frame_local = tk.Frame(frame_path)
 frame_local.grid (row=0, column=0, columnspan=2, padx=0, pady=0)
-
 
 local_dir_label = ttk.Label(frame_local, text="Local:")
 local_dir_label.grid(row=0, column=0, padx=5, pady=5)
 
 # Variable to store the file or folder path
 file_path = tk.StringVar()
-file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=58)
+file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=62)
 # file_path_entry = ttk.Combobox(frame_local, width=55)
 file_path_entry.grid(row=0, column=1, padx=5, pady=5)
 
-browse_btn = ttk.Button(frame_local, 
-                        text="Browse",
-                        command=browse_local_path_cmd)
-browse_btn.grid(row=0, column=2, padx=(5,0), pady=5)
+
+frame_browse = tk.Frame(frame_local)
+frame_browse.grid(row=0, column=2, padx=1, pady=1)
+
+# browse_label = ttk.Label(frame_browse, text="Select")
+# browse_label.grid(row=0, column=0, padx=(1,3), pady=1)
+
+files_btn = ttk.Button(frame_browse, width=3, text="🗐", command=browse_files)
+files_btn.grid(row=0, column=0, padx=(0,2), pady=2)
+files_text = tk.StringVar(value="Browse File(s)")
+
+create_tooltip_btn(files_btn, files_text)
+
+folder_btn = ttk.Button(frame_browse, width=3, text="🗁", command=browse_folder)
+folder_btn.grid(row=0, column=1, padx=(2,0), pady=0)
+folder_text = tk.StringVar(value="Browse Folder")
+
+create_tooltip_btn(folder_btn, folder_text)
+
+# browse_btn = ttk.Button(frame_local, 
+#                         text="Browse",
+#                         command=browse_local_path_cmd)
+# browse_btn.grid(row=0, column=2, padx=(5,0), pady=5)
 
 
 frame_remote = tk.Frame(frame_path)
