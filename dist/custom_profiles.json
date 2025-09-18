@@ -276,6 +276,36 @@
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach12_areaMonitor",
+                "base_ip": "10.81.35.10",
+                "ip_range": "3",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2051_SmuckerMcCalla/MyFiles/Backup/ForAll/LMSAreas.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach12_searchData",
+                "base_ip": "10.81.35.10",
+                "ip_range": "1-13",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2051_SmuckerMcCalla/MyFiles/Backup/ForAll/SearchData.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach12_panel",
+                "base_ip": "10.81.35.10",
+                "ip_range": "7",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2051_SmuckerMcCalla/MyFiles/Panel/OnBoard/Jsmart707eX707/OnBoardForkType1Jsmart707eX707_Export_RuntimeAndProject/UpdatePackage.zip",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
             }
         ]
     },
@@ -457,6 +487,56 @@
                 "base_ip": "172.23.51.140",
                 "ip_range": "40-44",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB25/ForAll/Quotes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_Boot",
+                "base_ip": "10.49.62.35",
+                "ip_range": "32,34,36",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/CB25Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_CaseSpeed",
+                "base_ip": "10.49.62.35",
+                "ip_range": "34,32",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/CB25/ForAll/CaseSpeed.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_areaMonitor",
+                "base_ip": "10.49.62.35",
+                "ip_range": "36",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/CB25/ForAll/LMSAreas.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach_Boot",
+                "base_ip": "10.49.62.35",
+                "ip_range": "41,48,55,58",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/Reach14Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_quote",
+                "base_ip": "10.49.62.35",
+                "ip_range": "32,34,36",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/CB25/ForAll/Quotes.xml",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",

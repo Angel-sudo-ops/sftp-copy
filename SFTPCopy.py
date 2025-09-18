@@ -24,6 +24,7 @@ import shutil
 import platform
 
 from myutils.autoupdater import check_for_updates_async, get_app_version
+from myutils.connectivity import is_host_reachable
 
 
 CONFIG_FILE = "config.ini"
@@ -480,44 +481,9 @@ def open_lgv_table_window():
 
     load_table_data_from_xml(treeview)
 
-################################################## Ping host ###################################################
-def is_host_reachable(host, timeout=2):
-    """Ping the host to check if it is reachable."""
-    # Define the ping command based on the OS
-    if platform.system().lower() == "windows":
-        ping_cmd = ["ping", "-n", "1", "-w", str(timeout * 1000), host]
-        creation_flags = subprocess.CREATE_NO_WINDOW
-    else:
-        ping_cmd = ["ping", "-c", "1", "-W", str(timeout), host]
-        creation_flags = 0
-
-    try:
-        subprocess.run(
-            ping_cmd, 
-            stdout=subprocess.DEVNULL, 
-            stderr=subprocess.DEVNULL, 
-            check=True, timeout=timeout + 1,
-            creationflags=creation_flags
-        )
-        return True
-    except subprocess.TimeoutExpired:
-        print(f"Ping to {host} timed out.")
-        return False
-    except subprocess.CalledProcessError:
-        print(f"Ping to {host} failed.")
-        return False
-    
-
-def is_host_reachable_fake(host, timeout=3):
-    import time
-    """Fake ping for testing cancel button responsiveness."""
-    for i in range(timeout):
-        if cancel_event.is_set():
-            return False
-        time.sleep(1)  # Simulate work / waiting
-    return True
-
-
+##########################################################################################################################
+########################################### TRANSFER / DOWNLOAD ##########################################################
+##########################################################################################################################
 
 # Global variable to track active transfers/downloads
 active_operations = 0
@@ -677,7 +643,7 @@ def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, l
     try: 
         
         # Ping check
-        if not is_host_reachable(host, timeout=5):
+        if not is_host_reachable(host):
             if cancel_event.is_set():
                 description = "Transfer cancelled before starting."
                 status = "Cancelled"
@@ -1148,7 +1114,7 @@ def ping_and_download(lgv_name, host, transfer_type, port, username, password, r
     try:
 
         # Ping check
-        if not is_host_reachable(host, timeout=5):
+        if not is_host_reachable(host):
             if cancel_event.is_set():
                 description = "Transfer cancelled before starting."
                 status = "Cancelled"
