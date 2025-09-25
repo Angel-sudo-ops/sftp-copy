@@ -2916,14 +2916,23 @@ def create_tooltip_btn(widget, text_var):
 ############################### Entry tooltip ###################################3
 
 class ToolTip:
-    def __init__(self, widget):
+    def __init__(self, widget, separator=","):
         self.widget = widget
         self.tipwindow = None
         self.text = ""
+        self.separator = separator
 
-    def showtip(self, text):
-        if self.tipwindow or not text:
+    def format_text(self, raw_text):
+        # Break at separators
+        chunks = [chunk.strip() for chunk in raw_text.split(self.separator)]
+        return "\n".join(chunks)
+
+    def showtip(self, raw_text):
+        if self.tipwindow or not raw_text:
             return
+        
+        formatted_text = self.format_text(raw_text)
+
         x = self.widget.winfo_rootx() + 20
         y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
 
@@ -2932,7 +2941,7 @@ class ToolTip:
         tw.wm_geometry(f"+{x}+{y}")
         label = tk.Label(
             tw,
-            text=text,
+            text=formatted_text,
             justify=tk.LEFT,
             background="white",
             relief=tk.SOLID,
@@ -2949,8 +2958,8 @@ class ToolTip:
             self.tipwindow = None
 
 
-def attach_entry_tooltip_on_overflow(entry_widget, text_var):
-    tooltip = ToolTip(entry_widget)
+def attach_tooltip_on_overflow(entry_widget, text_var, separator=","):
+    tooltip = ToolTip(entry_widget, separator=separator)
 
     def check_overflow():
         f = font.Font(font=str(entry_widget.cget("font")))
@@ -2982,7 +2991,6 @@ def attach_entry_tooltip_on_overflow(entry_widget, text_var):
     entry_widget.bind("<Configure>", on_resize)
     text_var.trace_add("write", on_update)
 
-    # Optional: initial check in case it’s prefilled
     entry_widget.after(100, check_overflow)
 
 
@@ -3222,7 +3230,7 @@ file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=67)
 # file_path_entry = ttk.Combobox(frame_local, width=55)
 file_path_entry.grid(row=0, column=1, padx=5, pady=5, sticky='nw')
 
-attach_entry_tooltip_on_overflow(file_path_entry, file_path)
+attach_tooltip_on_overflow(file_path_entry, file_path)
 
 
 frame_browse = tk.Frame(frame_local)
