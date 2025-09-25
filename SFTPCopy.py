@@ -2763,6 +2763,7 @@ def load_remote_paths(event=None):
 
 
 ################################################### Table Tooltip ###################################################
+
 class TreeviewTooltip:
     def __init__(self, widget):
         self.widget = widget
