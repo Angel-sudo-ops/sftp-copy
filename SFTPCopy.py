@@ -3,7 +3,7 @@ import stat
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from tkinter import font, ttk
+from tkinter import ttk, font
 import tkinter.scrolledtext as scrolledtext
 import threading
 import queue
@@ -21,7 +21,6 @@ import sqlite3
 import configparser
 import subprocess
 import shutil
-import platform
 
 from myutils.autoupdater import check_for_updates_async, get_app_version
 from myutils.connectivity import is_host_reachable
@@ -2912,6 +2911,73 @@ def create_tooltip_btn(widget, text_var):
     widget.bind("<Enter>", on_enter)
     widget.bind("<Leave>", on_leave)
 
+
+
+############################### Entry tooltip ###################################3
+from tkinter import font
+
+def create_overflow_tooltip(entry_widget, text_var):
+    tooltip = tk.Label(
+        entry_widget.winfo_toplevel(),  # attach to the top-level window
+        text="",
+        bg="white",
+        relief="solid",
+        bd=1,
+        font=("helvetica", "8", "normal"),
+        padx=1,
+        pady=1
+    )
+    tooltip.place_forget()
+
+    def get_entry_font(widget):
+        font_name = str(widget.cget("font"))
+        try:
+            return font.nametofont(font_name)
+        except tk.TclError:
+            return font.Font(font=font_name)
+
+    f = get_entry_font(entry_widget)
+
+    def is_text_overflowing():
+        text_width = f.measure(text_var.get())
+        entry_width = entry_widget.winfo_width()
+        return text_width > entry_width
+
+    def show_tooltip():
+        if is_text_overflowing() and entry_widget.winfo_ismapped():
+            tooltip.config(text=text_var.get())
+            tooltip.place(
+                in_=entry_widget,
+                relx=0.5,
+                rely=0.0,
+                y=0,
+                anchor="s"
+            )
+        else:
+            tooltip.place_forget()
+
+    def on_enter(event):
+        show_tooltip()
+
+    def on_leave(event):
+        tooltip.place_forget()
+
+    def on_text_change(*args):
+        # If tooltip is visible, update its content/visibility
+        if str(tooltip.place_info()) != "{}":
+            show_tooltip()
+
+    def on_resize(event):
+        # Re-check visibility when entry size changes
+        if str(tooltip.place_info()) != "{}":
+            show_tooltip()
+
+    entry_widget.bind("<Enter>", on_enter)
+    entry_widget.bind("<Leave>", on_leave)
+    entry_widget.bind("<Configure>", on_resize)
+    text_var.trace_add("write", on_text_change)
+
+
 ############################# Set GUI icon ##########################
 def set_icon():
     if os.path.exists(icon_path):
@@ -3147,6 +3213,8 @@ file_path = tk.StringVar()
 file_path_entry = ttk.Entry(frame_local, textvariable=file_path, width=67)
 # file_path_entry = ttk.Combobox(frame_local, width=55)
 file_path_entry.grid(row=0, column=1, padx=5, pady=5, sticky='nw')
+
+create_overflow_tooltip(file_path_entry, file_path)
 
 
 frame_browse = tk.Frame(frame_local)
