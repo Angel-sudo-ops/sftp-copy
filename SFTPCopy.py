@@ -2029,7 +2029,9 @@ def set_paths():
     remote_dir_entry['values'] = default_paths + custom_paths
     
     # Optionally, reset the displayed value to the first default path
-    if default_paths and not remote_dir_entry.get():
+    if default_paths:
+        check_source_path_for_keywords(file_path.get())
+    else:
         remote_dir_entry.set(default_paths[0])
 
     print(f"Default paths set to: {default_paths}")
@@ -2326,14 +2328,16 @@ def save_custom_profile(silent_update=False):
                     # Update the existing sub-profile
                     existing_subprofile.update(subprofile)
                     if not silent_update:
-                        messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' updated successfully.")
+                        # messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' updated successfully.")
+                        show_status_message(status_profile_label, f"Sub-profile '{subprofile_name}' updated successfully", fade_steps=20)
                     else:
                         show_status_message(status_path_label, "Path updated successfully", fade_steps=20)
                     break
             else:
                 # Add a new sub-profile to the profile
                 profile.setdefault("sub_profiles", []).append(subprofile)
-                messagebox.showinfo("Success", f"New sub-profile '{subprofile_name}' added to profile '{profile_name}'.")
+                # messagebox.showinfo("Success", f"New sub-profile '{subprofile_name}' added to profile '{profile_name}'.")
+                show_status_message(status_profile_label, f"New sub-profile '{subprofile_name}' added to profile", fade_steps=20)
             break 
     else:
         # Add a new profile with the sub-profile
@@ -2341,7 +2345,8 @@ def save_custom_profile(silent_update=False):
             "profile_name": profile_name,
             "sub_profiles": [subprofile]
         })
-        messagebox.showinfo("Success", f"New profile '{profile_name}' created with sub-profile '{subprofile_name}'.")
+        # messagebox.showinfo("Success", f"New profile '{profile_name}' created with sub-profile '{subprofile_name}'.")
+        show_status_message(status_profile_label, f"New profile '{profile_name}' created", fade_steps=20)
     
     save_custom_profiles(custom_profiles)
 
@@ -2459,7 +2464,8 @@ def delete_profile_or_subprofile():
                         if confirm:
                             subprofiles.remove(subprofile)
                             subprofiles_combobox.set("")
-                            messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' deleted successfully.")
+                            # messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' deleted successfully.")
+                            show_status_message(status_profile_label, f"Sub-profile '{subprofile_name}' deleted successfully", fade_steps=20)
                         break
                 else:
                     messagebox.showerror("Error", f"Sub-profile '{subprofile_name}' not found.")
@@ -2477,7 +2483,8 @@ def delete_profile_or_subprofile():
                     )
                     if confirm:
                         custom_profiles.remove(profile)
-                        messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                        # messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                        show_status_message(status_profile_label, f"Profile '{profile_name}' deleted successfully.", fade_steps=20)
                         profiles_combobox.set("") # Clear profile selection
                 break
             else:
@@ -2488,7 +2495,8 @@ def delete_profile_or_subprofile():
                 )
                 if confirm:
                     custom_profiles.remove(profile)
-                    messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                    # messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
+                    show_status_message(status_profile_label, f"Profile '{profile_name}' deleted successfully.", fade_steps=20)
                     profiles_combobox.set("") # Clear profile selection
             break
     else:
@@ -3172,6 +3180,9 @@ root.config(menu=menu_bar)
 frame_profile = ttk.Labelframe(root, text="Profile overview", labelanchor='nw', style="Custom.TLabelframe")
 frame_profile.grid(row=0, column=0, padx=10, pady=(5,10), ipadx=3)
 
+status_profile_label = ttk.Label(frame_profile, text="")
+status_profile_label.place(relx=1.0, rely=0.0, x=-250, y=-20, anchor="nw")
+
 profile_label = ttk.Label(frame_profile, text="Profile:")
 profile_label.grid(row=0, column=0, padx=5, pady=5, sticky='e')
 
@@ -3508,7 +3519,7 @@ root.mainloop()
 ## add profiles to save data just like routes - DONE
 
 ## fix data still gray even after placeholder is not the same - DONE
-##  cannot send several files at the same time
+##  cannot send several files at the same time - DONE
 
 ## create tool for layout zipper
 
@@ -3519,10 +3530,34 @@ root.mainloop()
 ##CAmbiar a tabla en vez de label
 
 
-# Add time when transfer is done
+# Add time when transfer is done - DONE
 
-# Poner Files para que el usuario sepa que puede seleccionar varios
+# Poner Files para que el usuario sepa que puede seleccionar varios - DONE
 
 # Line 586, make user able to save local paths, and separate if they are either folders or filesand when opening a new one pop up a message if they want to actually save that path
 
 # Transfer or Download maybe should update the profile
+
+
+# load static routes automatically at the beginning
+
+
+# Add tooltip on top of Root IP to show that IP is needed if no table is added
+
+# When adding table ...
+
+# When input range is wrong, indicate which value is missing from the table
+
+# Ctrl + T for transfer / Ctrl + D for download
+
+# Disable root ip entry if table is added, if no table is present, input is enable, update whenever 
+
+# Delete LGV table whenever plrofile is changed, then enable ip entry
+
+
+
+# download log files based on time
+
+# import rdm xml file besides db3 or static routes
+
+# add commits messages after every release update

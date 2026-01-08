@@ -2,67 +2,122 @@
 <LGVData>
     <LGV>
         <Name>LGV01</Name>
-        <IPAddress>10.80.14.11</IPAddress>
-        <Type>TC3</Type>
+        <IPAddress>10.241.40.61</IPAddress>
+        <Type>TC2</Type>
     </LGV>
     <LGV>
         <Name>LGV02</Name>
-        <IPAddress>10.80.14.12</IPAddress>
-        <Type>TC3</Type>
+        <IPAddress>10.241.40.62</IPAddress>
+        <Type>TC2</Type>
     </LGV>
     <LGV>
         <Name>LGV03</Name>
-        <IPAddress>10.80.14.13</IPAddress>
-        <Type>TC3</Type>
+        <IPAddress>10.241.40.63</IPAddress>
+        <Type>TC2</Type>
     </LGV>
     <LGV>
         <Name>LGV04</Name>
-        <IPAddress>10.80.14.14</IPAddress>
-        <Type>TC3</Type>
+        <IPAddress>10.241.40.64</IPAddress>
+        <Type>TC2</Type>
     </LGV>
     <LGV>
         <Name>LGV05</Name>
-        <IPAddress>10.80.14.15</IPAddress>
+        <IPAddress>10.241.40.65</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV21</Name>
+        <IPAddress>10.241.40.41</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV22</Name>
+        <IPAddress>10.241.40.42</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV23</Name>
+        <IPAddress>10.241.40.43</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV24</Name>
+        <IPAddress>10.241.40.44</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV25</Name>
+        <IPAddress>10.241.40.45</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV26</Name>
+        <IPAddress>10.241.40.46</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV27</Name>
+        <IPAddress>10.241.40.47</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV28</Name>
+        <IPAddress>10.241.40.48</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV29</Name>
+        <IPAddress>10.241.40.49</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV30</Name>
+        <IPAddress>10.241.40.50</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV31</Name>
+        <IPAddress>10.241.40.51</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV32</Name>
+        <IPAddress>10.241.40.52</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV33</Name>
+        <IPAddress>10.241.40.53</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV41</Name>
+        <IPAddress>10.241.40.71</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV42</Name>
+        <IPAddress>10.241.40.72</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV43</Name>
+        <IPAddress>10.241.40.73</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV44</Name>
+        <IPAddress>10.241.40.74</IPAddress>
+        <Type>TC2</Type>
+    </LGV>
+    <LGV>
+        <Name>LGV45</Name>
+        <IPAddress>10.241.40.75</IPAddress>
         <Type>TC3</Type>
     </LGV>
     <LGV>
-        <Name>LGV06</Name>
-        <IPAddress>10.80.14.16</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV07</Name>
-        <IPAddress>10.80.14.17</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV08</Name>
-        <IPAddress>10.80.14.18</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV09</Name>
-        <IPAddress>10.80.14.19</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV10</Name>
-        <IPAddress>10.80.14.20</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV11</Name>
-        <IPAddress>10.80.14.21</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV12</Name>
-        <IPAddress>10.80.14.22</IPAddress>
-        <Type>TC3</Type>
-    </LGV>
-    <LGV>
-        <Name>LGV13</Name>
-        <IPAddress>10.80.14.23</IPAddress>
+        <Name>LGV46</Name>
+        <IPAddress>10.241.40.76</IPAddress>
         <Type>TC3</Type>
     </LGV>
 </LGVData>

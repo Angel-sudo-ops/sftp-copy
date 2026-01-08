@@ -543,5 +543,40 @@
                 "transfer_type": "SFTP"
             }
         ]
+    },
+    {
+        "profile_name": "CC1403_Offal_BuenosAires",
+        "sub_profiles": [
+            {
+                "sub_name": "CB16_layout",
+                "base_ip": "192.168.80.201",
+                "ip_range": "2",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC1403_Offal/Layout/export_to_agv/layout.bin",
+                "remote_dir": "/Hard Disk/Backup/export_to_agv",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB16_Boot",
+                "base_ip": "192.168.80.201",
+                "ip_range": "1-5",
+                "local_dir": "D:/Documents/LGV OnSite Projects/TC2/CC1403_Offal/CB16Code/LGV01_v26",
+                "remote_dir": "/Hard Disk/Backup",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB16_quote",
+                "base_ip": "192.168.80.201",
+                "ip_range": "1-5",
+                "local_dir": "D:/Documents/LGV OnSite Projects/TC2/CC1403_Offal/CB16Code/LGV01_v26",
+                "remote_dir": "/Hard Disk/Backup",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            }
+        ]
     }
 ]
