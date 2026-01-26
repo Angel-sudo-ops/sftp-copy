@@ -504,8 +504,8 @@
             },
             {
                 "sub_name": "CB25_Boot",
-                "base_ip": "10.49.62.35",
-                "ip_range": "32,34,36",
+                "base_ip": "10.49.63.6",
+                "ip_range": "32-40",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/CB25Code/LGV/_Boot/TwinCAT RT (x64)",
                 "remote_dir": "\\TwinCAT\\Boot",
                 "username": "Administrator",
@@ -525,8 +525,8 @@
             {
                 "sub_name": "CB25_areaMonitor",
                 "base_ip": "10.49.62.35",
-                "ip_range": "36",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/CB25/ForAll/LMSAreas.prj",
+                "ip_range": "32-40",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/CB25/ForAll/LMSAreas.prj",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
@@ -535,7 +535,7 @@
             {
                 "sub_name": "Reach_Boot",
                 "base_ip": "10.49.62.35",
-                "ip_range": "41,48,55,58",
+                "ip_range": "41-58",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/Reach14Code/LGV/_Boot/TwinCAT RT (x64)",
                 "remote_dir": "\\TwinCAT\\Boot",
                 "username": "Administrator",
@@ -545,9 +545,49 @@
             {
                 "sub_name": "CB25_quote",
                 "base_ip": "10.49.62.35",
-                "ip_range": "32,34,36",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/CB25/ForAll/Quotes.xml",
+                "ip_range": "32-40",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/CB25/ForAll/Quotes.xml",
                 "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_RefToolApp",
+                "base_ip": "172.23.51.140",
+                "ip_range": "41-50",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/ReflTool/ReflectorFinderLogger.exe",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_RefToolConfig",
+                "base_ip": "172.23.51.140",
+                "ip_range": "41-50",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/ReflTool/Apps",
+                "remote_dir": "\\Apps",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach_areaMonitor",
+                "base_ip": "10.49.62.35",
+                "ip_range": "41-58",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/Reach14/ForAll/LMSAreas.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_layout",
+                "base_ip": "10.49.62.35",
+                "ip_range": "38,35",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC2080_Baxter_Marion/Layout/export_to_agv/export_to_agv_LayoutLoader_5p01/layout.bin",
+                "remote_dir": "\\Layout",
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"

@@ -1,6 +1,8 @@
 {
     "SFTP": [
         "/___OS (C:)___/Users/Administrator/Desktop/UnlockTools_2.0.0/ViewerMaps",
-        "/___OS (C:)___/Users/Administrator/Desktop"
+        "/___OS (C:)___/Users/Administrator/Desktop",
+        "/___OS (C:)___/Program Files/Elettric80 SpA/UNLOCK/ViewerMaps",
+        "/___OS (C:)___/TwinCAT/3.1/Target/License"
     ]
 }

@@ -381,12 +381,13 @@ def update_menu_state():
 ############################################## Open LGV Table Window ####################################
 lgv_table_window = None
 
-def open_lgv_table_window_cond():
-    global lgv_table_window
+lgv_table_window_position = None
+
+def open_lgv_table_window_cond(event=None):
+    global lgv_table_window, lgv_table_window_position
 
     if lgv_table_window is not None and lgv_table_window.winfo_exists():
-        lgv_table_window.lift()
-        lgv_table_window.focus_force()
+        lgv_table_window_position = get_window_pos_before_close(lgv_table_window)
     else:
         open_lgv_table_window()
 
@@ -398,8 +399,14 @@ def open_lgv_table_window():
 
     window_width = 290
     window_lenght = 300
-    lgv_table_window.geometry(f"{window_width}x{window_lenght}")
-    lgv_table_window.minsize(window_width, window_lenght)
+
+    if lgv_table_window_position:
+        lgv_table_window.geometry(f"{window_width}x{window_lenght}{lgv_table_window_position}")
+    else:
+        lgv_table_window.geometry(f"{window_width}x{window_lenght}")
+    
+    lgv_table_window.lift()
+    lgv_table_window.focus_force()
 
     global treeview
 
@@ -479,6 +486,30 @@ def open_lgv_table_window():
     scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     load_table_data_from_xml(treeview)
+
+    # Handle window close event to reset the reference
+    lgv_table_window.protocol("WM_DELETE_WINDOW", on_lgv_table_window_close)
+
+def on_lgv_table_window_close(event=None):
+    global lgv_table_window
+    lgv_table_window = get_window_pos_before_close(lgv_table_window)
+
+
+###################################################################################################################################################################
+######################################################################### Window helper ###########################################################################
+###################################################################################################################################################################
+
+def get_window_pos_before_close(window):
+    geometry = window.geometry()  # e.g. "420x400+123+456"
+    # Extract just the +x+y part
+    pos = geometry.split('+')
+    if len(pos) >= 3:
+        window.destroy()
+        window = None
+        return f"+{pos[1]}+{pos[2]}"
+    
+###################################################################################################################################################################
+
 
 ##########################################################################################################################
 ########################################### TRANSFER / DOWNLOAD ##########################################################
@@ -3169,6 +3200,8 @@ options_menu = tk.Menu(menu_bar, tearoff=0)
 options_menu.add_command(label="Show LGV Table", command=open_lgv_table_window_cond)
 options_menu.add_command(label="Remove LGV Table", command=delete_lgv_data_file)
 menu_bar.add_cascade(label=" Options ", menu=options_menu) 
+
+root.bind_all("<F2>", open_lgv_table_window_cond)
 
 # about_menu = tk.Menu(menu_bar, tearoff=0)
 # about_menu.add_command(label="Info    ", command=open_shortcuts_window_cond)
