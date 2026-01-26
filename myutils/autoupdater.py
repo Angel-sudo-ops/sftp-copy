@@ -66,6 +66,12 @@ def ask_and_update(root, current_version, latest_version, download_url, changelo
             changelog = fetch_changelog(changelog_url)
             if root:
                 root.destroy()
+
+            with open("I_RAN_FROM_EXE.txt", "w") as f:
+                f.write("Updater reached this point\n")
+                f.write(f"cwd: {os.getcwd()}\n")
+                f.write(f"exe: {sys.executable}\n")
+
             download_and_prepare_batch(
                 current_version, 
                 latest_version, 
@@ -116,6 +122,9 @@ def download_and_prepare_batch(current_version, latest_version, download_url, ap
 
         old_version_name = f"{os.path.splitext(current_exe_name)[0]}_{current_version}.exe"
         batch_path = os.path.join(current_dir, "run_updater.bat")
+        
+        with open("I_RAN_FROM_EXE.txt", "w") as f:
+                f.write("Updater reached point before batch\n")
 
         with open(batch_path, 'w', encoding='utf-8') as batch:
             batch.write("@echo off\n")
