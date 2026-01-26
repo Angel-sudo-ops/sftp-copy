@@ -9,14 +9,14 @@ import time
 
 TIMEOUT = 5  # seconds for HTTP requests
 
-def check_for_updates_async(root, current_version, version_url, download_url, app_name=None):
+def check_for_updates_async(root, current_version, version_url, download_url, changelog_url, app_name=None):
     def worker():
         try:
             display_name = app_name or get_app_display_name()
             latest_version = fetch_latest_version(version_url)
             if version.parse(latest_version) > version.parse(current_version):
                 # Messagebox must run in the main thread
-                root.after(0, lambda: ask_and_update(root, current_version, latest_version, download_url, display_name))
+                root.after(0, lambda: ask_and_update(root, current_version, latest_version, download_url, changelog_url, display_name))
             else:
                 print(f"[Updater] Already at latest version ({latest_version})")
                 return
@@ -45,7 +45,18 @@ def fetch_latest_version(version_url):
     return response.text.strip()
 
 
-def ask_and_update(root, current_version, latest_version, download_url, app_name):
+def fetch_changelog(changelog_url):
+    try:
+        import requests
+        r = requests.get(changelog_url, timeout=5)
+        if r.status_code == 200:
+            return r.text.splitlines()
+    except Exception as e:
+        print(f"[Updater] Failed to fetch changelog: {e}")
+    return []
+
+
+def ask_and_update(root, current_version, latest_version, download_url, changelog_url, app_name):
     def ask():
         answer = messagebox.askyesno(
             "Update Available",
@@ -53,15 +64,21 @@ def ask_and_update(root, current_version, latest_version, download_url, app_name
             parent=root
         )
         if answer:
+            changelog = fetch_changelog(changelog_url)
             if root:
                 root.destroy()
-            download_and_prepare_batch(current_version, latest_version, download_url, app_name)
+            download_and_prepare_batch(
+                current_version, 
+                latest_version, 
+                download_url,
+                app_name,
+                changelog=changelog)
             sys.exit(0)
 
     root.after(0, ask)
 
 
-def download_and_prepare_batch(current_version, latest_version, download_url, app_name):
+def download_and_prepare_batch(current_version, latest_version, download_url, changelog, app_name):
     try:
         if getattr(sys, 'frozen', False):
             # Running as a PyInstaller .exe
@@ -159,7 +176,20 @@ def download_and_prepare_batch(current_version, latest_version, download_url, ap
             batch.write(f"echo = {exe_display} =\n")
             batch.write("echo " + "=" * box_width + "\n")
             batch.write("echo.\n")
-            
+
+            if changelog:
+                batch.write("echo.\n")
+                batch.write("echo " + "=" * box_width + "\n")
+                batch.write("echo WHAT'S NEW:\n")
+                batch.write("echo " + "-" * box_width + "\n")
+
+                for line in changelog:
+                    safe_line = line.replace("&", "^&")
+                    batch.write(f"echo {safe_line}\n")
+
+                batch.write("echo " + "=" * box_width + "\n")
+
+            batch.write("echo.\n")
             batch.write("echo Press any key to exit... \n")
             batch.write("pause >nul\n")
             # batch.write("echo This window will close automatically in 10 seconds...\n")
