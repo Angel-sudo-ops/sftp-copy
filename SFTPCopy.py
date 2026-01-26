@@ -3647,7 +3647,8 @@ if getattr(sys, 'frozen', False) and not updated:  # Only in PyInstaller .exe
             root=root,
             current_version=VERSION,
             version_url="https://github.com/sudojac/sftp-copy/releases/latest/download/version.txt",
-            download_url="https://github.com/sudojac/sftp-copy/releases/latest/download/SFTPCopy.exe"
+            download_url="https://github.com/sudojac/sftp-copy/releases/latest/download/SFTPCopy.exe",
+            changelog_url="https://github.com/sudojac/sftp-copy/releases/latest/download/changelog.txt"
         ))
 
 ################################################################### Main loop ##########################################################################
