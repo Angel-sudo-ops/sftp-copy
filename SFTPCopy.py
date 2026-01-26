@@ -371,6 +371,7 @@ def delete_lgv_data_file():
     # Update the menu state regardless of success or failure
     sync_lgv_table_state()
 
+
 def sync_lgv_table_state():
     table_exists = lgv_table_is_valid()
 
@@ -385,6 +386,11 @@ def sync_lgv_table_state():
     )
 
     # ---- Root IP UI ----
+
+    default_font = font.nametofont("TkDefaultFont")
+    italic_font = default_font.copy()
+    italic_font.configure(slant="italic")
+
     if table_exists:
         base_ip = derive_base_ip_from_lgv_file()
         
@@ -394,11 +400,17 @@ def sync_lgv_table_state():
 
         ip_entry.grid_remove()
         ip_label.config(
-            text="LGV Table active — F2 to toggle"
+            text="LGV Table active — F2 to toggle view",
+            font=italic_font,
+            foreground="#555555"
         )
     else:
         ip_entry.grid()
-        ip_label.config(text="Root IP:")
+        ip_label.config(
+            text="Root IP:",
+            font=default_font,
+            foreground="#131212"
+        )
 
 
 def lgv_table_is_valid():
