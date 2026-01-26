@@ -15,7 +15,14 @@ REM Generate changelog
 git describe --tags --abbrev=0 > prev_tag.tmp 2>nul
 set /p PREV_TAG=<prev_tag.tmp
 
-git log %PREV_TAG%..HEAD --pretty=format:"- %%s" > changelog.txt
+echo [%VERSION%] > changelog.new
+git log %PREV_TAG%..HEAD --pretty=format:"- %%s" >> changelog.new
+
+if exist changelog.txt (
+    type changelog.txt >> changelog.new
+)
+
+move /Y changelog.new changelog.txt
 del prev_tag.tmp
 
 REM Create GitHub release 

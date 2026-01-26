@@ -54,6 +54,22 @@ def fetch_changelog(changelog_url):
         print(f"[Updater] Failed to fetch changelog: {e}")
     return []
 
+def extract_relevant_changes(lines, current_version):
+    result = []
+    collecting = False
+
+    for line in lines:
+        if line.startswith("["):
+            version = line.strip("[]")
+            if version == current_version:
+                break
+            collecting = True
+
+        if collecting:
+            result.append(line)
+
+    return result
+
 
 def ask_and_update(root, current_version, latest_version, download_url, changelog_url, app_name):
     def ask():
@@ -63,7 +79,12 @@ def ask_and_update(root, current_version, latest_version, download_url, changelo
             parent=root
         )
         if answer:
-            changelog = fetch_changelog(changelog_url)
+            raw_changelog = fetch_changelog(changelog_url)
+
+            relevant_changelog = extract_relevant_changes(
+                raw_changelog,
+                current_version
+            )
 
             if root:
                 root.destroy()
@@ -73,7 +94,7 @@ def ask_and_update(root, current_version, latest_version, download_url, changelo
                 latest_version, 
                 download_url,
                 app_name,
-                changelog=changelog)
+                changelog=relevant_changelog)
             
             sys.exit(0)
 
