@@ -1,3 +1,8 @@
+[3.6.7.7] 
+- export .exe version 3.6.7.7
+- bump version (sanity check)
+- changelog with last changes since current version stable 
+ 
 [3.6.7.6] 
 - export .exe version 3.6.7.6 (sanity check)
 - bugfix add a blank line between sections at release for changelog 

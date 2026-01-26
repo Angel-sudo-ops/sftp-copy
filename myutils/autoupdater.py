@@ -139,9 +139,6 @@ def download_and_prepare_batch(current_version, latest_version, download_url, ap
         old_version_name = f"{os.path.splitext(current_exe_name)[0]}_{current_version}.exe"
         batch_path = os.path.join(current_dir, "run_updater.bat")
         
-        with open("I_RAN_FROM_EXE.txt", "w") as f:
-                f.write("Updater reached point before batch\n")
-
         with open(batch_path, 'w', encoding='utf-8') as batch:
             batch.write("@echo off\n")
             batch.write("title Application Updater\n")
@@ -199,13 +196,12 @@ def download_and_prepare_batch(current_version, latest_version, download_url, ap
             batch.write("echo ={:^{width}}=\n".format("You can now run the new version:", width=box_width - 2))
             batch.write(f"echo = {exe_display} =\n")
             batch.write("echo " + "=" * box_width + "\n")
-            batch.write("echo.\n")
 
             if changelog:
                 batch.write("echo.\n")
                 batch.write("echo " + "=" * box_width + "\n")
                 batch.write("echo WHAT'S NEW:\n")
-                batch.write("echo " + "-" * box_width + "\n")
+                batch.write("echo " + "=" * box_width + "\n")
 
                 for line in changelog:
                     safe_line = line.replace("&", "^&")
@@ -213,7 +209,7 @@ def download_and_prepare_batch(current_version, latest_version, download_url, ap
 
                 batch.write("echo " + "=" * box_width + "\n")
 
-            batch.write("echo.\n")
+            batch.write("echo(\n")
             batch.write("echo Press any key to exit... \n")
             batch.write("pause >nul\n")
             # batch.write("echo This window will close automatically in 10 seconds...\n")
