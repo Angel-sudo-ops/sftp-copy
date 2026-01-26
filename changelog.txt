@@ -1,0 +1,2 @@
+- export .exe version 3.6.6.8
+- bugfix in escaping commit subject %%s for git

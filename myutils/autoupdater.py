@@ -47,7 +47,6 @@ def fetch_latest_version(version_url):
 
 def fetch_changelog(changelog_url):
     try:
-        import requests
         r = requests.get(changelog_url, timeout=5)
         if r.status_code == 200:
             return r.text.splitlines()
@@ -78,7 +77,7 @@ def ask_and_update(root, current_version, latest_version, download_url, changelo
     root.after(0, ask)
 
 
-def download_and_prepare_batch(current_version, latest_version, download_url, changelog, app_name):
+def download_and_prepare_batch(current_version, latest_version, download_url, app_name, changelog):
     try:
         if getattr(sys, 'frozen', False):
             # Running as a PyInstaller .exe

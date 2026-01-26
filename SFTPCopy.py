@@ -3701,3 +3701,6 @@ root.mainloop()
 # import rdm xml file besides db3 or static routes
 
 # add commits messages after every release update
+
+
+# version.json could replace version.txt + changelog.txt in the future
