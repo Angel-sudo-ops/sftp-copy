@@ -18,6 +18,7 @@ set /p PREV_TAG=<prev_tag.tmp
 echo [%VERSION%] > changelog.new
 git log %PREV_TAG%..HEAD --pretty=format:"- %%s" >> changelog.new
 echo. >> changelog.new
+echo. >> changelog.new
 
 if exist changelog.txt (
     type changelog.txt >> changelog.new

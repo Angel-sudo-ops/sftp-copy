@@ -1,3 +1,7 @@
+[3.6.7.6] 
+- export .exe version 3.6.7.6 (sanity check)
+- bugfix add a blank line between sections at release for changelog 
+ 
 [3.6.7.5] 
 - export version 3.6.7.5
 - bump version as test
@@ -6,7 +10,3 @@
 - export .exe version 3.6.7.3
 - changelog gets latest updates from current version
 - autoupdater + changelog stable
-
-[3.6.7.0]
-- export .exe version 3.6.7.0
-- add debug on autoupdater to fix update issue
