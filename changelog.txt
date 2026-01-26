@@ -1,2 +1,2 @@
-- export .exe version 3.6.6.9
-- add changelog when app version is updated
+- export .exe version 3.6.7.0
+- add debug on autoupdater to fix update issue
