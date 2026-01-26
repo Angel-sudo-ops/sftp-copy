@@ -1,2 +1,8 @@
+[3.6.7.4] 
+- export .exe version 3.6.7.3
+- changelog gets latest updates from current version
+- autoupdater + changelog stable
+
+[3.6.7.0]
 - export .exe version 3.6.7.0
 - add debug on autoupdater to fix update issue
