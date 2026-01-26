@@ -476,6 +476,7 @@ def open_lgv_table_window():
     global lgv_table_window
 
     lgv_table_window = tk.Toplevel(root)
+    lgv_table_window.withdraw()
     lgv_table_window.title("LGV Data")
 
     window_width = 290
@@ -492,7 +493,10 @@ def open_lgv_table_window():
         lgv_table_window.geometry(f"{window_width}x{window_lenght}+{x}+{y}")
     
     lgv_table_window.minsize(window_width, window_lenght)
-    
+
+    lgv_table_window.iconbitmap(icon_path)
+
+    lgv_table_window.deiconify()
     lgv_table_window.lift()
     lgv_table_window.focus_force()
 
@@ -3259,6 +3263,7 @@ def rotate_spinner():
 
 root = tk.Tk()
 root.title(f"Super File Transfer {VERSION}")
+
 
 # Check if running as a script or frozen executable
 if getattr(sys, 'frozen', False):
