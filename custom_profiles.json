@@ -599,7 +599,7 @@
             },
             {
                 "sub_name": "CB16_quote2",
-                "base_ip": "10.49.62.34",
+                "base_ip": "192.168.80.200",
                 "ip_range": "1-5",
                 "local_dir": "D:/Documents/LGV OnSite Projects/TC2/CC1403_Offal/MyFiles/Network.txt",
                 "remote_dir": "/Hard Disk/Backup",

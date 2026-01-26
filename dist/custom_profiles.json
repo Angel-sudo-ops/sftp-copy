@@ -544,7 +544,7 @@
             },
             {
                 "sub_name": "CB25_quote",
-                "base_ip": "10.49.62.35",
+                "base_ip": "10.49.62.34",
                 "ip_range": "32-40",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/CB25/ForAll/Quotes.xml",
                 "remote_dir": "\\Config",

@@ -394,7 +394,7 @@ def sync_lgv_table_state():
 
         ip_entry.grid_remove()
         ip_label.config(
-            text="LGV Table mode — Press F2 to show/hide"
+            text="LGV Table active — F2 to toggle"
         )
     else:
         ip_entry.grid()
