@@ -1,17 +1,16 @@
-[3.6.7.7] 
-- export .exe version 3.6.7.7
+[3.6.7.8]
+- small fixes in autoupdater
+ 
+[3.6.7.7]
 - bump version (sanity check)
 - changelog with last changes since current version stable 
  
-[3.6.7.6] 
-- export .exe version 3.6.7.6 (sanity check)
+[3.6.7.6]
 - bugfix add a blank line between sections at release for changelog 
  
-[3.6.7.5] 
-- export version 3.6.7.5
+[3.6.7.5]
 - bump version as test
 
-[3.6.7.4] 
-- export .exe version 3.6.7.3
+[3.6.7.4]
 - changelog gets latest updates from current version
 - autoupdater + changelog stable
