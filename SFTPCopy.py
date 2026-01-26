@@ -386,7 +386,12 @@ def sync_lgv_table_state():
 
     # ---- Root IP UI ----
     if table_exists:
-        ip_entry.insert(0, "")
+        base_ip = derive_base_ip_from_lgv_file()
+        
+        if base_ip:
+            ip_entry.delete(0, "end")
+            ip_entry.insert(0, base_ip)
+
         ip_entry.grid_remove()
         ip_label.config(
             text="LGV Table mode — Press F2 to show/hide"
@@ -403,6 +408,41 @@ def lgv_table_is_valid():
         return os.path.getsize(LGV_DATA_FILE) > 0
     except OSError:
         return False
+    
+    
+def derive_base_ip_from_lgv_file(filename=LGV_DATA_FILE):
+    if not lgv_table_is_valid():
+        return None
+
+    try:
+        tree = ET.parse(filename)
+        root = tree.getroot()
+
+        first_lgv = root.find("LGV")
+        if first_lgv is None:
+            return None
+
+        name = first_lgv.findtext("Name")
+        ip_address = first_lgv.findtext("IPAddress")
+
+        if not name or not ip_address:
+            return None
+
+        lgv_num = int(extract_numeric_part(name))
+        octets = ip_address.split(".")
+
+        last_octet = int(octets[-1])
+        base_last = last_octet - lgv_num
+
+        if base_last < 0:
+            return None
+
+        octets[-1] = str(base_last)
+        return ".".join(octets)
+
+    except Exception:
+        return None
+
     
 ############################################## Open LGV Table Window ####################################
 lgv_table_window = None
@@ -527,8 +567,8 @@ def open_lgv_table_window():
     lgv_table_window.protocol("WM_DELETE_WINDOW", on_lgv_table_window_close)
 
 def on_lgv_table_window_close(event=None):
-    global lgv_table_window
-    lgv_table_window = get_window_pos_before_close(lgv_table_window)
+    global lgv_table_window_position
+    lgv_table_window_position = get_window_pos_before_close(lgv_table_window)
 
 
 ###################################################################################################################################################################
@@ -2321,7 +2361,20 @@ def save_custom_profile(silent_update=False):
     profile_name = profiles_combobox.get().strip()
     subprofile_name = subprofiles_combobox.get().strip()
 
-    base_ip = ip_entry.get().strip()
+    base_ip = None
+    if lgv_table_is_valid():
+        base_ip = derive_base_ip_from_lgv_file()
+    if not base_ip:
+        base_ip = ip_entry.get().strip()
+
+    if not base_ip:
+        messagebox.showerror(
+            "Missing Base IP",
+            "Base IP could not be determined.\n"
+            "Please enter a Root IP or check the LGV table."
+        )
+        return
+
     range_input = range_entry.get().strip()
     local_dir = file_path_entry.get() # Be careful with this as it might have spaces at the end but also in the middle of the path
     remote_dir = remote_dir_entry.get() # Same as previous

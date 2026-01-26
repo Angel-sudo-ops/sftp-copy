@@ -551,6 +551,16 @@
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_Boot2",
+                "base_ip": "10.49.62.34",
+                "ip_range": "32,34,36",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/CB25Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
             }
         ]
     },
@@ -589,7 +599,7 @@
             },
             {
                 "sub_name": "CB16_quote2",
-                "base_ip": "e.g., 7.204.194.10",
+                "base_ip": "10.49.62.34",
                 "ip_range": "1-5",
                 "local_dir": "D:/Documents/LGV OnSite Projects/TC2/CC1403_Offal/MyFiles/Network.txt",
                 "remote_dir": "/Hard Disk/Backup",
