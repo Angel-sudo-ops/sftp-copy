@@ -17,6 +17,7 @@ set /p PREV_TAG=<prev_tag.tmp
 
 echo [%VERSION%] > changelog.new
 git log %PREV_TAG%..HEAD --pretty=format:"- %%s" >> changelog.new
+echo. >> changelog.new
 
 if exist changelog.txt (
     type changelog.txt >> changelog.new
@@ -25,8 +26,11 @@ if exist changelog.txt (
 move /Y changelog.new changelog.txt
 del prev_tag.tmp
 
+REM log path
+set LOG=changelog.txt
+
 REM Create GitHub release 
-gh release create %TAG% %EXE% %VERSION_FILE% changelog.txt ^
+gh release create %TAG% %EXE% %VERSION_FILE% %LOG% ^
     --title "SFTP Copy %VERSION%" ^
     --notes "Auto-release for version %VERSION%"
 

@@ -1,3 +1,7 @@
+[3.6.7.5] 
+- export version 3.6.7.5
+- bump version as test
+
 [3.6.7.4] 
 - export .exe version 3.6.7.3
 - changelog gets latest updates from current version
