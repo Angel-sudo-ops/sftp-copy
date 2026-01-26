@@ -59,96 +59,97 @@ def extract_lgv_name(input_name):
 def populate_table_from_xml(path=None):
     if not path:
         # Ask the user to select an XML file
-        file_path = filedialog.askopenfilename(title="Select StaticRoutes file", 
-                                            initialdir="C:\\TwinCAT\\3.1\\Target",
-                                            filetypes=[("XML files", "*.xml")])
+        file_path = filedialog.askopenfilename(
+            title="Select StaticRoutes file", 
+            initialdir="C:\\TwinCAT\\3.1\\Target",
+            filetypes=[("XML files", "*.xml")]
+        )
     else:
         file_path = path
 
-    if not file_path:
-        return
-
-    if file_path and not os.path.exists(file_path):
-        print(f"The file {path} does not exist.")
+    if not file_path or not os.path.exists(file_path):
         return
     
-    if file_path:
-        try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
-        except ET.ParseError:
-            messagebox.showerror("Error", "The selected file is not a valid XML file.")
-            return
+    # --- Parse XML ---
+    try:
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+    except ET.ParseError:
+        messagebox.showerror("Error", "The selected file is not a valid XML file.")
+        return
 
-        # Check for the expected root elements
-        remote_connections = root.find('RemoteConnections')
-        if remote_connections is None:
-            messagebox.showerror("Error", "XML file does not contain the expected 'RemoteConnections' structure.")
-            return
+    # Check for the expected root elements
+    remote_connections = root.find('RemoteConnections')
+    if remote_connections is None:
+        messagebox.showerror(
+            "Error", 
+            "XML file does not contain the expected 'RemoteConnections' structure."
+        )
+        return
+    
+    open_lgv_table_window()
+
+    for row in treeview.get_children():
+        treeview.delete(row)
         
-        open_lgv_table_window_cond()
+    # Initialize an empty list to hold the data
+    routes_data = []
+    seen_lgv_names = set()
+    invalid_routes = []
 
-        data = treeview.get_children()
-        # Clear the existing table data
-        if data is not None:
-            for i in data:
-                treeview.delete(i)
-            
-        # Initialize an empty list to hold the data
-        routes_data = []
-        seen_lgv_names = set()
-        invalid_routes = []
-        
-        # Iterate through each <Route> element in the XML
-        for route in remote_connections.findall('Route'):
-            name = route.find('Name')
-            address = route.find('Address')
-            net_id = route.find('NetId')
+    # --- Parse routes ---
+    for route in remote_connections.findall('Route'):
+        name = route.find('Name')
+        address = route.find('Address')
+        net_id = route.find('NetId')
 
-            if None in (name, address, net_id):
-                messagebox.showwarning("Warning", "One or more routes are missing required fields (Name, Address, NetId).")
-                invalid_routes.append("Missing fields (Name, Address, NetId)")
-                continue  # Skip this route and move to the next
+        if None in (name, address, net_id):
+            # messagebox.showwarning("Warning", "One or more routes are missing required fields (Name, Address, NetId).")
+            invalid_routes.append("Missing fields (Name, Address, NetId)")
+            continue  # Skip this route and move to the next
 
-            name = name.text.strip()
-            address = address.text.strip()
-            net_id = net_id.text.strip()
+        name = name.text.strip()
+        address = address.text.strip()
+        net_id = net_id.text.strip()
 
-            # Extract the LGV name
-            lgv_name = extract_lgv_name(name)
-            if not lgv_name:
-                invalid_routes.append(f"Invalid name format: {name}")
-                continue
+        # Extract the LGV name
+        lgv_name = extract_lgv_name(name)
+        if not lgv_name:
+            invalid_routes.append(f"Invalid name format: {name}")
+            continue
 
-            # Check for duplicate LGV names
-            if lgv_name in seen_lgv_names:
-                messagebox.showerror("Duplicate Entry", f"Duplicate LGV name found: {lgv_name}. File cannot be loaded.")
-                return None  # Abort loading the file
-
-            # Mark the LGV name as seen
-            seen_lgv_names.add(lgv_name)
-
-            type_tc = "TC3" if route.find('Flags') is not None else "TC2"
-            
-            # Append the tuple to the list
-            routes_data.append((lgv_name, address, type_tc))
-        
-        # Warn the user about invalid routes
-        if invalid_routes:
-            messagebox.showwarning(
-                "Invalid Routes",
-                f"The following routes were skipped:\n" + "\n".join(invalid_routes)
+        # Check for duplicate LGV names
+        if lgv_name in seen_lgv_names:
+            messagebox.showerror(
+                "Duplicate Entry", 
+                f"Duplicate LGV name found: {lgv_name}. File cannot be loaded."
             )
+            return None  # Abort loading the file
+
+        # Mark the LGV name as seen
+        seen_lgv_names.add(lgv_name)
+
+        type_tc = "TC3" if route.find('Flags') is not None else "TC2"
         
-        # Populate the Treeview with the data
-        for item in routes_data:
-            treeview.insert("", "end", values=item)
-        # messagebox.showinfo("Success", "Data loaded successfully from the XML file.")
+        # Append the tuple to the list
+        routes_data.append((lgv_name, address, type_tc))
+    
+    # Warn the user about invalid routes
+    if invalid_routes:
+        messagebox.showwarning(
+            "Invalid Routes",
+            f"The following routes were skipped:\n" + "\n".join(invalid_routes)
+        )
+    
+    # Populate the Treeview with the data
+    for item in routes_data:
+        treeview.insert("", "end", values=item)
+    # messagebox.showinfo("Success", "Data loaded successfully from the XML file.")
         
     save_table_data_to_xml(treeview)
 
     # Enable menu for Show LGV Table if table is updated
-    update_menu_state()
+    sync_lgv_table_state()
 
 
 def read_db3_file(db3_file_path, table_name):
@@ -203,7 +204,7 @@ def populate_table_from_db3():
     if rows_param is None:
         return
     
-    open_lgv_table_window_cond()
+    open_lgv_table_window()
 
     # # print(columns, rows)
     
@@ -248,7 +249,7 @@ def populate_table_from_db3():
     save_table_data_to_xml(treeview)
 
     # Enable menu for Show LGV Table if table is updated
-    update_menu_state()
+    sync_lgv_table_state()
 
 def extract_numeric_part(name):
     match = re.search(r'\d+', name) #Extract numeric part
@@ -316,7 +317,7 @@ def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
         f.write(xmlstr)
 
     print(f"Data successfully saved to {filename}.")
-    messagebox.showinfo("Attention", f"LGV data successfully saved to {filename}.")
+    # messagebox.showinfo("Attention", f"LGV data successfully saved to {filename}.")
 
 # Load data from XML
 def load_table_data_from_xml(tree=None, filename=LGV_DATA_FILE, return_data=False):
@@ -364,20 +365,45 @@ def delete_lgv_data_file():
         if confirm:
             try:
                 os.remove(LGV_DATA_FILE)
-                messagebox.showinfo("Success", f"'{LGV_DATA_FILE}' has been deleted.")
+                # messagebox.showinfo("Success", f"'{LGV_DATA_FILE}' has been deleted.")
             except Exception as e:
                 messagebox.showerror("Error", f"An error occurred while deleting the file: {e}")
     # Update the menu state regardless of success or failure
-    update_menu_state()
+    sync_lgv_table_state()
 
-def update_menu_state():
-    if os.path.exists(LGV_DATA_FILE):
-        options_menu.entryconfig("Show LGV Table", state="normal")  # Enable if file exists
-        options_menu.entryconfig("Remove LGV Table", state="normal")
+def sync_lgv_table_state():
+    table_exists = lgv_table_is_valid()
+
+    # ---- Menu ----
+    options_menu.entryconfig(
+        "Show LGV Table",
+        state="normal" if table_exists else "disabled"
+    )
+    options_menu.entryconfig(
+        "Remove LGV Table",
+        state="normal" if table_exists else "disabled"
+    )
+
+    # ---- Root IP UI ----
+    if table_exists:
+        ip_entry.insert(0, "")
+        ip_entry.grid_remove()
+        ip_label.config(
+            text="LGV Table mode — Press F2 to show/hide"
+        )
     else:
-        options_menu.entryconfig("Show LGV Table", state="disabled")  # Disable if file doesn't exist
-        options_menu.entryconfig("Remove LGV Table", state="disabled")
+        ip_entry.grid()
+        ip_label.config(text="Root IP:")
 
+
+def lgv_table_is_valid():
+    if not os.path.exists(LGV_DATA_FILE):
+        return False
+    try:
+        return os.path.getsize(LGV_DATA_FILE) > 0
+    except OSError:
+        return False
+    
 ############################################## Open LGV Table Window ####################################
 lgv_table_window = None
 
@@ -385,6 +411,9 @@ lgv_table_window_position = None
 
 def open_lgv_table_window_cond(event=None):
     global lgv_table_window, lgv_table_window_position
+
+    if not lgv_table_is_valid():
+        return
 
     if lgv_table_window is not None and lgv_table_window.winfo_exists():
         lgv_table_window_position = get_window_pos_before_close(lgv_table_window)
@@ -395,15 +424,22 @@ def open_lgv_table_window():
     global lgv_table_window
 
     lgv_table_window = tk.Toplevel(root)
-    lgv_table_window.title("LGV Data ")
+    lgv_table_window.title("LGV Data")
 
     window_width = 290
     window_lenght = 300
 
+    root.update_idletasks()
+
     if lgv_table_window_position:
         lgv_table_window.geometry(f"{window_width}x{window_lenght}{lgv_table_window_position}")
     else:
-        lgv_table_window.geometry(f"{window_width}x{window_lenght}")
+        x = root.winfo_x() + root.winfo_width() + 10
+        y = root.winfo_y()
+
+        lgv_table_window.geometry(f"{window_width}x{window_lenght}+{x}+{y}")
+    
+    lgv_table_window.minsize(window_width, window_lenght)
     
     lgv_table_window.lift()
     lgv_table_window.focus_force()
@@ -602,8 +638,8 @@ def start_transfer():
             return
     else:
         base_ip = ip_entry.get()
-        if not validate_base_ip():
-            messagebox.showerror("Input Error", "Please enter the base IP.")
+        if not validate_base_ip() and not lgv_table_is_valid():
+            messagebox.showerror("Input Error", "Please enter the base IP or load LGV data.")
             return
         ip_list = parse_ip_ranges(base_ip, range_input)
         if not ip_list:
@@ -1061,8 +1097,8 @@ def start_download():
             return
     else:
         base_ip = ip_entry.get()
-        if not validate_base_ip():
-            messagebox.showerror("Input Error", "Please enter the base IP.")
+        if not validate_base_ip() and not lgv_table_is_valid():
+            messagebox.showerror("Input Error", "Please enter the base IP or load LGV data.")
             return
         ip_list = parse_ip_ranges(base_ip, range_input)
         if not ip_list:
@@ -2302,8 +2338,8 @@ def save_custom_profile(silent_update=False):
         messagebox.showerror("Error", "Please enter a valid subprofile name.")
         return
     
-    if not validate_base_ip():
-        messagebox.showerror("Input Error", "Please enter valid base IP.")
+    if not validate_base_ip() and not lgv_table_is_valid():
+        messagebox.showerror("Input Error", "Please enter valid base IP or load LGV table")
         return
     
     if not validate_range():
@@ -3516,7 +3552,7 @@ timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=0)
 
 
 # Enable menu for Show LGV Table if table is updated
-update_menu_state()
+sync_lgv_table_state()
 
 
 # Load last session

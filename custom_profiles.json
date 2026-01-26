@@ -31,6 +31,16 @@
                 "password": "anonymous@example.com",
                 "transfer_type": "FTP",
                 "local_dir": "C:/default_path/"
+            },
+            {
+                "sub_name": "TC3_CB25_quote",
+                "base_ip": "172.20.2.50",
+                "ip_range": "16-18",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1965_GPRivergate/MyFiles/Backup/CB25TC3/ForAll/Quotes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
             }
         ]
     },
@@ -572,6 +582,16 @@
                 "base_ip": "192.168.80.201",
                 "ip_range": "1-5",
                 "local_dir": "D:/Documents/LGV OnSite Projects/TC2/CC1403_Offal/CB16Code/LGV01_v26",
+                "remote_dir": "/Hard Disk/Backup",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB16_quote2",
+                "base_ip": "e.g., 7.204.194.10",
+                "ip_range": "1-5",
+                "local_dir": "D:/Documents/LGV OnSite Projects/TC2/CC1403_Offal/MyFiles/Network.txt",
                 "remote_dir": "/Hard Disk/Backup",
                 "username": "anonymous",
                 "password": "anonymous@example.com",
