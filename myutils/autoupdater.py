@@ -204,8 +204,11 @@ def download_and_prepare_batch(current_version, latest_version, download_url, ap
                 batch.write("echo " + "=" * box_width + "\n")
 
                 for line in changelog:
-                    safe_line = line.replace("&", "^&")
-                    batch.write(f"echo {safe_line}\n")
+                    if not line.strip():
+                        batch.write("echo(\n")
+                    else:
+                        safe_line = line.replace("&", "^&")
+                        batch.write(f"echo {safe_line}\n")
 
                 batch.write("echo " + "=" * box_width + "\n")
 
