@@ -21,6 +21,7 @@ import sqlite3
 import configparser
 import subprocess
 import shutil
+import logging
 
 from myutils.autoupdater import check_for_updates_async, get_app_version
 from myutils.connectivity import is_host_reachable
@@ -3650,6 +3651,21 @@ if getattr(sys, 'frozen', False) and not updated:  # Only in PyInstaller .exe
             download_url="https://github.com/sudojac/sftp-copy/releases/latest/download/SFTPCopy.exe",
             changelog_url="https://github.com/sudojac/sftp-copy/releases/latest/download/changelog.txt"
         ))
+    
+
+# logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
+
+try:
+    import pyi_splash
+    pyi_splash.close()
+except ImportError:
+    pass
 
 ################################################################### Main loop ##########################################################################
 

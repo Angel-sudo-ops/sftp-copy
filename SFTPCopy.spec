@@ -5,7 +5,11 @@ a = Analysis(
     ['SFTPCopy.py'],
     pathex=[],
     binaries=[],
-    datas=[('transfer.ico', '.'), ('version.txt', '.')],
+    datas=[
+        ('transfer.ico', '.'), 
+        ('version.txt', '.'),
+        ('splash.png', '.')
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -16,11 +20,22 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+splash = Splash(
+    'splash.png',
+    binaries=a.binaries,
+    datas=a.datas,
+    text_pos=None,
+    text_size=12,
+    minify_script=True,
+)
+
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
     a.datas,
+    splash,
+    splash.binaries,
     [],
     name='SFTPCopy',
     debug=False,
