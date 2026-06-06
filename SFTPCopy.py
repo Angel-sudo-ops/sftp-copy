@@ -224,7 +224,7 @@ def populate_table_from_db3():
     routes_data = []
     # Iterate through each <Route> element in the XML
     for route in rows_agvs:
-        if route['dbf_Enabled']: 
+        if to_bool(route['dbf_Enabled']): 
         # if None in (name, address, net_id):
         #     messagebox.showwarning("Warning", "One or more routes are missing required fields (Name, Address, NetId).")
         #     continue  # Skip this route and move to the next
@@ -252,6 +252,9 @@ def populate_table_from_db3():
 
     # Enable menu for Show LGV Table if table is updated
     sync_lgv_table_state()
+
+def to_bool(value):
+    return str(value).strip().upper() in ("1", "TRUE")
 
 def extract_numeric_part(name):
     match = re.search(r'\d+', name) #Extract numeric part
