@@ -49,14 +49,9 @@ class OperationCancelledException(Exception):
     """Raised when an operation (i.e. transfer/download) is cancelled by the user."""
     pass
 
-############################################## Load/Save LGV Data #############################################
-def extract_lgv_name(input_name):
-    # Regex pattern to capture 'LGV' followed by numbers
-    pattern = r"(LGV\d+)"
-    match = re.search(pattern, input_name)
-    if match:
-        return match.group(1)  # Return the matched 'LGVxx' or 'LGVxxx'
-    return None
+###################################################################################################################################################################
+############################################################ Add data from config.db3/StaticRoutes.xml ############################################################
+###################################################################################################################################################################
 
 def populate_table_from_xml(path=None):
     if not path:
@@ -154,39 +149,13 @@ def populate_table_from_xml(path=None):
     sync_lgv_table_state()
 
 
-def read_db3_file(db3_file_path, table_name):
-    try:
-        # Connect to the .db3 file
-        conn = sqlite3.connect(db3_file_path)
-        cursor = conn.cursor()
-
-        # Check if the table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
-        if not cursor.fetchone():
-            # messagebox.showerror("Error", f"Table '{table_name}' does not exist in the database.")
-            messagebox.showerror("Error", f"Wrong database format.")
-            conn.close()
-            return None
-
-        # Query to get all rows from the specified table
-        cursor.execute(f"SELECT * FROM {table_name}")
-        
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Get column names
-        column_names = [description[0] for description in cursor.description]
-
-        # Convert the rows into a list of dictionaries
-        dict_rows = [dict(zip(column_names, row)) for row in rows]
-
-        # Close the connection
-        conn.close()
-
-        return dict_rows
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
-        return None
+def extract_lgv_name(input_name):
+    # Regex pattern to capture 'LGV' followed by numbers
+    pattern = r"(LGV\d+)"
+    match = re.search(pattern, input_name)
+    if match:
+        return match.group(1)  # Return the matched 'LGVxx' or 'LGVxxx'
+    return None
 
 
 def populate_table_from_db3():
@@ -253,12 +222,50 @@ def populate_table_from_db3():
     # Enable menu for Show LGV Table if table is updated
     sync_lgv_table_state()
 
+
+def read_db3_file(db3_file_path, table_name):
+    try:
+        # Connect to the .db3 file
+        conn = sqlite3.connect(db3_file_path)
+        cursor = conn.cursor()
+
+        # Check if the table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+        if not cursor.fetchone():
+            # messagebox.showerror("Error", f"Table '{table_name}' does not exist in the database.")
+            messagebox.showerror("Error", f"Wrong database format.")
+            conn.close()
+            return None
+
+        # Query to get all rows from the specified table
+        cursor.execute(f"SELECT * FROM {table_name}")
+        
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Get column names
+        column_names = [description[0] for description in cursor.description]
+
+        # Convert the rows into a list of dictionaries
+        dict_rows = [dict(zip(column_names, row)) for row in rows]
+
+        # Close the connection
+        conn.close()
+
+        return dict_rows
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
+        return None
+
+
 def to_bool(value):
     return str(value).strip().upper() in ("1", "TRUE")
 
-def extract_numeric_part(name):
-    match = re.search(r'\d+', name) #Extract numeric part
-    return int(match.group()) if match else float('inf') # Convert to int for correct sorting
+
+
+##########################################################################################################################################################
+############################################################ Manage load/save local data file ############################################################
+##########################################################################################################################################################
 
 # Save data to XML
 def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
@@ -323,6 +330,11 @@ def save_table_data_to_xml(tree, filename=LGV_DATA_FILE):
 
     print(f"Data successfully saved to {filename}.")
     # messagebox.showinfo("Attention", f"LGV data successfully saved to {filename}.")
+
+
+def extract_numeric_part(name):
+    match = re.search(r'\d+', name) #Extract numeric part
+    return int(match.group()) if match else float('inf') # Convert to int for correct sorting
 
 # Load data from XML
 def load_table_data_from_xml(tree=None, filename=LGV_DATA_FILE, return_data=False):
