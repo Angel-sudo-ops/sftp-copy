@@ -25,6 +25,7 @@ import logging
 
 from myutils.autoupdater import check_for_updates_async, get_app_version
 from myutils.connectivity import is_host_reachable
+from myutils.tooltips import create_tooltip_btn, attach_tooltip_on_overflow, TreeviewTooltip, show_status_message
 
 
 CONFIG_FILE = "config.ini"
@@ -45,7 +46,7 @@ if "--updated" in sys.argv:
 ############################################################# Custom exception class ##################################################################
 
 class OperationCancelledException(Exception):
-    """Raised when an operation (transfer/download) is cancelled by the user."""
+    """Raised when an operation (i.e. transfer/download) is cancelled by the user."""
     pass
 
 ############################################## Load/Save LGV Data #############################################
@@ -1747,50 +1748,6 @@ def validate_and_link_lgv(range_input):
 
 ############################################################ Choose file to transfer ################################################
 
-def show_status_message(
-    status_label,
-    message,
-    duration=3000,
-    fade_steps=10,
-    start_color="#00aa00",
-    end_color="#aaaaaa"
-):
-    """Show a temporary status message that fades from start_color to end_color before disappearing."""
-    status_label.config(text=message, foreground=start_color)
-
-    step_duration = duration // fade_steps
-
-    # Helper to convert hex to RGB tuple
-    def hex_to_rgb(hex_color):
-        hex_color = hex_color.lstrip("#")
-        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-
-    # Helper to convert RGB tuple to hex
-    def rgb_to_hex(rgb_tuple):
-        return "#{:02x}{:02x}{:02x}".format(*rgb_tuple)
-
-    start_rgb = hex_to_rgb(start_color)
-    end_rgb = hex_to_rgb(end_color)
-
-    def fade(step=0):
-        if step >= fade_steps:
-            status_label.config(text="")
-            return
-
-        # Interpolate between start and end RGB values
-        current_rgb = tuple(
-            int(start + (end - start) * (step / fade_steps))
-            for start, end in zip(start_rgb, end_rgb)
-        )
-
-        faded_color = rgb_to_hex(current_rgb)
-        status_label.config(foreground=faded_color)
-
-        root.after(step_duration, lambda: fade(step + 1))
-
-    root.after(duration, fade)
-
-
 def is_path_changed(current_path, profile_name, subprofile_name):
     """Check if the current local path differs from the saved one."""
     custom_profiles = load_custom_profiles()
@@ -2466,15 +2423,15 @@ def save_custom_profile(silent_update=False):
                     existing_subprofile.update(subprofile)
                     if not silent_update:
                         # messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' updated successfully.")
-                        show_status_message(status_profile_label, f"Sub-profile '{subprofile_name}' updated successfully", fade_steps=20)
+                        show_status_message(root, status_profile_label, f"Sub-profile '{subprofile_name}' updated successfully", fade_steps=20)
                     else:
-                        show_status_message(status_path_label, "Path updated successfully", fade_steps=20)
+                        show_status_message(root, status_path_label, "Path updated successfully", fade_steps=20)
                     break
             else:
                 # Add a new sub-profile to the profile
                 profile.setdefault("sub_profiles", []).append(subprofile)
                 # messagebox.showinfo("Success", f"New sub-profile '{subprofile_name}' added to profile '{profile_name}'.")
-                show_status_message(status_profile_label, f"New sub-profile '{subprofile_name}' added to profile", fade_steps=20)
+                show_status_message(root, status_profile_label, f"New sub-profile '{subprofile_name}' added to profile", fade_steps=20)
             break 
     else:
         # Add a new profile with the sub-profile
@@ -2483,7 +2440,7 @@ def save_custom_profile(silent_update=False):
             "sub_profiles": [subprofile]
         })
         # messagebox.showinfo("Success", f"New profile '{profile_name}' created with sub-profile '{subprofile_name}'.")
-        show_status_message(status_profile_label, f"New profile '{profile_name}' created", fade_steps=20)
+        show_status_message(root, status_profile_label, f"New profile '{profile_name}' created", fade_steps=20)
     
     save_custom_profiles(custom_profiles)
 
@@ -2602,7 +2559,7 @@ def delete_profile_or_subprofile():
                             subprofiles.remove(subprofile)
                             subprofiles_combobox.set("")
                             # messagebox.showinfo("Success", f"Sub-profile '{subprofile_name}' deleted successfully.")
-                            show_status_message(status_profile_label, f"Sub-profile '{subprofile_name}' deleted successfully", fade_steps=20)
+                            show_status_message(root, status_profile_label, f"Sub-profile '{subprofile_name}' deleted successfully", fade_steps=20)
                         break
                 else:
                     messagebox.showerror("Error", f"Sub-profile '{subprofile_name}' not found.")
@@ -2621,7 +2578,7 @@ def delete_profile_or_subprofile():
                     if confirm:
                         custom_profiles.remove(profile)
                         # messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
-                        show_status_message(status_profile_label, f"Profile '{profile_name}' deleted successfully.", fade_steps=20)
+                        show_status_message(root, status_profile_label, f"Profile '{profile_name}' deleted successfully.", fade_steps=20)
                         profiles_combobox.set("") # Clear profile selection
                 break
             else:
@@ -2633,7 +2590,7 @@ def delete_profile_or_subprofile():
                 if confirm:
                     custom_profiles.remove(profile)
                     # messagebox.showinfo("Success", f"Profile '{profile_name}' deleted successfully.")
-                    show_status_message(status_profile_label, f"Profile '{profile_name}' deleted successfully.", fade_steps=20)
+                    show_status_message(root, status_profile_label, f"Profile '{profile_name}' deleted successfully.", fade_steps=20)
                     profiles_combobox.set("") # Clear profile selection
             break
     else:
@@ -2907,87 +2864,6 @@ def load_remote_paths(event=None):
     remote_dir_entry['values'] = tuple(sorted(combined_paths, key=str.lower))
 
 
-################################################### Table Tooltip ###################################################
-# Revisit this class later, add target column
-class TreeviewTooltip:
-    def __init__(self, widget):
-        self.widget = widget
-        self.tipwindow = None
-        self.widget.bind("<Motion>", self.show_tooltip)
-        self.widget.bind("<Leave>", self.hide_tooltip)
-
-    def show_tooltip(self, event):
-        # Identify the row and column under the mouse
-        item_id = self.widget.identify_row(event.y)
-        column = self.widget.identify_column(event.x)
-
-        # If not hovering over a valid cell, hide the tooltip
-        if not item_id or column != "#4":  # "#4" corresponds to the 4th column (Description)
-            self.hide_tooltip()
-            return
-
-        # Get the description text from the identified row
-        item_values = self.widget.item(item_id, "values")
-        description = item_values[3] if len(item_values) > 3 else ""  # Safeguard against missing data
-
-        if not description.strip():  # Hide the tooltip if there's no content
-            self.hide_tooltip()
-            return
-
-        # Get the width of the column
-        column_width = self.widget.column(column, "width")
-
-        # Create a temporary label to measure text width
-        temp_label = tk.Label(
-            self.widget,
-            text=description,
-            font=("Segoe UI", 10),
-        )
-        temp_label.update_idletasks()  # Ensure accurate width calculation
-        text_width = temp_label.winfo_reqwidth()
-        temp_label.destroy()
-
-        # Show the tooltip only if the text width exceeds the column width
-        if text_width <= column_width:
-            self.hide_tooltip()
-            return
-
-        # Calculate the position for the tooltip
-        try:
-            x, y, _, height = self.widget.bbox(item_id, column)
-        except (ValueError, TypeError):
-            self.hide_tooltip()
-            return
-
-        x += self.widget.winfo_rootx()
-        y += self.widget.winfo_rooty() + height
-
-        # Create the tooltip window if it doesn't exist
-        if self.tipwindow:
-            return
-
-        self.tipwindow = tk.Toplevel(self.widget)
-        self.tipwindow.wm_overrideredirect(True)  # Remove window decorations
-        self.tipwindow.wm_geometry(f"+{x}+{y}")
-
-        # Add the tooltip content
-        label = tk.Label(
-            self.tipwindow,
-            text=description,
-            background="lightyellow",
-            relief="solid",
-            borderwidth=1,
-            font=("Segoe UI", 10),
-            wraplength=400,  # Set a maximum width for the tooltip
-        )
-        label.pack(ipadx=5, ipady=2)
-
-    def hide_tooltip(self, event=None):
-        if self.tipwindow:
-            self.tipwindow.destroy()
-            self.tipwindow = None
-
-
 ####################################################################################################################
 def on_enter(e):
     if e.widget['state']== "normal":
@@ -3026,118 +2902,6 @@ def disable_focus(widget):
         pass  # Skip widgets that do not support takefocus
     for child in widget.winfo_children():
         disable_focus(child)
-
-############################### Button tooltip ########################
-
-# Tooltip Logic
-def create_tooltip_btn(widget, text_var):
-    tooltip = tk.Label(root, text="", bg="white", relief="solid", bd=1, font=("helvetica", "8", "normal"), padx=1, pady=1)
-    tooltip.place_forget()
-
-    def on_enter(event):
-        tooltip.config(text=text_var.get())
-        # Place it in the global reference
-        # tooltip.place(x=400, y=160)
-
-        widget = event.widget
-
-        # Use widget-relative placement inside the same parent
-        tooltip.place(
-            in_=widget,  # Anchor to the button
-            relx=0.5,    # Centered horizontally
-            rely=0.0,    # Just above the button
-            x=-7,
-            y=0,       # Shift up
-            anchor="s"   # Anchor the bottom center of tooltip to relx/rel...
-        )
-
-    def on_leave(event):
-        tooltip.place_forget()
-
-    widget.bind("<Enter>", on_enter)
-    widget.bind("<Leave>", on_leave)
-
-
-
-############################### Entry tooltip ###################################3
-
-class ToolTip:
-    def __init__(self, widget, separator=","):
-        self.widget = widget
-        self.tipwindow = None
-        self.text = ""
-        self.separator = separator
-
-    def format_text(self, raw_text):
-        # Break at separators
-        chunks = [chunk.strip() for chunk in raw_text.split(self.separator)]
-        return "\n".join(chunks)
-
-    def showtip(self, raw_text):
-        if self.tipwindow or not raw_text:
-            return
-        
-        formatted_text = self.format_text(raw_text)
-
-        x = self.widget.winfo_rootx() + 20
-        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
-
-        self.tipwindow = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(True)
-        tw.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(
-            tw,
-            text=formatted_text,
-            justify=tk.LEFT,
-            background="white",
-            relief=tk.SOLID,
-            borderwidth=1,
-            font=("Segoe UI", 9),
-            padx=4,
-            pady=2
-        )
-        label.pack()
-
-    def hidetip(self):
-        if self.tipwindow:
-            self.tipwindow.destroy()
-            self.tipwindow = None
-
-
-def attach_tooltip_on_overflow(entry_widget, text_var, separator=","):
-    tooltip = ToolTip(entry_widget, separator=separator)
-
-    def check_overflow():
-        f = font.Font(font=str(entry_widget.cget("font")))
-        text_width = f.measure(text_var.get())
-        widget_width = entry_widget.winfo_width() - 4  # small padding for borders
-        tooltip.text = text_var.get() if text_width > widget_width else ""
-
-    def on_enter(event):
-        check_overflow()
-        if tooltip.text:
-            tooltip.showtip(tooltip.text)
-
-    def on_leave(event):
-        tooltip.hidetip()
-
-    def on_update(*args):
-        if tooltip.tipwindow:
-            check_overflow()
-            if tooltip.text:
-                tooltip.showtip(tooltip.text)
-            else:
-                tooltip.hidetip()
-
-    def on_resize(event):
-        on_update()
-
-    entry_widget.bind("<Enter>", on_enter)
-    entry_widget.bind("<Leave>", on_leave)
-    entry_widget.bind("<Configure>", on_resize)
-    text_var.trace_add("write", on_update)
-
-    entry_widget.after(100, check_overflow)
 
 
 ############################# Set GUI icon ##########################
@@ -3395,13 +3159,13 @@ files_btn = ttk.Button(frame_browse, width=3, text="🗐", command=browse_files)
 files_btn.grid(row=0, column=0, padx=(0,3), pady=2)
 files_text = tk.StringVar(value="Browse File(s)")
 
-create_tooltip_btn(files_btn, files_text)
+create_tooltip_btn(files_btn, files_text, root)
 
 folder_btn = ttk.Button(frame_browse, width=3, text="🗁", command=browse_folder)
 folder_btn.grid(row=0, column=1, padx=(3,0), pady=0)
 folder_text = tk.StringVar(value="Browse Folder")
 
-create_tooltip_btn(folder_btn, folder_text)
+create_tooltip_btn(folder_btn, folder_text, root)
 
 # browse_btn = ttk.Button(frame_local, 
 #                         text="Browse",
