@@ -490,13 +490,13 @@
         ]
     },
     {
-        "profile_name": "CC2080_Baxter",
+        "profile_name": "CC2080_Baxter_Marion",
         "sub_profiles": [
             {
                 "sub_name": "Reach14_config",
-                "base_ip": "172.23.51.140",
-                "ip_range": "40-44",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC1863_GPPortHudson/Miscellanea/Parameters/CB25/ForAll/Quotes.xml",
+                "base_ip": "10.49.62.34",
+                "ip_range": "41-58",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/Reach14/ForAll/PressureDeviceParameters.xml",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
@@ -504,7 +504,7 @@
             },
             {
                 "sub_name": "CB25_Boot",
-                "base_ip": "10.49.63.6",
+                "base_ip": "10.49.62.34",
                 "ip_range": "32-40",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/CB25Code/LGV/_Boot/TwinCAT RT (x64)",
                 "remote_dir": "\\TwinCAT\\Boot",
@@ -524,9 +524,9 @@
             },
             {
                 "sub_name": "CB25_areaMonitor",
-                "base_ip": "10.49.62.35",
+                "base_ip": "10.49.62.34",
                 "ip_range": "32-40",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/CB25/ForAll/LMSAreas.prj",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/CB25/ForAll/LMSAreas.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/CB25/ForAll/VertLeft.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/CB25/ForAll/VertRight.prj",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
@@ -554,19 +554,19 @@
             },
             {
                 "sub_name": "Reach14_RefToolApp",
-                "base_ip": "172.23.51.140",
-                "ip_range": "41-50",
+                "base_ip": "10.49.62.34",
+                "ip_range": "50-51",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/ReflTool/ReflectorFinderLogger.exe",
-                "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Downloads",
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
             },
             {
                 "sub_name": "Reach14_RefToolConfig",
-                "base_ip": "172.23.51.140",
-                "ip_range": "41-50",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/ReflTool/Apps",
+                "base_ip": "10.49.62.34",
+                "ip_range": "50-51",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/ReflTool/Apps/ReflectorFinder/RFConfig.xml",
                 "remote_dir": "\\Apps",
                 "username": "Administrator",
                 "password": "1",
@@ -574,9 +574,9 @@
             },
             {
                 "sub_name": "Reach_areaMonitor",
-                "base_ip": "10.49.62.35",
-                "ip_range": "41-58",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/Reach14/ForAll/LMSAreas.prj",
+                "base_ip": "10.49.62.34",
+                "ip_range": "58",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/Reach14/ForAll/LMSAreas.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/Reach14/ForAll/VertLeft.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/Reach14/ForAll/VertRight.prj",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
@@ -584,13 +584,53 @@
             },
             {
                 "sub_name": "CB25_layout",
-                "base_ip": "10.49.62.35",
-                "ip_range": "38,35",
+                "base_ip": "10.49.62.34",
+                "ip_range": "32-40",
                 "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC2080_Baxter_Marion/Layout/export_to_agv/export_to_agv_LayoutLoader_5p01/layout.bin",
                 "remote_dir": "\\Layout",
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach_layout",
+                "base_ip": "10.49.62.34",
+                "ip_range": "48",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC2080_Baxter_Marion/Layout/export_to_agv/export_to_agv_LayoutLoader_5p01/layout.bin",
+                "remote_dir": "\\Layout",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB25_Config",
+                "base_ip": "10.49.62.34",
+                "ip_range": "32-40",
+                "local_dir": "",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_UnlockUpdate",
+                "base_ip": "10.49.62.34",
+                "ip_range": "54",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/UpdateUnlock/UnlockUpdate",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Downloads",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Turtle_Config",
+                "base_ip": "10.49.62.34",
+                "ip_range": "1",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2080_BaxterMarion/MyFiles/Backup/Turtle",
+                "remote_dir": "/",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
             }
         ]
     },
@@ -726,6 +766,141 @@
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"
+            }
+        ]
+    },
+    {
+        "profile_name": "CC2232_GP_Crosset",
+        "sub_profiles": [
+            {
+                "sub_name": "CB16_TC3_Boot",
+                "base_ip": "10.60.119.0",
+                "ip_range": "125,126",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/CB16Code/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_TC3_layout",
+                "base_ip": "10.60.119.0",
+                "ip_range": "125,126",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC1804_GPCrossett/Layout/export_to_agv/export_to_agv_LayoutLoader_5p03/layout.bin",
+                "remote_dir": "\\Layout",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_1804_layout",
+                "base_ip": "10.60.119.0",
+                "ip_range": "124",
+                "local_dir": "C:/Program Files (x86)/Elettric80/Smart 7.67.0.1/Smart/Layouts/CC1804_GPCrossett/Layout/export_to_agv/export_to_agv_LayoutLoader_4p16/layout.bin",
+                "remote_dir": "/Hard Disk/Backup/export_to_agv",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB16_TC3_backup",
+                "base_ip": "10.60.119.0",
+                "ip_range": "125,126",
+                "local_dir": "",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_TC2_1804_backup",
+                "base_ip": "10.60.119.0",
+                "ip_range": "121-124",
+                "local_dir": "",
+                "remote_dir": "/Hard Disk/Backup",
+                "username": "anonymous",
+                "password": "anonymous@example.com",
+                "transfer_type": "FTP"
+            },
+            {
+                "sub_name": "CB16_TC3_quotes",
+                "base_ip": "10.60.119.0",
+                "ip_range": "125,126",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/MyFiles/Backup/TC3/ForAll/PalletData.xml, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/MyFiles/Backup/TC3/ForAll/Quotes.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_TC3_areamonitor",
+                "base_ip": "10.60.119.0",
+                "ip_range": "125,126",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/MyFiles/Backup/TC3/CB16/ForAll/LMSAreas.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_Clamp_TC3_Boot",
+                "base_ip": "10.60.119.0",
+                "ip_range": "30-33",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/CB16ClampCode/LGV/_Boot/TwinCAT RT (x64)",
+                "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_Clamp_unlockTools",
+                "base_ip": "10.60.119.0",
+                "ip_range": "30",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/MyFiles/Unlock",
+                "remote_dir": "/___OS (C:)___/Users/Administrator/Desktop",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_Clamp_areaMonitor",
+                "base_ip": "10.60.119.0",
+                "ip_range": "30-33",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/MyFiles/Backup/TC3/CB16Clamp/ForAll/PlsBWAreas.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_Clamp_caseSpeed",
+                "base_ip": "10.60.119.0",
+                "ip_range": "30-33",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/MyFiles/Backup/TC3/CB16Clamp/ForAll/CaseSpeed.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_Clamp_TC3_backup",
+                "base_ip": "10.60.119.0",
+                "ip_range": "30-33",
+                "local_dir": "",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "CB16_TC2_731_backup",
+                "base_ip": "10.60.119.0",
+                "ip_range": "1,2,4-21,23-29",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2232_GPCrosset/MyFiles/Backup/TC2 731",
+                "remote_dir": "\\Backup",
+                "username": "Administrator",
+                "password": "StandardE80",
+                "transfer_type": "NET"
             }
         ]
     }

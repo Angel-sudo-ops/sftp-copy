@@ -827,7 +827,7 @@ def sftp_transfer(lgv_name, host, port, username, password, local_path, remote_p
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=5, auth_timeout=5)
+        ssh.connect(hostname=host, port=port, username=username, password=password, timeout=15, auth_timeout=5) #increase timeout from 5 to 15
         sftp = ssh.open_sftp()
 
         if os.path.isfile(local_path):
@@ -3704,3 +3704,10 @@ root.mainloop()
 
 
 # version.json could replace version.txt + changelog.txt in the future
+
+
+# \log paths
+# sftp - \logs - \logs\BB has the folder structure with folder as days
+
+#ftp - /Hard Disk2/Logs
+
