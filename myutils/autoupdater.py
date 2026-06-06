@@ -59,8 +59,9 @@ def extract_relevant_changes(lines, current_version):
     collecting = False
 
     for line in lines:
-        if line.startswith("["):
-            version = line.strip("[]")
+        stripped_line = line.strip()
+        if stripped_line.startswith("[") and stripped_line.endswith("]"):
+            version = stripped_line[1:-1]
             if version == current_version:
                 break
             collecting = True

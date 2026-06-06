@@ -94,7 +94,7 @@ git rev-parse %TAG% >nul 2>&1 && (
 REM ---------------------------------------------------------
 REM Write version.txt
 REM ---------------------------------------------------------
-echo %NEW_VERSION% > version.txt
+echo %NEW_VERSION%> version.txt
 
 REM ---------------------------------------------------------
 REM Determine previous tag (if any)
@@ -110,17 +110,13 @@ del prev_tag.tmp 2>nul
 REM ---------------------------------------------------------
 REM Generate changelog
 REM ---------------------------------------------------------
-echo [%NEW_VERSION%] > changelog.new
+echo [%NEW_VERSION%]> changelog.new
 
 if defined PREV_TAG (
-    (
-        git log %PREV_TAG%..HEAD --pretty=format:"- %%s"
-    ) | findstr /v /i "export .exe bump version"
+    git log %PREV_TAG%..HEAD --pretty=format:"- %%s" | findstr /v /i "export .exe bump version" >> changelog.new
 ) else (
-    (
-        git log --pretty=format:"- %%s"
-    ) | findstr /v /i "export .exe bump version"
-) >> changelog.new
+    git log --pretty=format:"- %%s" | findstr /v /i "export .exe bump version" >> changelog.new
+)
 
 REM Blank line separation
 echo( >> changelog.new

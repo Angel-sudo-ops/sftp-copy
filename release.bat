@@ -1,5 +1,15 @@
 @echo off
 REM ==== Auto-release ====
+
+REM ---------------------------------------------------------
+REM Ensure clean working tree
+REM ---------------------------------------------------------
+git diff --quiet || (
+    echo ERROR: Working tree is not clean.
+    echo Commit or stash changes before preparing a release.
+    exit /b 1
+)
+
 REM Get version number from file
 setlocal
 set /p VERSION=<version.txt
@@ -10,25 +20,6 @@ set TAG=v%VERSION%
 REM Executable and version paths
 set EXE=dist\SFTPCopy.exe
 set VERSION_FILE=version.txt
-
-REM Generate changelog 
-git describe --tags --abbrev=0 > prev_tag.tmp 2>nul
-set /p PREV_TAG=<prev_tag.tmp
-
-echo [%VERSION%] > changelog.new
-
-(
-git log %PREV_TAG%..HEAD --pretty=format:"- %%s" 
-) | findstr /v /i "export .exe" >> changelog.new
-
-echo. >> changelog.new
-
-if exist changelog.txt (
-    type changelog.txt >> changelog.new
-)
-
-move /Y changelog.new changelog.txt
-del prev_tag.tmp
 
 REM log path
 set LOG=changelog.txt
