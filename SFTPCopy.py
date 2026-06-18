@@ -22,6 +22,8 @@ import configparser
 import subprocess
 import shutil
 import logging
+import hashlib
+import difflib
 
 from myutils.autoupdater import check_for_updates_async, get_app_version
 from myutils.connectivity import is_host_reachable
@@ -620,9 +622,9 @@ def get_window_pos_before_close(window):
 ###################################################################################################################################################################
 
 
-##########################################################################################################################
-########################################### TRANSFER / DOWNLOAD ##########################################################
-##########################################################################################################################
+########################################################################################################################################
+############################################### TRANSFER / DOWNLOAD / COMPARE ##########################################################
+########################################################################################################################################
 
 # Global variable to track active transfers/downloads
 active_operations = 0
@@ -772,7 +774,7 @@ def start_transfer():
         t.start()
         
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
+    threading.Thread(target=monitor_threads, args=(threads, result_queue, "transfer"), daemon=True).start()
 
 
 def ping_and_transfer(lgv_name, host, transfer_type, port, username, password, local_paths, remote_dir, result_queue):
@@ -1243,7 +1245,7 @@ def start_download():
         t.start()
     
     # Start a separate thread to monitor the worker threads
-    threading.Thread(target=monitor_threads, args=(threads, result_queue), daemon=True).start()
+    threading.Thread(target=monitor_threads, args=(threads, result_queue, "download"), daemon=True).start()
 
 
 def ping_and_download(lgv_name, host, transfer_type, port, username, password, remote_dir, download_folder, result_queue):
@@ -1532,6 +1534,336 @@ def net_download(lgv_name, host, username, password, remote_path, local_path):
     
     return success, description
 
+
+#########################################################################################################################################################
+######################################################### Compare local file to remote servers ##########################################################
+#########################################################################################################################################################
+
+def start_compare():
+    global operation_active
+    global active_operations
+
+    if operation_active:
+        messagebox.showwarning("Operation in progress", "An operation is already in progress.")
+        return
+
+    profile_name = profiles_combobox.get().strip()
+    if not profile_name or profile_name.lower() == "select a profile" or profile_name.lower() == str(default_profile["profile_name"]).lower():
+        messagebox.showerror("Error", "Please enter a valid profile.")
+        return
+
+    remote_dir = remote_dir_entry.get()
+    username = username_entry.get()
+    password = password_entry.get()
+    transfer_type = transfer_type_sel.get()
+    range_input = range_entry.get()
+
+    if transfer_type == 'SFTP':
+        port = 20022
+
+    if not remote_dir:
+        messagebox.showerror("Input Error", "Please enter the remote file path.")
+        return
+
+    if not validate_range():
+        messagebox.showerror("Input Error", "Please enter a valid range.")
+        return
+
+    lgv_data_exists = os.path.exists(LGV_DATA_FILE)
+    if lgv_data_exists:
+        ip_list = validate_and_link_lgv(range_input)
+        if not ip_list:
+            messagebox.showerror("Input Error", "Invalid LGV range or no matching data.")
+            return
+    else:
+        base_ip = ip_entry.get()
+        if not validate_base_ip() and not lgv_table_is_valid():
+            messagebox.showerror("Input Error", "Please enter the base IP or load LGV data.")
+            return
+        ip_list = parse_ip_ranges(base_ip, range_input)
+        if not ip_list:
+            messagebox.showerror("Input Error", "Please provide a valid IP range.")
+            return
+
+    if not username:
+        messagebox.showerror("Input Error", "Please enter the username.")
+        return
+    if not password:
+        messagebox.showerror("Input Error", "Please enter the password.")
+        return
+
+    global file_path
+    # User picks the local reference file
+    initial_dir = file_path.get() if file_path.get() else "/"
+    local_file = filedialog.askopenfilename(
+        title="Select local reference file",
+        initialdir=initial_dir
+    )
+    if not local_file:
+        return
+
+    # Set local_root_path into local path entry
+   
+    file_path.set(local_file)
+
+    # Read local file once — all threads share the same bytes
+    with open(local_file, 'rb') as f:
+        local_bytes = f.read()
+
+    remote_dir = remote_dir_entry.get().replace('\\', '/')
+    filename = os.path.basename(local_file)
+    remote_file_path = f"{remote_dir}/{filename}"
+
+    # Reset UI
+    summary_label.config(text="Status result", fg="black")
+    timestamp_label.config(text="Last operation: 00:00:00")
+
+    operation_active = True
+    start_spinner(265, 320)
+    radio_transfer.config(state="disable")
+    radio_download.config(state="disable")
+
+    active_operations = 0
+    cancel_event.clear()
+    show_cancel_button("compare")
+
+    hosts = [
+        (
+            f"LGV{int(item['number']):02}" if lgv_data_exists else "",
+            item["ip_address"] if lgv_data_exists else item
+        )
+        for item in ip_list
+    ]
+
+    status_table.delete(*status_table.get_children())
+    for lgv_name, host in hosts:
+        status_table.insert("", "end", values=(lgv_name, host, "Queued", "Waiting..."))
+
+    result_queue = queue.Queue()
+    compare_results = {}
+    threads = []
+
+    for lgv_name, host in hosts:
+        t = threading.Thread(
+            target=ping_and_compare,
+            args=(lgv_name, host, transfer_type, port, username, password, remote_file_path, local_bytes, result_queue, compare_results)
+        )
+        t.daemon = True
+        threads.append(t)
+        t.start()
+
+    threading.Thread(
+        target=monitor_threads,
+        args=(threads, result_queue, "compare", compare_results),
+        daemon=True
+    ).start()
+
+
+def ping_and_compare(lgv_name, host, transfer_type, port, username, password, remote_file_path, local_bytes, result_queue, compare_results):
+    success = False
+    increment_active_operations()
+
+    try:
+        # Ping check — same as download
+        if not is_host_reachable(host):
+            if cancel_event.is_set():
+                description = "Compare cancelled before starting."
+                status = "Cancelled"
+            else:
+                description = "Host is not reachable."
+                status = "Failed"
+            return
+
+        safe_update_status_table(host, lgv_name, "In Progress", "Fetching remote file...")
+
+        if transfer_type == 'SFTP':
+            remote_bytes = sftp_fetch_file(host, port, username, password, remote_file_path)
+
+        # Compare
+        filename = os.path.basename(remote_file_path)
+        result = compare_files(local_bytes, remote_bytes, filename)
+
+        # Store result for the full report later
+        compare_results[lgv_name] = result
+
+        # Build table description
+        if result['same']:
+            description = "No differences."
+            status = "Same"
+        elif result['diff_lines'] == -1:
+            description = "Binary files differ."
+            status = "Different"
+        else:
+            description = f"{result['diff_lines']} difference(s) found."
+            status = "Different"
+
+        success = True
+
+    except OperationCancelledException:
+        description = "Compare cancelled."
+        status = "Cancelled"
+        success = False
+    
+    except FileNotFoundError as e:
+        description = "File not found on remote server."
+        status = "Failed"
+        compare_results[lgv_name] = None
+        success = False
+
+    except Exception as e:
+        description = f"Compare failed: {e}"
+        status = "Failed"
+        compare_results[lgv_name] = None
+        success = False
+
+    finally:
+        finalize_operation(success, result_queue, host)
+        update_status_table(host, lgv_name, status, description)
+
+
+def sftp_fetch_file(host, port, username, password, remote_file_path):
+    """
+    Connects via SFTP and reads a single file into memory.
+    Returns the raw bytes, or raises an exception on failure.
+    """
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        ssh.connect(
+            hostname=host,
+            port=port,
+            username=username,
+            password=password,
+            timeout=5,
+            auth_timeout=5
+        )
+        sftp = ssh.open_sftp()
+
+        try:
+            with sftp.open(remote_file_path, 'rb') as f:
+                content = f.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Remote file not found: {remote_file_path}")
+        except IOError:
+            raise IOError(f"Could not read remote file: {remote_file_path}")
+
+        return content
+
+    finally:
+        try:
+            sftp.close()
+            ssh.close()
+        except:
+            pass
+
+
+def sftp_fetch_file(host, port, username, password, remote_file_path):
+    """
+    Connects via SFTP and reads a single file into memory.
+    Returns the raw bytes, or raises an exception on failure.
+    """
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        ssh.connect(
+            hostname=host,
+            port=port,
+            username=username,
+            password=password,
+            timeout=5,
+            auth_timeout=5
+        )
+        sftp = ssh.open_sftp()
+
+        with sftp.open(remote_file_path, 'rb') as f:
+            content = f.read()
+
+        return content
+
+    finally:
+        try:
+            sftp.close()
+            ssh.close()
+        except:
+            pass
+
+
+def compare_files(local_bytes, remote_bytes, filename):
+    """
+    Compares two files given as bytes.
+    Returns a dict with:
+      - 'same': bool
+      - 'diff_lines': int (0 if same, -1 if binary)
+      - 'report': str (unified diff, or note about binary/identical)
+    """
+    # Fast path: identical bytes
+    local_hash = hashlib.md5(local_bytes).hexdigest()
+    remote_hash = hashlib.md5(remote_bytes).hexdigest()
+
+    if local_hash == remote_hash:
+        return {
+            'same': True,
+            'diff_lines': 0,
+            'report': 'Files are identical.'
+        }
+
+    # Try to decode as text
+    try:
+        local_text = local_bytes.decode('utf-8')
+        remote_text = remote_bytes.decode('utf-8')
+        is_binary = False
+    except UnicodeDecodeError:
+        is_binary = True
+
+    if is_binary:
+        return {
+            'same': False,
+            'diff_lines': -1,
+            'report': f'{filename}: Files differ (binary file, cannot show diff).'
+        }
+
+    # Text/XML: prepare lines then diff
+    local_lines, remote_lines = _prepare_lines(local_text, remote_text, filename)
+
+    diff = list(difflib.unified_diff(
+        local_lines,
+        remote_lines,
+        fromfile='Local',
+        tofile='Remote',
+        lineterm=''
+    ))
+
+    return {
+        'same': False,
+        'diff_lines': sum(1 for l in diff if l.startswith(('+', '-')) and not l.startswith(('+++', '---'))),
+        'report': '\n'.join(diff)
+    }
+
+
+def _prepare_lines(local_text, remote_text, filename):
+    """
+    For XML files, pretty-prints both sides before diffing to avoid
+    false positives from formatting differences.
+    Falls back to raw lines for everything else.
+    """
+    if filename.lower().endswith('.xml'):
+        try:
+            import xml.etree.ElementTree as ET
+
+            def pretty(text):
+                root = ET.fromstring(text)
+                ET.indent(root)
+                return ET.tostring(root, encoding='unicode').splitlines()
+
+            return pretty(local_text), pretty(remote_text)
+        except Exception:
+            pass  # fall through to raw lines if XML parsing fails
+
+    return local_text.splitlines(), remote_text.splitlines()
+
+
 ############################################ Monitor threads ##################################################
 def monitor_threads_deprecated(threads, result_queue, status_widget):
     # Wait for all threads to complete
@@ -1566,7 +1898,7 @@ def monitor_threads_deprecated(threads, result_queue, status_widget):
     status_widget.yview(tk.END)
 
 
-def monitor_threads(threads, result_queue):
+def monitor_threads(threads, result_queue, operation_type, compare_results=None):
     global operation_active
     # Wait for all threads to complete
     for t in threads:
@@ -1591,32 +1923,37 @@ def monitor_threads(threads, result_queue):
         if counts["failed"] > 0:
             failed_hosts_count += 1
 
-    # Update the summary label
+    # Operation-specific summary text
+    if operation_type == "transfer":
+        success_msg = "All transfers completed successfully!"
+        fail_msg = f"Transfers completed with issues: {failed_hosts_count} / {total_hosts} hosts failed."
+    elif operation_type == "download":
+        success_msg = "All downloads completed successfully!"
+        fail_msg = f"Downloads completed with issues: {failed_hosts_count} / {total_hosts} hosts failed."
+    elif operation_type == "compare":
+        success_msg = "Compare completed successfully!"
+        fail_msg = f"Compare completed with issues: {failed_hosts_count} / {total_hosts} hosts failed."
+
     if failed_hosts_count > 0:
-        summary_label.config(
-            text=f"Transfers completed with issues: {failed_hosts_count} / {total_hosts} hosts failed.",
-            foreground="red"
-        )
+        summary_label.config(text=fail_msg, fg="red")
     else:
-        summary_label.config(
-            text="All transfers completed successfully!",
-            foreground="green"
-        )
+        summary_label.config(text=success_msg, fg="green")
+
+    # Show View Report button only for compare
+    if operation_type == "compare" and compare_results:
+        show_report_button(compare_results)
 
     # Reset operation_active once all threads are done
     operation_active = False
     stop_spinner()
     del_cancel_button()
-    
 
     # Re-enable radio buttons after operation is complete
     radio_download.config(state="normal")
     radio_transfer.config(state="normal")
 
     # Update the timestamp label
-    current_time = datetime.now()
-    formatted_time = current_time.strftime("%H:%M:%S")
-    timestamp_label.config(text=f"Last operation: {formatted_time}")
+    timestamp_label.config(text=f"Last operation: {datetime.now().strftime("%H:%M:%S")}")
 
 
 def increment_active_operations():
@@ -1662,6 +1999,8 @@ def show_cancel_button(operation_type):
         cancel_button.place(relx=1.0, rely=0.0, x=-100, y=317, anchor="nw")
     elif operation_type == "transfer":
         cancel_button.place(relx=0.0, rely=0.0, x=20, y=317, anchor="nw")
+    elif operation_type == "compare":
+        cancel_button.place(relx=1.0, rely=0.0, x=-100, y=317, anchor="nw")
 
 def hide_cancel_button(delay_ms=3000):
     """Hides the cancel button after a small delay (default 500ms)."""
@@ -1676,6 +2015,111 @@ def del_cancel_button():
     cancel_active = False
 
 
+
+def view_report(compare_results):
+    report_lines = []
+    for lgv_name, result in compare_results.items():
+        report_lines.append(f"===== {lgv_name} =====")
+        if result is None:
+            report_lines.append("Error: compare failed or file not found.")
+        else:
+            report_lines.append(result['report'])
+        report_lines.append("")  # blank line between sections
+
+    report_text = "\n".join(report_lines)
+
+    # Write to a temp file and open in Notepad
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        f.write(report_text)
+        temp_path = f.name
+
+    os.startfile(temp_path)
+
+
+def show_diff_viewer(compare_results):
+    viewer = tk.Toplevel()
+    viewer.title("Compare Report")
+    viewer.geometry("900x600")
+
+    # --- Top bar: jump-to dropdown ---
+    top_bar = tk.Frame(viewer)
+    top_bar.pack(fill=tk.X, padx=5, pady=5)
+
+    tk.Label(top_bar, text="Jump to:").pack(side=tk.LEFT)
+    jump_var = tk.StringVar()
+    jump_combo = ttk.Combobox(top_bar, textvariable=jump_var, state="readonly", width=20)
+    jump_combo.pack(side=tk.LEFT, padx=5)
+
+    # --- Text widget + scrollbars ---
+    frame = tk.Frame(viewer)
+    frame.pack(fill=tk.BOTH, expand=True)
+
+    text_widget = tk.Text(frame, wrap=tk.NONE, font=("Consolas", 10))
+    text_widget.grid(row=0, column=0, sticky="nsew")
+
+    v_scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=text_widget.yview)
+    v_scrollbar.grid(row=0, column=1, sticky="ns")
+
+    h_scrollbar = tk.Scrollbar(frame, orient=tk.HORIZONTAL, command=text_widget.xview)
+    h_scrollbar.grid(row=1, column=0, sticky="ew")
+
+    text_widget.config(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+
+    frame.grid_rowconfigure(0, weight=1)
+    frame.grid_columnconfigure(0, weight=1)
+
+    # Color tags
+    text_widget.tag_config("added", foreground="#1a7f37")
+    text_widget.tag_config("removed", foreground="#cf222e")
+    text_widget.tag_config("header", foreground="#0969da", font=("Consolas", 10, "bold"))
+    text_widget.tag_config("section", background="#f0f0f0", font=("Consolas", 11, "bold"))
+
+    section_positions = {}  # lgv_name -> text widget line index
+
+    for lgv_name, result in compare_results.items():
+        # Record where this section starts, BEFORE inserting it
+        section_positions[lgv_name] = text_widget.index(tk.END)
+
+        text_widget.insert(tk.END, f"\n===== {lgv_name} =====\n", "section")
+
+        if result is None:
+            text_widget.insert(tk.END, "Error: compare failed or file not found.\n")
+            continue
+
+        for line in result['report'].splitlines():
+            if line.startswith('+++') or line.startswith('---'):
+                text_widget.insert(tk.END, line + "\n", "header")
+            elif line.startswith('@@'):
+                text_widget.insert(tk.END, line + "\n", "header")
+            elif line.startswith('+'):
+                text_widget.insert(tk.END, line + "\n", "added")
+            elif line.startswith('-'):
+                text_widget.insert(tk.END, line + "\n", "removed")
+            else:
+                text_widget.insert(tk.END, line + "\n")
+
+    text_widget.config(state="disabled")
+
+    # Populate the dropdown and wire up the jump behavior
+    jump_combo['values'] = list(section_positions.keys())
+
+    def jump_to_section(event=None):
+        selected = jump_var.get()
+        if selected in section_positions:
+            text_widget.see(section_positions[selected])
+            # Move that line to the top of the visible area
+            text_widget.yview(section_positions[selected])
+
+    jump_combo.bind("<<ComboboxSelected>>", jump_to_section)
+
+def show_report_button(compare_results):
+    # report_button.config(text="View Full Report", command=lambda: view_report(compare_results))
+    report_button.config(text="View Full Report", command=lambda: show_diff_viewer(compare_results))
+    report_button.place(relx=1.0, rely=0.0, x=-250, y=682, anchor="nw")
+
+def hide_report_button():
+    report_button.place_forget()
 
 
 ####################################################### Get IPs #############################################################
@@ -3053,7 +3497,7 @@ else:
 # root.iconbitmap(icon_path)
 
 window_width = 557
-window_lenght = 660 # 670
+window_lenght = 720 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
 
@@ -3339,6 +3783,31 @@ download.config(state="disabled")
 print(f"Download button state: {download['state']}")
 # Avoid color change when hovering when button is disabled
 
+
+frame_compare = tk.Frame(frame_mode)
+frame_compare.grid(row=1, column=0, padx=20, pady=10)
+
+radio_compare = ttk.Radiobutton(frame_compare, 
+                                # text="Download", 
+                                variable=mode_selection, 
+                                value='compare',
+                                takefocus=0,
+                                command=select_mode
+                                )
+radio_compare.grid(row=0, column=2, padx=(6,0), pady=0, sticky='w')
+
+compare = ttk.Button(frame_compare,
+                    text="Compare", 
+                    style="TD.TButton",
+                    command=start_compare
+                    )
+compare.grid(row=0, 
+              column=0,  
+              pady=0,
+              padx=0,
+              sticky='e')
+
+
 # status_widget = tk.Text(root, height=10, width=80)
 # status_widget = scrolledtext.ScrolledText(root, 
 #                                           undo=True,
@@ -3400,6 +3869,7 @@ timestamp_label = tk.Label(description_frame, text="Last operation: 00:00:00", f
 timestamp_label.grid(row=0, column=1, sticky='e', padx=10, pady=0)
 
 
+report_button = ttk.Button(root, text="Results")
 
 # Enable menu for Show LGV Table if table is updated
 sync_lgv_table_state()
