@@ -930,9 +930,39 @@
             {
                 "sub_name": "Reach14_LowMast_Boot",
                 "base_ip": "10.193.52.100",
-                "ip_range": "8",
+                "ip_range": "8,18",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Reach14LowMastCode/LGV/_Boot/forks/TwinCAT RT (x64)",
                 "remote_dir": "\\TwinCAT\\Boot",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_areamonitor",
+                "base_ip": "10.193.52.100",
+                "ip_range": "8",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Configs ON SITE/Common/LMSAreas.prj",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_LowMastConfig",
+                "base_ip": "10.193.52.100",
+                "ip_range": "1-23",
+                "local_dir": "",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_PalletData",
+                "base_ip": "10.193.52.100",
+                "ip_range": "8,18,37",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Configs ON SITE/Common/PalletData.xml",
+                "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
                 "transfer_type": "SFTP"

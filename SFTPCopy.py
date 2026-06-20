@@ -1796,37 +1796,43 @@ def compare_files(local_bytes, remote_bytes, filename):
     Returns a dict with:
       - 'same': bool
       - 'diff_lines': int (0 if same, -1 if binary)
-      - 'report': str (unified diff, or note about binary/identical)
+      - 'report': str (unified diff, used for binary/fallback display)
+      - 'rows': list of (left_text, left_tag, right_text, right_tag)
+                 — only present for text/XML files that differ
     """
-    # Fast path: identical bytes
     local_hash = hashlib.md5(local_bytes).hexdigest()
     remote_hash = hashlib.md5(remote_bytes).hexdigest()
-
+ 
     if local_hash == remote_hash:
         return {
             'same': True,
             'diff_lines': 0,
             'report': 'Files are identical.'
         }
-
-    # Try to decode as text
-    try:
-        local_text = local_bytes.decode('utf-8')
-        remote_text = remote_bytes.decode('utf-8')
-        is_binary = False
-    except UnicodeDecodeError:
+ 
+    # Heuristic: genuine text files essentially never contain null bytes,
+    # even if they happen to be technically valid UTF-8 by coincidence
+    if b'\x00' in local_bytes or b'\x00' in remote_bytes:
         is_binary = True
-
+    else:
+        try:
+            local_text = local_bytes.decode('utf-8')
+            remote_text = remote_bytes.decode('utf-8')
+            is_binary = False
+        except UnicodeDecodeError:
+            is_binary = True
+ 
     if is_binary:
         return {
             'same': False,
             'diff_lines': -1,
             'report': f'{filename}: Files differ (binary file, cannot show diff).'
+            # no 'rows' key — viewer will fall back to showing 'report'
         }
-
-    # Text/XML: prepare lines then diff
+ 
     local_lines, remote_lines = _prepare_lines(local_text, remote_text, filename)
-
+ 
+    # Unified diff — kept for diff_lines count and as a plain-text fallback
     diff = list(difflib.unified_diff(
         local_lines,
         remote_lines,
@@ -1834,11 +1840,16 @@ def compare_files(local_bytes, remote_bytes, filename):
         tofile='Remote',
         lineterm=''
     ))
-
+    diff_count = sum(1 for l in diff if l.startswith(('+', '-')) and not l.startswith(('+++', '---')))
+ 
+    # Side-by-side rows for the viewer
+    rows = _collapse_equal_runs(_build_side_by_side(local_lines, remote_lines), context=2)
+ 
     return {
         'same': False,
-        'diff_lines': sum(1 for l in diff if l.startswith(('+', '-')) and not l.startswith(('+++', '---'))),
-        'report': '\n'.join(diff)
+        'diff_lines': diff_count,
+        'report': '\n'.join(diff),
+        'rows': rows
     }
 
 
@@ -1862,6 +1873,64 @@ def _prepare_lines(local_text, remote_text, filename):
             pass  # fall through to raw lines if XML parsing fails
 
     return local_text.splitlines(), remote_text.splitlines()
+
+
+def _collapse_equal_runs(rows, context=2):
+    result = []
+    i = 0
+    n = len(rows)
+ 
+    while i < n:
+        if rows[i][1] == 'equal':
+            start = i
+            while i < n and rows[i][1] == 'equal':
+                i += 1
+            run = rows[start:i]
+ 
+            if len(run) <= context * 2:
+                result.extend(run)
+            else:
+                result.extend(run[:context])
+                hidden = len(run) - (context * 2)
+                result.append(('...', 'collapsed', f'{hidden} lines unchanged', 'collapsed'))
+                result.extend(run[-context:])
+        else:
+            result.append(rows[i])
+            i += 1
+ 
+    return result
+
+
+def _build_side_by_side(local_lines, remote_lines):
+    matcher = difflib.SequenceMatcher(None, local_lines, remote_lines)
+    rows = []
+ 
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        local_chunk = local_lines[i1:i2]
+        remote_chunk = remote_lines[j1:j2]
+ 
+        if tag == 'equal':
+            for l, r in zip(local_chunk, remote_chunk):
+                rows.append((l, 'equal', r, 'equal'))
+ 
+        elif tag == 'replace':
+            max_len = max(len(local_chunk), len(remote_chunk))
+            for idx in range(max_len):
+                l = local_chunk[idx] if idx < len(local_chunk) else ''
+                r = remote_chunk[idx] if idx < len(remote_chunk) else ''
+                l_tag = 'removed' if idx < len(local_chunk) else None
+                r_tag = 'added' if idx < len(remote_chunk) else None
+                rows.append((l, l_tag, r, r_tag))
+ 
+        elif tag == 'delete':
+            for l in local_chunk:
+                rows.append((l, 'removed', '', None))
+ 
+        elif tag == 'insert':
+            for r in remote_chunk:
+                rows.append(('', None, r, 'added'))
+ 
+    return rows
 
 
 ############################################ Monitor threads ##################################################
@@ -2037,7 +2106,7 @@ def view_report(compare_results):
     os.startfile(temp_path)
 
 
-def show_diff_viewer(compare_results):
+def show_diff_viewer_lines(compare_results):
     viewer = tk.Toplevel()
     viewer.title("Compare Report")
     viewer.geometry("900x600")
@@ -2113,9 +2182,143 @@ def show_diff_viewer(compare_results):
 
     jump_combo.bind("<<ComboboxSelected>>", jump_to_section)
 
+
+def show_diff_viewer_panes(compare_results):
+    """
+    compare_results: dict of lgv_name -> result dict, where result has:
+        - 'same': bool
+        - 'rows': list of (left_text, left_tag, right_text, right_tag)
+                  (only present when 'same' is False and file is text/XML)
+        - 'report': fallback string (used for binary/error cases)
+    """
+    viewer = tk.Toplevel()
+    viewer.title("Compare Report")
+    viewer.geometry("1100x650")
+
+    # --- Top bar: jump-to dropdown ---
+    top_bar = tk.Frame(viewer)
+    top_bar.pack(fill=tk.X, padx=5, pady=5)
+
+    tk.Label(top_bar, text="Jump to:").pack(side=tk.LEFT)
+    jump_var = tk.StringVar()
+    jump_combo = ttk.Combobox(top_bar, textvariable=jump_var, state="readonly", width=20)
+    jump_combo.pack(side=tk.LEFT, padx=5)
+
+    tk.Label(top_bar, text="Local", fg="#555").pack(side=tk.LEFT, padx=(40, 0))
+    tk.Label(top_bar, text="Remote", fg="#555").pack(side=tk.LEFT, padx=(420, 0))
+
+    # --- Two-pane frame ---
+    frame = tk.Frame(viewer)
+    frame.pack(fill=tk.BOTH, expand=True)
+
+    left_text = tk.Text(frame, wrap=tk.NONE, font=("Consolas", 10))
+    right_text = tk.Text(frame, wrap=tk.NONE, font=("Consolas", 10))
+
+    left_text.grid(row=0, column=0, sticky="nsew")
+    right_text.grid(row=0, column=2, sticky="nsew")
+
+    # Shared vertical scrollbar (drives both panes together)
+    v_scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL)
+    v_scrollbar.grid(row=0, column=3, sticky="ns")
+
+    # Separate horizontal scrollbars (each pane can scroll independently)
+    left_h_scrollbar = tk.Scrollbar(frame, orient=tk.HORIZONTAL, command=left_text.xview)
+    left_h_scrollbar.grid(row=1, column=0, sticky="ew")
+
+    right_h_scrollbar = tk.Scrollbar(frame, orient=tk.HORIZONTAL, command=right_text.xview)
+    right_h_scrollbar.grid(row=1, column=2, sticky="ew")
+
+    # Small divider column between panes
+    divider = tk.Frame(frame, width=2, bg="#ccc")
+    divider.grid(row=0, column=1, sticky="ns")
+
+    frame.grid_rowconfigure(0, weight=1)
+    frame.grid_columnconfigure(0, weight=1)
+    frame.grid_columnconfigure(2, weight=1)
+
+    left_text.config(xscrollcommand=left_h_scrollbar.set)
+    right_text.config(xscrollcommand=right_h_scrollbar.set)
+
+    # --- Sync vertical scrolling between both panes ---
+    def sync_yview(*args):
+        left_text.yview(*args)
+        right_text.yview(*args)
+
+    def on_mousewheel_left(event):
+        left_text.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        right_text.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        return "break"
+
+    v_scrollbar.config(command=sync_yview)
+
+    def update_scrollbar(*args):
+        # Both panes have identical row counts, so left's fraction is enough
+        v_scrollbar.set(*args)
+
+    left_text.config(yscrollcommand=update_scrollbar)
+    right_text.config(yscrollcommand=lambda *a: None)  # avoid double-driving the scrollbar
+
+    left_text.bind("<MouseWheel>", on_mousewheel_left)
+    right_text.bind("<MouseWheel>", on_mousewheel_left)
+
+    # --- Color tags (same palette for both panes) ---
+    for widget in (left_text, right_text):
+        widget.tag_config("added", background="#e6ffec", foreground="#1a7f37")
+        widget.tag_config("removed", background="#ffebe9", foreground="#cf222e")
+        widget.tag_config("collapsed", foreground="#999999", font=("Consolas", 9, "italic"))
+        widget.tag_config("section", background="#f0f0f0", font=("Consolas", 11, "bold"))
+
+    section_positions = {}
+
+    for lgv_name, result in compare_results.items():
+        section_positions[lgv_name] = left_text.index(tk.END)
+
+        section_header = f"\n===== {lgv_name} =====\n"
+        left_text.insert(tk.END, section_header, "section")
+        right_text.insert(tk.END, section_header, "section")
+
+        if result is None:
+            left_text.insert(tk.END, "Error: compare failed or file not found.\n")
+            right_text.insert(tk.END, "\n")
+            continue
+
+        if result['same']:
+            left_text.insert(tk.END, "Files are identical.\n")
+            right_text.insert(tk.END, "Files are identical.\n")
+            continue
+
+        if 'rows' not in result:
+            # Binary or fallback case — no side-by-side rows available
+            left_text.insert(tk.END, result.get('report', 'Files differ.') + "\n")
+            right_text.insert(tk.END, "\n")
+            continue
+
+        for left_line, left_tag, right_line, right_tag in result['rows']:
+            l_tags = (left_tag,) if left_tag else ()
+            r_tags = (right_tag,) if right_tag else ()
+            left_text.insert(tk.END, left_line + "\n", l_tags)
+            right_text.insert(tk.END, right_line + "\n", r_tags)
+
+    left_text.config(state="disabled")
+    right_text.config(state="disabled")
+
+    jump_combo['values'] = list(section_positions.keys())
+
+    def jump_to_section(event=None):
+        selected = jump_var.get()
+        if selected in section_positions:
+            pos = section_positions[selected]
+            left_text.yview(pos)
+            right_text.yview(pos)
+            v_scrollbar.set(*left_text.yview())
+
+    jump_combo.bind("<<ComboboxSelected>>", jump_to_section)
+
+    return viewer
+
 def show_report_button(compare_results):
     # report_button.config(text="View Full Report", command=lambda: view_report(compare_results))
-    report_button.config(text="View Full Report", command=lambda: show_diff_viewer(compare_results))
+    report_button.config(text="View Full Report", command=lambda: show_diff_viewer_panes(compare_results))
     report_button.place(relx=1.0, rely=0.0, x=-250, y=682, anchor="nw")
 
 def hide_report_button():
