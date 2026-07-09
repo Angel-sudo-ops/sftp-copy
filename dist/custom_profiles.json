@@ -905,12 +905,12 @@
         ]
     },
     {
-        "profile_name": "CC2244_SCJohnson",
+        "profile_name": "CC2244_SCJohnsonKenosha",
         "sub_profiles": [
             {
                 "sub_name": "Reach14_HighMast_Boot",
                 "base_ip": "10.193.52.100",
-                "ip_range": "37",
+                "ip_range": "37,39",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Reach14HighMastCode/LGV/_Boot/forks/TwinCAT RT (x64)",
                 "remote_dir": "\\TwinCAT\\Boot",
                 "username": "Administrator",
@@ -930,7 +930,7 @@
             {
                 "sub_name": "Reach14_LowMast_Boot",
                 "base_ip": "10.193.52.100",
-                "ip_range": "8,18",
+                "ip_range": "8,9,13,17,18,20",
                 "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Reach14LowMastCode/LGV/_Boot/forks/TwinCAT RT (x64)",
                 "remote_dir": "\\TwinCAT\\Boot",
                 "username": "Administrator",
@@ -940,8 +940,8 @@
             {
                 "sub_name": "Reach14_areamonitor",
                 "base_ip": "10.193.52.100",
-                "ip_range": "8",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Configs ON SITE/Common/LMSAreas.prj",
+                "ip_range": "8,9,13,17,18",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/LMSAreas.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/VertLeft.prj, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/VertRight.prj",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
@@ -958,10 +958,40 @@
                 "transfer_type": "SFTP"
             },
             {
-                "sub_name": "Reach14_PalletData",
+                "sub_name": "Reach14_commonParams",
                 "base_ip": "10.193.52.100",
-                "ip_range": "8,18,37",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Configs ON SITE/Common/PalletData.xml",
+                "ip_range": "1,8,9,13,17,18,37",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/SmartDectParameters.xml, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/CaseSpeed.xml, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/PalletData.xml, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/PressureDeviceParameters.xml, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/Quotes.xml, C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Common/SearchData.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_LowMast_movements",
+                "base_ip": "10.193.52.100",
+                "ip_range": "8,9,13,17,18,20",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/LowMast/Common/Movements.xml",
+                "remote_dir": "\\Config",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_unlockConfig",
+                "base_ip": "10.193.52.100",
+                "ip_range": "1-23,31-39",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Apps and Services/Unlock/unlockServiceConfig.xml",
+                "remote_dir": "\\Apps\\Unlock",
+                "username": "Administrator",
+                "password": "1",
+                "transfer_type": "SFTP"
+            },
+            {
+                "sub_name": "Reach14_HighMastConfig",
+                "base_ip": "10.193.52.100",
+                "ip_range": "31-39",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/HighMast",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",

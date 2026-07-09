@@ -2197,15 +2197,21 @@ def show_diff_viewer_panes(compare_results):
 
     # --- Top bar: jump-to dropdown ---
     top_bar = tk.Frame(viewer)
-    top_bar.pack(fill=tk.X, padx=5, pady=5)
+    top_bar.pack(fill=tk.X, padx=5, pady=(5,0))
 
     tk.Label(top_bar, text="Jump to:").pack(side=tk.LEFT)
     jump_var = tk.StringVar()
     jump_combo = ttk.Combobox(top_bar, textvariable=jump_var, state="readonly", width=20)
     jump_combo.pack(side=tk.LEFT, padx=5)
 
-    tk.Label(top_bar, text="Local", fg="#555").pack(side=tk.LEFT, padx=(40, 0))
-    tk.Label(top_bar, text="Remote", fg="#555").pack(side=tk.LEFT, padx=(420, 0))
+    # --- Row 2: Local / Remote column headers above their panes ---
+    headers_bar = tk.Frame(viewer)
+    headers_bar.pack(fill=tk.X, padx=5, pady=(2, 0))
+ 
+    headers_bar.grid_columnconfigure(0, weight=1)
+    headers_bar.grid_columnconfigure(1, weight=1)
+    tk.Label(headers_bar, text="Local", fg="#555", font=("Consolas", 10, "bold"), anchor="w").grid(row=0, column=0, sticky="ew")
+    tk.Label(headers_bar, text="Remote", fg="#555", font=("Consolas", 10, "bold"), anchor="w").grid(row=0, column=1, sticky="ew")
 
     # --- Two-pane frame ---
     frame = tk.Frame(viewer)
@@ -2266,54 +2272,56 @@ def show_diff_viewer_panes(compare_results):
         widget.tag_config("added", background="#e6ffec", foreground="#1a7f37")
         widget.tag_config("removed", background="#ffebe9", foreground="#cf222e")
         widget.tag_config("collapsed", foreground="#999999", font=("Consolas", 9, "italic"))
-        widget.tag_config("section", background="#f0f0f0", font=("Consolas", 11, "bold"))
 
     section_positions = {}
 
-    for lgv_name, result in compare_results.items():
-        section_positions[lgv_name] = left_text.index(tk.END)
+    def render_lgv(lgv_name):
 
-        section_header = f"\n===== {lgv_name} =====\n"
-        left_text.insert(tk.END, section_header, "section")
-        right_text.insert(tk.END, section_header, "section")
+        # Clear both panes
+        left_text.config(state="normal")
+        right_text.config(state="normal")
+        left_text.delete("1.0", tk.END)
+        right_text.delete("1.0", tk.END)
+
+        result = compare_results.get(lgv_name)
 
         if result is None:
             left_text.insert(tk.END, "Error: compare failed or file not found.\n")
             right_text.insert(tk.END, "\n")
-            continue
 
-        if result['same']:
+        elif result['same']:
             left_text.insert(tk.END, "Files are identical.\n")
             right_text.insert(tk.END, "Files are identical.\n")
-            continue
 
-        if 'rows' not in result:
+        elif 'rows' not in result:
             # Binary or fallback case — no side-by-side rows available
             left_text.insert(tk.END, result.get('report', 'Files differ.') + "\n")
             right_text.insert(tk.END, "\n")
-            continue
 
-        for left_line, left_tag, right_line, right_tag in result['rows']:
-            l_tags = (left_tag,) if left_tag else ()
-            r_tags = (right_tag,) if right_tag else ()
-            left_text.insert(tk.END, left_line + "\n", l_tags)
-            right_text.insert(tk.END, right_line + "\n", r_tags)
+        else:
+            for left_line, left_tag, right_line, right_tag in result['rows']:
+                l_tags = (left_tag,) if left_tag else ()
+                r_tags = (right_tag,) if right_tag else ()
+                left_text.insert(tk.END, left_line + "\n", l_tags)
+                right_text.insert(tk.END, right_line + "\n", r_tags)
 
-    left_text.config(state="disabled")
-    right_text.config(state="disabled")
+        left_text.config(state="disabled")
+        right_text.config(state="disabled")
 
-    jump_combo['values'] = list(section_positions.keys())
+    # --- Wire combobox ---
+    lgv_names = list(compare_results.keys())
+    jump_combo['values'] = lgv_names
 
-    def jump_to_section(event=None):
-        selected = jump_var.get()
-        if selected in section_positions:
-            pos = section_positions[selected]
-            left_text.yview(pos)
-            right_text.yview(pos)
-            v_scrollbar.set(*left_text.yview())
+    def on_lgv_selected(event=None):
+        render_lgv(jump_var.get())
 
-    jump_combo.bind("<<ComboboxSelected>>", jump_to_section)
+    jump_combo.bind("<<ComboboxSelected>>", on_lgv_selected)
 
+    # Show first lgv by default
+    if lgv_names:
+        jump_var.set(lgv_names[0])
+        render_lgv(lgv_names[0])
+        
     return viewer
 
 def show_report_button(compare_results):

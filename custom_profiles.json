@@ -931,7 +931,7 @@
                 "sub_name": "Reach14_HighMast_config",
                 "base_ip": "10.193.52.100",
                 "ip_range": "8,18,37",
-                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Reach14L_Low_Mast/LGVxx/LgvConfiguration.xml",
+                "local_dir": "C:/Users/contreras.j/Documents/LGV Onsite Projects/TC3/CC2244_SCJohnsonPleasantPrairie/Miscellanea/Parameters/Configs ON SITE/Common/Quotes.xml",
                 "remote_dir": "\\Config",
                 "username": "Administrator",
                 "password": "1",
