@@ -734,9 +734,8 @@ def start_transfer():
 
     # Set operation active after all checks
     operation_active = True
-    start_spinner()
-    
-    disable_operation_buttons()
+
+    begin_operation_ui()
 
     active_operations = 0
     cancel_event.clear()
@@ -1187,7 +1186,7 @@ def start_download():
         messagebox.showerror("Input Error", "Please enter the password.")
         return
 
-    local_root_path = filedialog.askdirectory(title="Choose a folder to save downloads")
+    local_root_path = filedialog.askdirectory(title="Choose a folder")
     if not local_root_path:
         # messagebox.showwarning("Error", "Download cancelled.")
         return
@@ -1199,9 +1198,8 @@ def start_download():
 
     # Set operation active after all checks
     operation_active = True
-    start_spinner()
 
-    disable_operation_buttons()
+    begin_operation_ui()
 
     active_operations = 0
     cancel_event.clear()
@@ -1613,13 +1611,12 @@ def start_compare():
     timestamp_label.config(text="Last operation: 00:00:00")
 
     operation_active = True
-    start_spinner()
     
-    disable_operation_buttons()
+    begin_operation_ui()
 
     active_operations = 0
     cancel_event.clear()
-    show_cancel_button()
+
 
     hosts = [
         (
@@ -2008,11 +2005,8 @@ def monitor_threads(threads, result_queue, operation_type, compare_results=None)
 
     # Reset operation_active once all threads are done
     operation_active = False
-    stop_spinner()
-    del_cancel_button()
-
-    # Re-enable radio buttons after operation is complete
-    enable_operation_buttons()
+   
+    end_operation_ui()
 
     # Update the timestamp label
     timestamp_label.config(text=f"Last operation: {datetime.now().strftime("%H:%M:%S")}")
@@ -2057,7 +2051,7 @@ def cancel_transfers():
 
 def show_cancel_button():
     cancel_button.config(text="Cancel")
-    cancel_button.place(in_=control_row, relx=0.6, rely=0.5, anchor="center")
+    cancel_button.place(in_=control_row, relx=0.65, rely=0.5, anchor="center")
 
 
 def hide_cancel_button(delay_ms=3000):
@@ -3652,7 +3646,7 @@ def start_spinner():
 
      # Make the spinner visible
     # spinner_frame.place(x=x, y=y)  # Adjust position as needed
-    spinner_frame.place(in_=control_row, relx=0.4, rely=0.5, anchor="center")
+    spinner_frame.place(in_=control_row, relx=0.35, rely=0.5, anchor="center")
 
     rotate_spinner()  # Start rotating the spinner
 
@@ -3670,6 +3664,26 @@ def rotate_spinner():
         new_angle = (float(current_angle) + 20) % 360  # Adjust rotation speed here
         spinner_canvas.itemconfig(spinner_arc, start=new_angle)
         spinner_canvas.after(50, rotate_spinner)  # Adjust the delay for rotation speed
+    
+def show_idle_state():
+    idle_separator.place(in_=control_row, relx=0.5, rely=0.5, relwidth=5, anchor="center")
+
+def hide_idle_state():
+    idle_separator.place_forget()
+
+def begin_operation_ui():
+    """Call this at the start of any operation (Download, Compare, Transfer, ...)."""
+    hide_idle_state()
+    start_spinner()
+    show_cancel_button()
+    disable_operation_buttons()
+
+def end_operation_ui():
+    """Call this once an operation finishes, regardless of success/fail/cancel."""
+    stop_spinner()
+    del_cancel_button()
+    show_idle_state()
+    enable_operation_buttons()
 
 ######################################################## Create UI ##################################################
 
@@ -3685,7 +3699,7 @@ else:
 # root.iconbitmap(icon_path)
 
 window_width = 557
-window_lenght = 720 # 670
+window_lenght = 690 # 670
 root.geometry(f"{window_width}x{window_lenght}")
 root.minsize(window_width, window_lenght)
 
@@ -3919,16 +3933,20 @@ compare_button = ttk.Button(frame_actions, text="Compare", style="TD.TButton", c
 compare_button.grid(row=0, column=2, pady=5, padx=5, sticky='ew')
 
 separator = ttk.Separator(frame_actions, orient="vertical")
-separator.grid(row=0, column=3, sticky="ns", padx=10)
+separator.grid(row=0, column=3, sticky="ns", padx=10, pady=7)
 
 transfer_button = ttk.Button(frame_actions, text="Transfer", style="TD.TButton", command=start_transfer)
 transfer_button.grid(row=0, column=4, pady=5, padx=5, sticky='ew')
 
-control_row = tk.Frame(root)
-control_row.grid(row=5, column=0, padx=5, pady=(5,0))
+control_row = tk.Frame(root, width=500, height=30)
+control_row.grid(row=5, column=0, padx=5, pady=(2,2))
+control_row.grid_propagate(False)
 
 cancel_button = ttk.Button(control_row, text="Cancel", command=cancel_transfers)
-# No .grid() yet — we will grid it dynamically when transfers start
+
+idle_separator = ttk.Separator(control_row, orient="horizontal")
+
+show_idle_state()
 
 # Create the Treeview (table)
 table_frame = tk.Frame(root)
