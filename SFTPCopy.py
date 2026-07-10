@@ -734,13 +734,13 @@ def start_transfer():
 
     # Set operation active after all checks
     operation_active = True
-    start_spinner(265, 320)
-    # To avoid selecting download during transfer
-    radio_download.config(state="disable")
+    start_spinner()
+    
+    disable_operation_buttons()
 
     active_operations = 0
     cancel_event.clear()
-    show_cancel_button("transfer")
+    show_cancel_button()
 
     print (f"Selected port is {port}")
     print(f"Login is {username}")
@@ -1192,23 +1192,20 @@ def start_download():
         # messagebox.showwarning("Error", "Download cancelled.")
         return
     
-    # Set local_root_path into local path entry
-    global file_path
-    file_path.set(local_root_path)
-    
+        
     # Reset labels at the start of a new download
     summary_label.config(text="Status result", fg="black")
     timestamp_label.config(text="Last operation: 00:00:00")
 
     # Set operation active after all checks
     operation_active = True
-    start_spinner(265, 320)
-    # To avoid selecting transfer during download
-    radio_transfer.config(state="disable")
+    start_spinner()
+
+    disable_operation_buttons()
 
     active_operations = 0
     cancel_event.clear()
-    show_cancel_button("download")
+    show_cancel_button()
 
     download_folder = os.path.join(local_root_path, "Download")
     
@@ -1602,9 +1599,6 @@ def start_compare():
     if not local_file:
         return
 
-    # Set local_root_path into local path entry
-   
-    file_path.set(local_file)
 
     # Read local file once — all threads share the same bytes
     with open(local_file, 'rb') as f:
@@ -1619,13 +1613,13 @@ def start_compare():
     timestamp_label.config(text="Last operation: 00:00:00")
 
     operation_active = True
-    start_spinner(265, 320)
-    radio_transfer.config(state="disable")
-    radio_download.config(state="disable")
+    start_spinner()
+    
+    disable_operation_buttons()
 
     active_operations = 0
     cancel_event.clear()
-    show_cancel_button("compare")
+    show_cancel_button()
 
     hosts = [
         (
@@ -2018,8 +2012,7 @@ def monitor_threads(threads, result_queue, operation_type, compare_results=None)
     del_cancel_button()
 
     # Re-enable radio buttons after operation is complete
-    radio_download.config(state="normal")
-    radio_transfer.config(state="normal")
+    enable_operation_buttons()
 
     # Update the timestamp label
     timestamp_label.config(text=f"Last operation: {datetime.now().strftime("%H:%M:%S")}")
@@ -2062,14 +2055,10 @@ def cancel_transfers():
         # messagebox.showinfo("Info", "There are no active transfers to cancel.")
 
 
-def show_cancel_button(operation_type):
+def show_cancel_button():
     cancel_button.config(text="Cancel")
-    if operation_type == "download":
-        cancel_button.place(relx=1.0, rely=0.0, x=-100, y=317, anchor="nw")
-    elif operation_type == "transfer":
-        cancel_button.place(relx=0.0, rely=0.0, x=20, y=317, anchor="nw")
-    elif operation_type == "compare":
-        cancel_button.place(relx=1.0, rely=0.0, x=-100, y=317, anchor="nw")
+    cancel_button.place(in_=control_row, relx=0.6, rely=0.5, anchor="center")
+
 
 def hide_cancel_button(delay_ms=3000):
     """Hides the cancel button after a small delay (default 500ms)."""
@@ -2332,6 +2321,18 @@ def show_report_button(compare_results):
 def hide_report_button():
     report_button.place_forget()
 
+###################################################### Action buttons ######################################################
+
+def disable_operation_buttons():
+    transfer_button.config(state="disabled")
+    download_button.config(state="disabled")
+    compare_button.config(state="disabled")
+
+def enable_operation_buttons():
+    transfer_button.config(state="normal")
+    download_button.config(state="normal")
+    compare_button.config(state="normal")
+
 
 ####################################################### Get IPs #############################################################
 
@@ -2487,14 +2488,7 @@ def browse_local_path():
         return None
 
 
-def is_mode_transfer():
-    if mode_selection.get() == "transfer":
-        return True
-
-def browse_files():
-    if not is_mode_transfer():
-        return
-    
+def browse_files():   
     current_path = file_path.get().strip()
     initial_dir = get_initial_dir(current_path)
 
@@ -2513,9 +2507,6 @@ def browse_files():
 
 
 def browse_folder():
-    if not is_mode_transfer():
-        return
-    
     current_path = file_path.get().strip()
     initial_dir = get_initial_dir(current_path)
 
@@ -2798,21 +2789,6 @@ def set_path_on_selection(*args):
     set_paths()
     print(f"Password: {password_entry.get()}")
 
-
-def select_mode():
-    mode_selected = mode_selection.get()
-    if mode_selected == 'transfer':
-        transfer.config(state='normal')
-        download.config(state="disabled")
-        file_path_entry.config(state='normal')
-        load_data_from_selection()
-
-    elif mode_selected == 'download':
-        transfer.config(state='disabled')
-        download.config(state="normal")
-        # file_path_entry.config(state='readonly')
-
-    print(f"Selected mode {mode_selected}")
 
 # Helper function to load a JSON file 
 def load_json_file(file_path):
@@ -3658,7 +3634,7 @@ def create_spinner_widget():
     global spinner_frame, spinner_canvas, spinner_arc
 
     # Create a frame to hold the spinner (fixed position in the layout)
-    spinner_frame = tk.Frame(root, width=25, height=25, bg=root['bg'])  # Match frame bg to window bg
+    spinner_frame = tk.Frame(control_row, width=25, height=25, bg=root['bg'])  # Match frame bg to window bg
 
     # Create a canvas for the spinner with the same background color as the root window
     spinner_canvas = tk.Canvas(spinner_frame, width=25, height=25, bg=root['bg'], highlightthickness=0)
@@ -3670,12 +3646,13 @@ def create_spinner_widget():
     # Initially hide the spinner frame
     spinner_frame.place_forget()
 
-def start_spinner(x, y):
+def start_spinner():
     global running
     running = True  # Set the spinner running flag
 
      # Make the spinner visible
-    spinner_frame.place(x=x, y=y)  # Adjust position as needed
+    # spinner_frame.place(x=x, y=y)  # Adjust position as needed
+    spinner_frame.place(in_=control_row, relx=0.4, rely=0.5, anchor="center")
 
     rotate_spinner()  # Start rotating the spinner
 
@@ -3929,111 +3906,33 @@ transfer_type_combobox.grid(row=1, column=0, padx=5, pady=5)
 transfer_type_combobox.bind("<<ComboboxSelected>>", set_path_on_selection)
 
 
-frame_mode = tk.Frame(root)
-frame_mode.grid(row=4, column=0, columnspan=2, padx=5, pady=(5,0))
+frame_actions = tk.Frame(root)
+frame_actions.grid(row=4, column=0, padx=5, pady=(5,0))
+
+style.configure('TD.TButton', font=('Segoe UI', 12))
 
 
-cancel_button = ttk.Button(root, text="Cancel", command=cancel_transfers)
+download_button = ttk.Button(frame_actions, text="Download", style="TD.TButton", command=start_download)
+download_button.grid(row=0, column=1, pady=5, padx=5, sticky='ew')
+
+compare_button = ttk.Button(frame_actions, text="Compare", style="TD.TButton", command=start_compare)
+compare_button.grid(row=0, column=2, pady=5, padx=5, sticky='ew')
+
+separator = ttk.Separator(frame_actions, orient="vertical")
+separator.grid(row=0, column=3, sticky="ns", padx=10)
+
+transfer_button = ttk.Button(frame_actions, text="Transfer", style="TD.TButton", command=start_transfer)
+transfer_button.grid(row=0, column=4, pady=5, padx=5, sticky='ew')
+
+control_row = tk.Frame(root)
+control_row.grid(row=5, column=0, padx=5, pady=(5,0))
+
+cancel_button = ttk.Button(control_row, text="Cancel", command=cancel_transfers)
 # No .grid() yet — we will grid it dynamically when transfers start
-
-
-mode_selection = tk.StringVar(value='transfer')
-# Radio buttons for selecting file or folder
-
-frame_transfer = tk.Frame(frame_mode)
-frame_transfer.grid(row=0, column=0, padx=25, pady=10)
-
-radio_transfer = ttk.Radiobutton(frame_transfer, 
-                                # text="Transfer", 
-                                variable=mode_selection, 
-                                value='transfer', 
-                                takefocus=0,
-                                command=select_mode
-                                )
-radio_transfer.grid(row=0, column=0, padx=0, pady=0, sticky='e')
-
-style.configure('TD.TButton', font=('Lucida Sans', 12))
-transfer = ttk.Button(frame_transfer, 
-                    text="Transfer", 
-                    style="TD.TButton",
-                    command=start_transfer
-                    )
-transfer.grid(row=0, 
-              column=1, 
-              pady=0,
-              padx=0, 
-              sticky='w')
-
-print(f"Transfer button state: {transfer['state']}")
-
-frame_download = tk.Frame(frame_mode)
-frame_download.grid(row=0, column=1, padx=20, pady=10)
-
-radio_download = ttk.Radiobutton(frame_download, 
-                                # text="Download", 
-                                variable=mode_selection, 
-                                value='download',
-                                takefocus=0,
-                                command=select_mode
-                                )
-radio_download.grid(row=0, column=2, padx=(6,0), pady=0, sticky='w')
-
-download = ttk.Button(frame_download,
-                    text="Download", 
-                    style="TD.TButton",
-                    command=start_download
-                    )
-download.grid(row=0, 
-              column=0,  
-              pady=0,
-              padx=0,
-              sticky='e')
-# download.configure(font=('Lucida Sans', 12))
-# button_design(download)
-download.config(state="disabled")
-print(f"Download button state: {download['state']}")
-# Avoid color change when hovering when button is disabled
-
-
-frame_compare = tk.Frame(frame_mode)
-frame_compare.grid(row=1, column=0, padx=20, pady=10)
-
-radio_compare = ttk.Radiobutton(frame_compare, 
-                                # text="Download", 
-                                variable=mode_selection, 
-                                value='compare',
-                                takefocus=0,
-                                command=select_mode
-                                )
-radio_compare.grid(row=0, column=2, padx=(6,0), pady=0, sticky='w')
-
-compare = ttk.Button(frame_compare,
-                    text="Compare", 
-                    style="TD.TButton",
-                    command=start_compare
-                    )
-compare.grid(row=0, 
-              column=0,  
-              pady=0,
-              padx=0,
-              sticky='e')
-
-
-# status_widget = tk.Text(root, height=10, width=80)
-# status_widget = scrolledtext.ScrolledText(root, 
-#                                           undo=True,
-#                                           wrap = tk.WORD,
-#                                           height=17,
-#                                           width=70
-#                                           )
-# status_font = font.Font(family="Consolas", size=11)
-# status_widget.configure(font=status_font)
-# status_widget.grid(row=5, column=0, columnspan=2, padx=15, pady=15)
-# status_widget.bind("<Key>", lambda e: "break")
 
 # Create the Treeview (table)
 table_frame = tk.Frame(root)
-table_frame.grid(row=5, column=0, columnspan=2, padx=(10,0), pady=(10,0), sticky='nsew')
+table_frame.grid(row=6, column=0, columnspan=2, padx=(10,0), pady=(10,0), sticky='nsew')
 
 treeview_style = ttk.Style()
 treeview_style.configure("Treeview", rowheight=23)  # Increase row height for more space between items
@@ -4065,7 +3964,7 @@ tooltip = TreeviewTooltip(status_table)
 
 # Create the Description frame
 description_frame = tk.Frame(root)
-description_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=5, sticky='nsew')
+description_frame.grid(row=7, column=0, columnspan=2, padx=10, pady=5, sticky='nsew')
 
 # Configure column weights to control alignment
 description_frame.columnconfigure(0, weight=1)  # Left column (summary label)
