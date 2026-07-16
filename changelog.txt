@@ -1,3 +1,20 @@
+[3.6.8.3]
+- some more tests
+- test all operations after buttons redesign
+- Finish feature "action_buttons_redesign"
+- adjust UI for spinner and cancel button when operation is running
+- adjust action buttons positioning, remove unnecessary methods used when radio mode used
+- show differences for each LGV using a combobox
+- add compare panes, local vs remote for each remote server
+- add compare feature, shows differences between local and remote file for several lgvs, still work in progress
+- adjust methods to load staticroutes.xml and config.db3
+- bugfix detecting if lgv enabled when loading config.db3
+- add all tooltip methods in a separate module (tooltips)
+- reset tracking
+- reset tracking
+- add splash screen and logging
+- bugfix when extracting changelog in prepare_release and autoupdater, adjust release.bat, exit if clean working tree not clean
+ 
 [3.6.8.1] 
 - bugfix in autoupdater when showing output in console
  
